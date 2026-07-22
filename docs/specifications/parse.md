@@ -228,7 +228,9 @@ Discovery follows deterministic rules only.
 Priority order is:
 
 1. Existing Identity definitions already present in Endpoint.
-2. Field names starting with or ending with an identifier token such as `id` or `uuid` (case-insensitive).
+2. Field names starting with or ending with an identifier token such as `id` or `uuid` (case-insensitive), provided that:
+   - the field type is `string`, `integer`, or `number`; and
+   - the identifier token is explicitly distinguishable from the adjacent characters. Otherwise, the field remains undetermined.
 3. OpenAPI schema format or type explicitly representing an identifier (for example `uuid`).
 4. Continue recursively through every nested object and array.
 5. Export every discovered Identity.
@@ -353,11 +355,13 @@ Instead, Parse constructs a compact analysis payload containing:
 - the Pending Basket;
 - minimal surrounding API context.
 
-AI has only two responsibilities.
+AI has only three responsibilities.
 
-First, discover additional Identities that deterministic rules could not confidently identify.
+First, review Pending Identity candidates and determine whether they should become exported Identities.
 
-Second, connect Pending Relatives to existing Identities.
+Second, discover additional Identities that deterministic discovery intentionally does not infer.
+
+Third, connect Pending Relatives to existing Identities.
 
 
 AI never modifies OpenAPI.
