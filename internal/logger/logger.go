@@ -6,41 +6,25 @@ import (
 	"os"
 )
 
-// Logger defines the logging interface used across Blaster.
-type Logger interface {
-	Debug(msg string, args ...any)
-	Info(msg string, args ...any)
-	Warn(msg string, args ...any)
-	Error(msg string, args ...any)
-
-	// With returns a logger containing additional context.
-	With(args ...any) Logger
-}
-
-// Config controls logger behavior.
 type Config struct {
-	Verbose bool
+	JSON    bool // JSON enables JSON formatting for log output
+	Verbose bool // Verbose enables debug-level logging.
 	Quiet   bool
-	JSON    bool
-	Writer  io.Writer
+	Out     io.Writer // Out specifies the writer to write logs to.
 }
 
-type logger struct {
-	slog *slog.Logger
-}
-
-// New creates a new logger.
-func New(cfg Config) Logger {
-	writer := cfg.Writer
-	if writer == nil {
-		// CLI tools should log to stderr.
-		writer = os.Stderr
-	}
-
+// New creates and configures a new *slog.Logger instance based on the provided Config.
+func New(cfg Config) *slog.Logger {
 	if cfg.Quiet {
-		writer = io.Discard
+		return slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 
+	out := cfg.Out
+	if out == nil {
+		out = os.Stderr
+	}
+
+	// Determine the log level based on the Verbose flag.
 	level := slog.LevelInfo
 	if cfg.Verbose {
 		level = slog.LevelDebug
@@ -50,36 +34,13 @@ func New(cfg Config) Logger {
 		Level: level,
 	}
 
+	// Initialize the appropriate handler based on the JSON flag.
 	var handler slog.Handler
 	if cfg.JSON {
-		handler = slog.NewJSONHandler(writer, opts)
+		handler = slog.NewJSONHandler(out, opts)
 	} else {
-		handler = slog.NewTextHandler(writer, opts)
+		handler = slog.NewTextHandler(out, opts)
 	}
 
-	return &logger{
-		slog: slog.New(handler),
-	}
-}
-
-func (l *logger) Debug(msg string, args ...any) {
-	l.slog.Debug(msg, args...)
-}
-
-func (l *logger) Info(msg string, args ...any) {
-	l.slog.Info(msg, args...)
-}
-
-func (l *logger) Warn(msg string, args ...any) {
-	l.slog.Warn(msg, args...)
-}
-
-func (l *logger) Error(msg string, args ...any) {
-	l.slog.Error(msg, args...)
-}
-
-func (l *logger) With(args ...any) Logger {
-	return &logger{
-		slog: l.slog.With(args...),
-	}
+	return slog.New(handler)
 }
