@@ -2,15 +2,17 @@
 
 ## Purpose
 
-The endpoint domain is the core semantic engine of Blaster. It defines how API metadata is modeled, how data flows between endpoints (Producers and Consumers), and how human-driven decisions (Declarative State) are prioritized over automated algorithms.
+The Endpoint domain is the core semantic engine of Blaster. It defines how API metadata is modeled, how data flows between endpoints (Producers and Consumers), and how human-driven decisions (Declarative State) are prioritized over automated algorithms.
 
-This specification outlines the mental model, definitions, and strict rules used throughout the parsing engine.
+This specification outlines the mental model, definitions, and strict rules used throughout the parsing engine. It is strictly **Protocol-Agnostic**—meaning it manages relationships across REST, gRPC, GraphQL, and event streams seamlessly.
 
 ---
 
 ## Target Nodes
 
-A Target Node is a schema field that satisfies the conditions to participate in data flow mapping.A Target Node is **NOT** restricted to just `id` or `uuid`. It can be **ANY** field that acts as a Producer or Consumer in the API schema (e.g., `url`, `code`, `slug`, `invoiceNumber`).
+A Target Node is a schema field that satisfies the conditions to participate in data flow mapping.
+
+A Target Node is **NOT** restricted to just `id` or `uuid`. It can be **ANY** field that acts as a Producer or Consumer in the API schema (e.g., `url`, `code`, `slug`, `invoiceNumber`, `receipt_handle`).
 
 When a Target Node in a Request (Consumer) is mapped to a Target Node in a Response (Producer), it means the system must use the exact real data originating from the database (e.g., a real response `url`), rather than randomly generating fake data.
 
@@ -22,7 +24,9 @@ When a Target Node in a Request (Consumer) is mapped to a Target Node in a Respo
 
 An Identity represents a resource produced by the API (e.g., `User.id`, `Product.url`, `Order.code`).
 
-An Endpoint **MAY** declare multiple Identities.Each Identity has exactly **ONE** Root.
+An Endpoint **MAY** declare multiple Identities.
+
+Each Identity has exactly **ONE** Root.
 
 ---
 
@@ -89,7 +93,79 @@ A
  └── B
 ```
 
-This keeps automatic discovery deterministic and performant while successfully covering the vast majority of real-world REST APIs. Developers can manually create deeper Branch hierarchies in the YAML files if required.
+This keeps automatic discovery deterministic and performant while successfully covering the vast majority of real-world APIs. Developers can manually create deeper Branch hierarchies in the YAML files if required.
+
+---
+
+## Protocol Agnosticism & Cross-Protocol Mappings
+
+The Endpoint layer is the semantic bridge between API descriptions (OpenAPI, gRPC, GraphQL, Kafka) and Workflow Planning. It never contains execution logic.
+
+### Directory Structure
+
+Every protocol owns its directory namespace:
+
+```text
+endpoint/
+    rest/
+    grpc/
+    graphql/
+    kafka/
+```
+
+### REST Priority
+
+REST is considered the canonical protocol whenever it exists.
+
+- REST Roots cannot reference identities from other protocols.
+- REST Branches can only reference REST Roots.
+- Other protocols may reference REST Roots.
+- Other protocols may create independent Roots when REST does not provide them.
+
+This guarantees stable identity ownership while allowing cross-protocol execution (e.g., A Kafka Event providing a TargetID for a gRPC Request).
+
+---
+
+## Addressing (Absolute vs. Relative)
+
+To provide the best Developer Experience (DX), Blaster YAML files support Relative Addressing for intra-protocol relationships.
+
+### 1. Absolute Addressing (Memory & Cross-Protocol)
+
+Contains the protocol prefix. Required when mapping across different protocols.
+
+**Format:**
+
+```text
+{protocol}:{method}:{path}:{field}
+```
+
+**Example:**
+
+```text
+rest:GET:/users:id
+grpc:UserService/Get:id
+```
+
+### 2. Relative Addressing (Intra-Protocol)
+
+Omits the protocol prefix. The parser automatically infers the protocol based on the file's location.
+
+**Format:**
+
+```text
+{method}:{path}:{field}
+```
+
+**Example:**
+
+```text
+GET:/users:id
+```
+
+(inside a `rest/` directory).
+
+The Parser Engine automatically converts Relative to Absolute addresses during in-memory processing, and strips redundant prefixes when writing back to disk.
 
 ---
 
@@ -99,19 +175,15 @@ This keeps automatic discovery deterministic and performant while successfully c
 
 Pending indicates that no Root Identity could be resolved automatically.
 
-Example:
-
 ```yaml
 invoiceNumber: ?
 ```
 
-Pending Identities or Relatives require manual confirmation by a human developer or resolution via optional AI analysis. They never resolve automatically on their own.
+Pending Target Nodes require manual confirmation by a human developer or resolution via optional AI analysis. They never resolve automatically on their own.
 
 ### Ignore (`ignore`)
 
-Ignored Target Nodes participate in State Reconciliation (to preserve the developer's choice) but are completely excluded from Discovery and Resolution algorithms.
-
-Ignore affects discovery only.
+Ignored Target Nodes participate in State Reconciliation (to preserve the developer's choice) but are completely excluded from Discovery and Resolution algorithms. Ignore affects discovery only.
 
 ---
 
@@ -124,3 +196,4 @@ Ignore affects discovery only.
 | Relative | A Relative resolves downward only (Descendants are compatible, Parents are not). |
 | Pending | Never resolves automatically. Requires manual or AI intervention. |
 | Ignore | Never participates in automatic discovery or resolution. |
+| Cross-Protocol | Identifiers can seamlessly map across REST, gRPC, GraphQL, etc. |

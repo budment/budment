@@ -5,8 +5,9 @@ The `blaster parse` command transforms an API specification into a deterministic
 ```mermaid
 flowchart LR
     A[API Specification] -->|Parse| B((Endpoint Workspace))
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
+
+    style A fill:#2d3748,stroke:#60a5fa,stroke-width:2px,color:#ffffff
+    style B fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#ffffff
 ```
 
 ---
@@ -33,11 +34,11 @@ Loads the API specification and prepares it for deterministic processing.
 
 ## Responsibilities
 
-- Parse the source document (OpenAPI, etc.).
-- Normalize and flatten the hierarchical model.
-- Deterministic Sort: Sort operations by path depth (shallow before deep) and HTTP method (e.g., GET > POST). This guarantees that canonical endpoints are always processed before derived endpoints.
+- Parse the source document via Protocol Adapters (e.g., OpenAPI, gRPC proto).
+- Normalize and flatten the hierarchical structure into a Unified `schema.Model`.
+- Deterministic Sort: Sort operations by path depth (shallow before deep) and method priority. This guarantees that canonical endpoints are always processed before derived endpoints.
 
-**Output:** Normalized OpenAPI Model
+**Output:** Unified Schema Model
 
 ---
 
@@ -48,9 +49,9 @@ Synchronizes existing Endpoint files from the disk with the latest API structure
 ## Responsibilities
 
 - Create missing files.
-- Remove obsolete generated data.
+- Remove obsolete generated data (Garbage Collection).
 - Preserve explicit manual fields (e.g., locked targets, ignore).
-- Preserve manual files.
+- Isolate synchronization by protocol namespace (e.g., OpenAPI Sync only affects the `rest/` directory).
 
 **Output:** Working Endpoint (Locked State)
 
@@ -64,11 +65,11 @@ Examples of discovered entities:
 
 - Identity Candidates (Root / Branch)
 - Relative Candidates
-- Pending (?)
+- Pending (`?`)
 
 ```mermaid
 flowchart TD
-    subgraph OpenAPI Schema
+    subgraph Unified Schema Model
         TN[Target Node]
     end
 
@@ -90,10 +91,10 @@ Resolves the discovered relationships and builds the Canonical Identity Graph. U
 
 ## Responsibilities
 
+- Learn from existing manual mappings (Learned Dictionary) for transitive resolution.
 - Resolve Relatives to Root Identities.
 - Resolve Branch Identities to Root Identities.
-- Validate Identity graph integrity.
-- Detect semantic conflicts.
+- Build the protocol-agnostic directed graph.
 
 ```mermaid
 flowchart LR
@@ -102,8 +103,9 @@ flowchart LR
         Relative[Relative Consumer] -->|Maps to| Root
         Pending[Pending / Unbound] -.->|Fails to map| Basket[AI Pending Basket]
     end
-    style Root fill:#d4edda,stroke:#28a745,stroke-width:2px
-    style Basket fill:#fff3cd,stroke:#ffc107,stroke-width:2px
+
+    style Root fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff
+    style Basket fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff
 ```
 
 ---
@@ -125,17 +127,17 @@ AI **MUST NOT**:
 
 ---
 
-# Phase 6 — Validate
+# Phase 6 — Validate (Gatekeeper)
 
-Validates the complete Endpoint workspace before writing (Gatekeeping). Validation reports problems but does not modify Endpoint files natively (except downgrading invalid manual references safely back to Pending).
+Validates the complete Endpoint workspace before writing. Validation reports problems but does not modify Endpoint files natively (except downgrading invalid manual references safely back to Pending).
 
-Validation includes detecting:
+## Responsibilities
 
-- Duplicate identities.
-- Invalid relatives.
-- Orphan branches.
-- Invalid or dangling references.
-- Consistency checks.
+- Detect duplicate identities.
+- Detect invalid relatives.
+- Detect orphan branches.
+- Intercept invalid or dangling references.
+- Perform cross-protocol consistency checks.
 
 ---
 
@@ -147,8 +149,8 @@ Write **MUST**:
 
 - Preserve user comments natively via AST.
 - Preserve formatting and spacing.
-- Preserve manual fields.
 - Produce deterministic structural ordering.
+- Act as a SerDes Boundary: Automatically strip redundant protocol prefixes for intra-protocol addresses to ensure an optimal Developer Experience (DX).
 
 ---
 
@@ -157,6 +159,7 @@ Write **MUST**:
 | Rule | Description |
 |------|-------------|
 | Deterministic | Same input → same output. |
+| Config-Driven | Behavior is controlled strictly by the project's YAML configuration. |
 | Incremental | Only affected files change. |
 | Non-destructive | Manual data (comments, locked targets) is completely preserved. |
 | Isolated | Each phase has one single responsibility. |
@@ -166,21 +169,22 @@ Write **MUST**:
 
 # Error Handling
 
-Errors terminate the current phase immediately (Fail-Fast). Previous completed phases remain unchanged.
+Errors terminate the current phase immediately (Fail-Fast). Previous completed phases remain unchanged. Syntax errors in existing YAML files trigger a fail-safe mechanism, returning the file untouched to prevent data loss.
 
 ```mermaid
 flowchart LR
     Load --> Sync --> Discover --> Resolve
     Resolve -- "✖ Error" --> Stop((Stop))
 
-    style Stop fill:#dc3545,color:#fff,stroke:#fff
-
     Resolve -.-> Validate -.-> Write
 
-    style Validate stroke-dasharray: 5 5,opacity:0.5
-    style Write stroke-dasharray: 5 5,opacity:0.5
+    style Stop fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff
+    style Validate stroke-dasharray:5 5,opacity:0.6
+    style Write stroke-dasharray:5 5,opacity:0.6
 ```
 
 ---
 
-Every phase produces a deterministic workspace for the next phase. The final Endpoint workspace becomes the canonical semantic representation of the API.
+Every phase produces a deterministic workspace for the next phase. The final Endpoint workspace becomes the canonical, protocol-agnostic semantic representation of the API.
+
+---
