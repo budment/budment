@@ -13,15 +13,21 @@ type Matcher interface {
 
 // JaroWinkler optimally matches API fields by rewarding common prefixes.
 // It returns a score between 0.0 and 1.0
-type JaroWinkler struct{}
+type JaroWinkler struct {
+	BoostThreshold float64
+	PrefixSize     int
+}
 
-func NewJaroWinkler() *JaroWinkler {
-	return &JaroWinkler{}
+func NewJaroWinkler(boostThreshold float64, prefixSize int) *JaroWinkler {
+	return &JaroWinkler{
+		BoostThreshold: boostThreshold,
+		PrefixSize:     prefixSize,
+	}
 }
 
 func (j *JaroWinkler) Calculate(a, b string) float64 {
 	// Boost threshold 0.7, Prefix size 4 - standard for short variable names
-	return smetrics.JaroWinkler(strings.ToLower(a), strings.ToLower(b), 0.7, 4)
+	return smetrics.JaroWinkler(strings.ToLower(a), strings.ToLower(b), j.BoostThreshold, j.PrefixSize)
 }
 
 // TypeCompatibility dictates whether an Identity mapping is logically sound.

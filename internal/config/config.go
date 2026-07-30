@@ -10,18 +10,22 @@ type ParseConfig struct {
 
 // EndpointConfig holds tuning parameters for endpoint generation.
 type EndpointConfig struct {
-	IdentifierTokens []string `yaml:"identifier_tokens"`
-	WrapperNames     []string `yaml:"wrapper_names"`
-	MinimumScore     float64  `yaml:"minimum_score"`
-	SafetyMargin     float64  `yaml:"safety_margin"`
+	IdentifierTokens   []string `yaml:"identifier_tokens"`
+	WrapperNames       []string `yaml:"wrapper_names"`
+	MinimumScore       float64  `yaml:"minimum_score"`
+	SafetyMargin       float64  `yaml:"safety_margin"`
+	JaroBoostThreshold float64  `yaml:"jaro_boost_threshold"`
+	JaroPrefixSize     int      `yaml:"jaro_prefix_size"`
 }
 
 func DefaultEndpointConfig() EndpointConfig {
 	return EndpointConfig{
-		IdentifierTokens: []string{"id", "uuid", "code"},
-		WrapperNames:     []string{"body", "data", "payload"},
-		MinimumScore:     80.0,
-		SafetyMargin:     15.0,
+		IdentifierTokens:   []string{"id", "uuid", "code"},
+		WrapperNames:       []string{"body", "data", "payload"},
+		MinimumScore:       80.0,
+		SafetyMargin:       15.0,
+		JaroBoostThreshold: 0.7,
+		JaroPrefixSize:     4,
 	}
 }
 

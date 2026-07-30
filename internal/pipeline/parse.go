@@ -76,6 +76,10 @@ func RunParse(cfg config.ParseConfig, fs filesystem.FS, log *slog.Logger) error 
 		}
 	}
 
+	log.Info("Validating final endpoint structure and relationships...")
+	validator := endpoint.NewValidator(log)
+	validator.Validate(compiledEndpoints)
+
 	log.Info("Writing compiled endpoints to disk...")
 	writer := endpoint.NewWriter(cfg.EndpointDir, fs)
 	if err := writer.WriteAll(compiledEndpoints); err != nil {

@@ -58,6 +58,10 @@ func (s *Synchronizer) Reconcile(oldEndpoints []*Endpoint, apiModel *openapi.Mod
 	}
 
 	for _, oldEp := range oldEndpoints {
+		if oldEp.Protocol != "rest" {
+			continue
+		}
+
 		lookupKey := strings.ToUpper(oldEp.Method) + ":" + strings.TrimSuffix(oldEp.Path, "/")
 
 		canonicalPath, exists := validOps[lookupKey]
@@ -65,7 +69,7 @@ func (s *Synchronizer) Reconcile(oldEndpoints []*Endpoint, apiModel *openapi.Mod
 			continue
 		}
 
-		epKey := strings.ToUpper(oldEp.Method) + ":" + canonicalPath
+		epKey := "rest:" + strings.ToUpper(oldEp.Method) + ":" + canonicalPath
 
 		for _, rel := range oldEp.Relatives {
 			stateKey := state.makeKey(epKey, rel.NodePath)

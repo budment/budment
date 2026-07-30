@@ -22,6 +22,14 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 
 	root := doc.Content[0]
 
+	formatTarget := func(tid string) string {
+		prefix := ep.Protocol + ":"
+		if ep.Protocol != "" && strings.HasPrefix(tid, prefix) {
+			return strings.TrimPrefix(tid, prefix)
+		}
+		return tid
+	}
+
 	// Convert Endpoint into a fast lookup map for reconciliation
 	expectedPaths := make(map[string]string)
 
@@ -33,7 +41,7 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 		} else if ident.Status == StatusIgnored {
 			val = "ignore"
 		} else if ident.TargetID != "" {
-			val = ident.TargetID // Branch Identity mapping
+			val = formatTarget(ident.TargetID) // Branch Identity mapping
 		}
 		expectedPaths[pathKey] = val
 	}
@@ -43,7 +51,7 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 		val := "?"
 		switch rel.Status {
 		case StatusResolved:
-			val = rel.TargetID
+			val = formatTarget(rel.TargetID)
 		case StatusIgnored:
 			val = "ignore"
 		}

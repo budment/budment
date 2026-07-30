@@ -2,3 +2,5 @@ identifier_tokens: ["id", "uuid", "code"]
 wrapper_names: ["body", "data", "payload"]
 minimum_score: 80.0
 safety_margin: 15.0
+JaroBoostThreshold: 0.7,
+JaroPrefixSize:     4,

@@ -11,6 +11,7 @@ const (
 )
 
 type Endpoint struct {
+	Protocol   string // e.g., "rest", "grpc", "graphql", "kafka"
 	Method     string
 	Path       string
 	Identities []Identity
@@ -55,18 +56,20 @@ type IdentityCandidate struct {
 	TargetResource string // Valid only if Category is CategoryBranch
 
 	// Origin metadata for resolution
-	OriginMethod string
-	OriginPath   string
-	TargetID     string
+	OriginProtocol string
+	OriginMethod   string
+	OriginPath     string
+	TargetID       string
 }
 
 type RelativeCandidate struct {
-	Name         string
-	NodePath     []string
-	Types        []string
-	OriginMethod string
-	OriginPath   string
-	TargetID     string
+	Name           string
+	NodePath       []string
+	Types          []string
+	OriginProtocol string
+	OriginMethod   string
+	OriginPath     string
+	TargetID       string
 }
 
 type DiscoveryResult struct {
@@ -88,6 +91,7 @@ func NewIdentityGraph() *IdentityGraph {
 }
 
 type RootNode struct {
+	Protocol      string
 	Method        string
 	Resource      string
 	SemanticOwner string // Used for smart similarity scoring
@@ -96,11 +100,13 @@ type RootNode struct {
 	Children      []*BranchNode
 }
 
+// GlobalID: protocol:method:resource:name
 func (r *RootNode) GlobalID() string {
-	return fmt.Sprintf("%s:%s:%s", r.Method, r.Resource, r.Name)
+	return fmt.Sprintf("%s:%s:%s:%s", r.Protocol, r.Method, r.Resource, r.Name)
 }
 
 type BranchNode struct {
+	Protocol string
 	Method   string
 	Resource string
 	Name     string

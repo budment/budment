@@ -45,10 +45,16 @@ func (r *Reader) parseFile(fullPath string) *Endpoint {
 	}
 
 	parts := strings.Split(strings.ReplaceAll(relPath, "\\", "/"), "/")
+	if len(parts) < 2 {
+		return nil
+	}
+
+	protocol := parts[0]
 	fileName := parts[len(parts)-1]
+
 	dir := "/"
-	if len(parts) > 1 {
-		dir = "/" + strings.Join(parts[:len(parts)-1], "/")
+	if len(parts) > 2 {
+		dir = "/" + strings.Join(parts[1:len(parts)-1], "/")
 	}
 
 	method := strings.ToUpper(strings.TrimSuffix(fileName, ".yaml"))
@@ -62,9 +68,26 @@ func (r *Reader) parseFile(fullPath string) *Endpoint {
 		return nil
 	}
 
-	ep := &Endpoint{Method: method, Path: dir}
+	ep := &Endpoint{Protocol: protocol, Method: method, Path: dir}
 	r.walkYamlMap(raw, []string{}, ep)
 	return ep
+}
+
+func (r *Reader) normalizeTargetID(raw string, currentProtocol string) string {
+	if raw == "?" || raw == "ignore" || raw == "identity" || raw == "" {
+		return raw
+	}
+
+	parts := strings.SplitN(raw, ":", 2)
+	if len(parts) > 1 {
+		prefix := parts[0]
+		switch prefix {
+		case "rest", "grpc", "graphql", "kafka", "websocket", "webhook":
+			return raw
+		}
+	}
+
+	return currentProtocol + ":" + raw
 }
 
 func (r *Reader) walkYamlMap(node map[string]any, currentPath []string, ep *Endpoint) {
@@ -82,7 +105,7 @@ func (r *Reader) walkYamlMap(node map[string]any, currentPath []string, ep *Endp
 					ident.Status = StatusIgnored
 				} else if v != "identity" { // Contains a Branch mapping
 					ident.Status = StatusResolved
-					ident.TargetID = v
+					ident.TargetID = r.normalizeTargetID(v, ep.Protocol)
 				} else {
 					ident.Status = StatusResolved
 				}
@@ -96,7 +119,7 @@ func (r *Reader) walkYamlMap(node map[string]any, currentPath []string, ep *Endp
 					rel.Status = StatusIgnored
 				default:
 					rel.Status = StatusResolved
-					rel.TargetID = v
+					rel.TargetID = r.normalizeTargetID(v, ep.Protocol)
 				}
 				ep.Relatives = append(ep.Relatives, rel)
 			}
@@ -123,7 +146,8 @@ func (w *Writer) WriteAll(endpoints []*Endpoint) error {
 	for _, ep := range endpoints {
 		cleanPath := strings.TrimPrefix(ep.Path, "/")
 		methodFile := strings.ToLower(ep.Method) + ".yaml"
-		dirPath := w.fs.Join(w.BaseDir, cleanPath)
+
+		dirPath := w.fs.Join(w.BaseDir, ep.Protocol, cleanPath)
 		fullPath := w.fs.Join(dirPath, methodFile)
 
 		activePaths[fullPath] = true

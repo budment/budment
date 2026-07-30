@@ -8,18 +8,20 @@ import (
 )
 
 type Resolver struct {
-	MinimumScore float64
-	SafetyMargin float64
-	matcher      similarity.Matcher
-	learnedMap   map[string]string
+	MinimumScore     float64
+	SafetyMargin     float64
+	matcher          similarity.Matcher
+	learnedMap       map[string]string
+	identifierTokens []string
 }
 
 func NewResolver(cfg config.EndpointConfig) *Resolver {
 	return &Resolver{
-		MinimumScore: cfg.MinimumScore,
-		SafetyMargin: cfg.SafetyMargin,
-		matcher:      similarity.NewJaroWinkler(),
-		learnedMap:   make(map[string]string),
+		MinimumScore:     cfg.MinimumScore,
+		SafetyMargin:     cfg.SafetyMargin,
+		matcher:          similarity.NewJaroWinkler(cfg.JaroBoostThreshold, cfg.JaroPrefixSize),
+		learnedMap:       make(map[string]string),
+		identifierTokens: cfg.IdentifierTokens,
 	}
 }
 
@@ -41,10 +43,11 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 	for epKey, ident := range state.LockedIdentities {
 		parts := strings.Split(epKey, "|")
 		if len(parts) == 2 {
-			epRouteParts := strings.Split(parts[0], ":")
-			if len(epRouteParts) == 2 {
-				method := epRouteParts[0]
-				path := epRouteParts[1]
+			epRouteParts := strings.SplitN(parts[0], ":", 3)
+			if len(epRouteParts) == 3 {
+				protocol := epRouteParts[0]
+				method := epRouteParts[1]
+				path := epRouteParts[2]
 
 				if ident.Status == StatusResolved && ident.TargetID == "" {
 					owner := r.extractSemanticToken(ident.Name)
@@ -53,6 +56,7 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 					}
 
 					node := &RootNode{
+						Protocol:      protocol,
 						Method:        method,
 						Resource:      path,
 						SemanticOwner: owner,
@@ -60,7 +64,7 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 						Types:         ident.Types,
 					}
 
-					key := strings.ToLower(node.Resource + ":" + node.Name)
+					key := strings.ToLower(node.Protocol + ":" + node.Resource + ":" + node.Name)
 					canonicalMap[key] = node
 					graph.Roots[node.GlobalID()] = node
 				}
@@ -70,13 +74,14 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 
 	for i := range result.RootCandidates {
 		root := &result.RootCandidates[i]
-		key := strings.ToLower(root.OriginPath + ":" + root.Name)
+		key := strings.ToLower(root.OriginProtocol + ":" + root.OriginPath + ":" + root.Name)
 
 		if existing, exists := canonicalMap[key]; exists {
 			root.Category = CategoryBranch
 			root.TargetID = existing.GlobalID()
 		} else {
 			node := &RootNode{
+				Protocol:      root.OriginProtocol,
 				Method:        root.OriginMethod,
 				Resource:      root.OriginPath,
 				SemanticOwner: extractResource(root.OriginPath),
@@ -191,8 +196,7 @@ func (r *Resolver) extractSemanticToken(originalName string) string {
 	lower := strings.ToLower(originalName)
 
 	base := lower
-	tokens := []string{"id", "uuid"}
-	for _, t := range tokens {
+	for _, t := range r.identifierTokens {
 		if strings.HasSuffix(base, t) && len(base) > len(t) {
 			base = base[:len(base)-len(t)]
 			break

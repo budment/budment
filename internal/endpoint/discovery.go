@@ -62,11 +62,12 @@ func (d *Discoverer) scanRequest(op openapi.Operation, result *DiscoveryResult) 
 		if d.isIdentifier(param.Name) || d.hasIdentifierType(param.Schema) {
 			path := []string{strings.ToLower(param.In), param.Name}
 			cand := RelativeCandidate{
-				Name:         param.Name,
-				NodePath:     path,
-				Types:        extractSchemaTypes(param.Schema),
-				OriginMethod: op.Method,
-				OriginPath:   op.Path,
+				Name:           param.Name,
+				NodePath:       path,
+				Types:          extractSchemaTypes(param.Schema),
+				OriginProtocol: "rest",
+				OriginMethod:   op.Method,
+				OriginPath:     op.Path,
 			}
 			result.RelativeCandidates = append(result.RelativeCandidates, cand)
 		}
@@ -78,11 +79,12 @@ func (d *Discoverer) scanRequest(op openapi.Operation, result *DiscoveryResult) 
 				if d.isIdentifier(name) || d.hasIdentifierType(schema) {
 					semanticName := d.getRelativeSemanticName(name, path)
 					cand := RelativeCandidate{
-						Name:         semanticName,
-						NodePath:     path,
-						Types:        extractSchemaTypes(schema),
-						OriginMethod: op.Method,
-						OriginPath:   op.Path,
+						Name:           semanticName,
+						NodePath:       path,
+						Types:          extractSchemaTypes(schema),
+						OriginProtocol: "rest",
+						OriginMethod:   op.Method,
+						OriginPath:     op.Path,
 					}
 					result.RelativeCandidates = append(result.RelativeCandidates, cand)
 				}
@@ -93,14 +95,24 @@ func (d *Discoverer) scanRequest(op openapi.Operation, result *DiscoveryResult) 
 
 func (d *Discoverer) getRelativeSemanticName(name string, path []string) string {
 	lowerName := strings.ToLower(name)
-	if lowerName != "id" && lowerName != "uuid" {
+
+	isIdentifier := false
+	for _, token := range d.identifierTokens {
+		if lowerName == token {
+			isIdentifier = true
+			break
+		}
+	}
+
+	if !isIdentifier {
 		return name
 	}
+
 	if len(path) > 1 {
 		for i := len(path) - 2; i >= 0; i-- {
 			parent := path[i]
 			if !d.wrapperNames[strings.ToLower(parent)] {
-				return parent + "Id"
+				return parent + strings.Title(name)
 			}
 		}
 	}
@@ -109,12 +121,13 @@ func (d *Discoverer) getRelativeSemanticName(name string, path []string) string 
 
 func (d *Discoverer) categorizeIdentity(name string, path []string, types []string, ctx SemanticContext, op openapi.Operation, result *DiscoveryResult) {
 	candidate := IdentityCandidate{
-		Name:         name,
-		NodePath:     path,
-		Types:        types,
-		Context:      ctx,
-		OriginMethod: op.Method,
-		OriginPath:   op.Path,
+		Name:           name,
+		NodePath:       path,
+		Types:          types,
+		Context:        ctx,
+		OriginProtocol: "rest",
+		OriginMethod:   op.Method,
+		OriginPath:     op.Path,
 	}
 
 	if ctx.IsCurrent {
@@ -168,10 +181,7 @@ func (d *Discoverer) resolveSemanticContext(name string, path []string, currentR
 
 	ctx := SemanticContext{ResourceName: owner, IsCurrent: false}
 
-	cleanOwner := strings.TrimSuffix(strings.ToLower(owner), "s")
-	cleanCurrent := strings.TrimSuffix(strings.ToLower(currentResource), "s")
-
-	if cleanOwner == cleanCurrent {
+	if strings.EqualFold(owner, currentResource) {
 		ctx.IsCurrent = true
 	}
 

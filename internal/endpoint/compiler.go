@@ -62,16 +62,17 @@ func (c *Compiler) buildEndpoints(apiModel *openapi.Model, result DiscoveryResul
 	epMap := make(map[string]*Endpoint)
 
 	for _, op := range apiModel.Operations {
-		epKey := op.Method + ":" + op.Path
+		epKey := "rest:" + op.Method + ":" + op.Path
 		epMap[epKey] = &Endpoint{
-			Method: op.Method,
-			Path:   op.Path,
+			Protocol: "rest",
+			Method:   op.Method,
+			Path:     op.Path,
 		}
 		endpoints = append(endpoints, epMap[epKey])
 	}
 
 	slotIdentity := func(cand IdentityCandidate) {
-		epKey := cand.OriginMethod + ":" + cand.OriginPath
+		epKey := cand.OriginProtocol + ":" + cand.OriginMethod + ":" + cand.OriginPath
 		if ep, exists := epMap[epKey]; exists {
 			ident := Identity{
 				Name:     cand.Name,
@@ -114,7 +115,7 @@ func (c *Compiler) buildEndpoints(apiModel *openapi.Model, result DiscoveryResul
 	}
 
 	for _, cand := range result.RelativeCandidates {
-		epKey := cand.OriginMethod + ":" + cand.OriginPath
+		epKey := cand.OriginProtocol + ":" + cand.OriginMethod + ":" + cand.OriginPath
 		if ep, exists := epMap[epKey]; exists {
 			rel := Relative{
 				Name:     cand.Name,
