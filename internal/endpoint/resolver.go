@@ -43,31 +43,39 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 	for epKey, ident := range state.LockedIdentities {
 		parts := strings.Split(epKey, "|")
 		if len(parts) == 2 {
-			epRouteParts := strings.SplitN(parts[0], ":", 3)
-			if len(epRouteParts) == 3 {
-				protocol := epRouteParts[0]
-				method := epRouteParts[1]
-				path := epRouteParts[2]
+			epRouteParts := strings.Split(parts[0], ":")
 
-				if ident.Status == StatusResolved && ident.TargetID == "" {
-					owner := r.extractSemanticToken(ident.Name)
-					if owner == ident.Name {
-						owner = extractResource(path)
-					}
+			var protocol, method, path string
+			if len(epRouteParts) >= 3 {
+				protocol = epRouteParts[0]
+				method = epRouteParts[1]
+				path = strings.Join(epRouteParts[2:], ":")
+			} else if len(epRouteParts) == 2 {
+				protocol = epRouteParts[0]
+				method = "EVENT"
+				path = epRouteParts[1]
+			} else {
+				continue
+			}
 
-					node := &RootNode{
-						Protocol:      protocol,
-						Method:        method,
-						Resource:      path,
-						SemanticOwner: owner,
-						Name:          ident.Name,
-						Types:         ident.Types,
-					}
-
-					key := strings.ToLower(node.Protocol + ":" + node.Resource + ":" + node.Name)
-					canonicalMap[key] = node
-					graph.Roots[node.GlobalID()] = node
+			if ident.Status == StatusResolved && ident.TargetID == "" {
+				owner := r.extractSemanticToken(ident.Name)
+				if owner == ident.Name {
+					owner = extractResource(path)
 				}
+
+				node := &RootNode{
+					Protocol:      protocol,
+					Method:        method,
+					Resource:      path,
+					SemanticOwner: owner,
+					Name:          ident.Name,
+					Types:         ident.Types,
+				}
+
+				key := strings.ToLower(node.Protocol + ":" + node.Resource + ":" + node.Name)
+				canonicalMap[key] = node
+				graph.Roots[node.GlobalID()] = node
 			}
 		}
 	}
@@ -249,8 +257,10 @@ func (r *Resolver) isTypeCompatible(consumerTypes, producerTypes []string) bool 
 	return false
 }
 
+// extractResource uses zero-allocation scanning to find the last clean resource name
 func extractResource(path string) string {
 	cleanPath := strings.Trim(path, "/")
+
 	for {
 		if cleanPath == "" {
 			return "root"

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/openapi"
+	"github.com/vunas/blaster/internal/schema"
 )
 
 type Discoverer struct {
@@ -24,32 +24,36 @@ func NewDiscoverer(cfg config.EndpointConfig) *Discoverer {
 	}
 }
 
-func (d *Discoverer) Discover(apiModel *openapi.Model, state *WorkingState) DiscoveryResult {
+func (d *Discoverer) Discover(actions []schema.Action, state *WorkingState) DiscoveryResult {
 	result := DiscoveryResult{}
 
-	for _, op := range apiModel.Operations {
-		currentResource := extractResource(op.Path)
-		d.scanRequest(op, &result)
+	for _, action := range actions {
+		currentResource := extractResource(action.Resource)
 
-		for _, resp := range op.Responses {
-			if !strings.HasPrefix(resp.StatusCode, "2") {
-				continue
-			}
-
-			for _, header := range resp.Headers {
-				if d.isIdentifier(header.Name) {
-					ctx := SemanticContext{ResourceName: currentResource, IsCurrent: true}
-					d.categorizeIdentity(header.Name, []string{"header", header.Name}, extractSchemaTypes(header.Schema), ctx, op, &result)
+		// Scan Inputs for Relatives
+		for _, field := range action.Inputs {
+			if d.isIdentifier(field.Name) || d.hasIdentifierType(field.Format) {
+				semanticName := d.getRelativeSemanticName(field.Name, field.Path)
+				cand := RelativeCandidate{
+					Name:           semanticName,
+					NodePath:       field.Path,
+					Types:          field.Types,
+					OriginProtocol: action.Protocol,
+					OriginMethod:   action.Method,
+					OriginPath:     action.Resource,
 				}
+				result.RelativeCandidates = append(result.RelativeCandidates, cand)
 			}
+		}
 
-			for _, content := range resp.Contents {
-				d.walkSchema(content.Schema, []string{"body"}, func(name string, path []string, schema *openapi.Schema) {
-					if d.isIdentifier(name) || d.hasIdentifierType(schema) {
-						semanticContext := d.resolveSemanticContext(name, path, currentResource)
-						d.categorizeIdentity(name, path, extractSchemaTypes(schema), semanticContext, op, &result)
-					}
-				})
+		// Scan Outputs for Identities
+		for _, field := range action.Outputs {
+			if d.isIdentifier(field.Name) || d.hasIdentifierType(field.Format) {
+				ctx := d.resolveSemanticContext(field.Name, field.Path, currentResource)
+				if field.IsHeader {
+					ctx.IsCurrent = true // Headers natively belong to the resource payload
+				}
+				d.categorizeIdentity(field.Name, field.Path, field.Types, ctx, action, &result)
 			}
 		}
 	}
@@ -57,45 +61,8 @@ func (d *Discoverer) Discover(apiModel *openapi.Model, state *WorkingState) Disc
 	return result
 }
 
-func (d *Discoverer) scanRequest(op openapi.Operation, result *DiscoveryResult) {
-	for _, param := range op.Parameters {
-		if d.isIdentifier(param.Name) || d.hasIdentifierType(param.Schema) {
-			path := []string{strings.ToLower(param.In), param.Name}
-			cand := RelativeCandidate{
-				Name:           param.Name,
-				NodePath:       path,
-				Types:          extractSchemaTypes(param.Schema),
-				OriginProtocol: "rest",
-				OriginMethod:   op.Method,
-				OriginPath:     op.Path,
-			}
-			result.RelativeCandidates = append(result.RelativeCandidates, cand)
-		}
-	}
-
-	if op.RequestBody != nil {
-		for _, content := range op.RequestBody.Contents {
-			d.walkSchema(content.Schema, []string{"body"}, func(name string, path []string, schema *openapi.Schema) {
-				if d.isIdentifier(name) || d.hasIdentifierType(schema) {
-					semanticName := d.getRelativeSemanticName(name, path)
-					cand := RelativeCandidate{
-						Name:           semanticName,
-						NodePath:       path,
-						Types:          extractSchemaTypes(schema),
-						OriginProtocol: "rest",
-						OriginMethod:   op.Method,
-						OriginPath:     op.Path,
-					}
-					result.RelativeCandidates = append(result.RelativeCandidates, cand)
-				}
-			})
-		}
-	}
-}
-
 func (d *Discoverer) getRelativeSemanticName(name string, path []string) string {
 	lowerName := strings.ToLower(name)
-
 	isIdentifier := false
 	for _, token := range d.identifierTokens {
 		if lowerName == token {
@@ -119,15 +86,15 @@ func (d *Discoverer) getRelativeSemanticName(name string, path []string) string 
 	return name
 }
 
-func (d *Discoverer) categorizeIdentity(name string, path []string, types []string, ctx SemanticContext, op openapi.Operation, result *DiscoveryResult) {
+func (d *Discoverer) categorizeIdentity(name string, path []string, types []string, ctx SemanticContext, action schema.Action, result *DiscoveryResult) {
 	candidate := IdentityCandidate{
 		Name:           name,
 		NodePath:       path,
 		Types:          types,
 		Context:        ctx,
-		OriginProtocol: "rest",
-		OriginMethod:   op.Method,
-		OriginPath:     op.Path,
+		OriginProtocol: action.Protocol,
+		OriginMethod:   action.Method,
+		OriginPath:     action.Resource,
 	}
 
 	if ctx.IsCurrent {
@@ -151,12 +118,10 @@ func (d *Discoverer) resolveSemanticContext(name string, path []string, currentR
 		if strings.HasSuffix(lowerName, token) && len(name) > len(token) {
 			tokenLen := len(token)
 			charBefore := name[len(name)-tokenLen-1]
-
 			if charBefore == '_' || charBefore == '-' || charBefore == '.' {
 				owner = name[:len(name)-tokenLen-1]
 				break
 			}
-
 			firstCharOfSuffix := name[len(name)-tokenLen]
 			if firstCharOfSuffix >= 'A' && firstCharOfSuffix <= 'Z' {
 				owner = name[:len(name)-tokenLen]
@@ -180,57 +145,22 @@ func (d *Discoverer) resolveSemanticContext(name string, path []string, currentR
 	}
 
 	ctx := SemanticContext{ResourceName: owner, IsCurrent: false}
-
 	if strings.EqualFold(owner, currentResource) {
 		ctx.IsCurrent = true
 	}
-
 	return ctx
-}
-
-func (d *Discoverer) walkSchema(schema *openapi.Schema, currentPath []string, callback func(string, []string, *openapi.Schema)) {
-	if schema == nil {
-		return
-	}
-	visiting := make(map[*openapi.Schema]bool)
-	d.doWalkSchema(schema, currentPath, visiting, callback)
-}
-
-func (d *Discoverer) doWalkSchema(schema *openapi.Schema, currentPath []string, visiting map[*openapi.Schema]bool, callback func(string, []string, *openapi.Schema)) {
-	if schema == nil || visiting[schema] {
-		return
-	}
-	visiting[schema] = true
-	defer func() { visiting[schema] = false }()
-
-	if schema.Items != nil {
-		d.doWalkSchema(schema.Items, currentPath, visiting, callback)
-	}
-
-	for _, prop := range schema.Properties {
-		newPath := append(append([]string(nil), currentPath...), prop.Name)
-		callback(prop.Name, newPath, prop.Schema)
-		d.doWalkSchema(prop.Schema, newPath, visiting, callback)
-	}
-
-	for _, s := range append(append(schema.AllOf, schema.AnyOf...), schema.OneOf...) {
-		d.doWalkSchema(s, currentPath, visiting, callback)
-	}
 }
 
 func (d *Discoverer) isIdentifier(name string) bool {
 	if len(name) == 0 {
 		return false
 	}
-
 	lowerName := strings.ToLower(name)
 	for _, token := range d.identifierTokens {
 		tokenLen := len(token)
-
 		if lowerName == token {
 			return true
 		}
-
 		if strings.HasSuffix(lowerName, token) && len(name) > tokenLen {
 			charBefore := name[len(name)-tokenLen-1]
 			if charBefore == '_' || charBefore == '-' || charBefore == '.' {
@@ -242,7 +172,6 @@ func (d *Discoverer) isIdentifier(name string) bool {
 				return true
 			}
 		}
-
 		if strings.HasPrefix(lowerName, token) && len(name) > tokenLen {
 			charAfter := name[tokenLen]
 			if charAfter == '_' || charAfter == '-' || charAfter == '.' {
@@ -257,17 +186,7 @@ func (d *Discoverer) isIdentifier(name string) bool {
 	return false
 }
 
-func (d *Discoverer) hasIdentifierType(schema *openapi.Schema) bool {
-	if schema == nil {
-		return false
-	}
-	f := strings.ToLower(schema.Format)
+func (d *Discoverer) hasIdentifierType(format string) bool {
+	f := strings.ToLower(format)
 	return strings.Contains(f, "id") || strings.Contains(f, "uid")
-}
-
-func extractSchemaTypes(schema *openapi.Schema) []string {
-	if schema == nil || len(schema.Types) == 0 {
-		return nil
-	}
-	return schema.Types
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/vunas/blaster/internal/schema"
 )
 
 // Parser converts raw OpenAPI 3.x bytes into the package internal model.
@@ -19,7 +20,7 @@ func NewParser() *Parser {
 	return &Parser{}
 }
 
-func (p *Parser) Parse(input []byte) (*Model, error) {
+func (p *Parser) Parse(input []byte) ([]schema.Action, error) {
 	if len(strings.TrimSpace(string(input))) == 0 {
 		return nil, ErrEmptyInput
 	}
@@ -33,7 +34,88 @@ func (p *Parser) Parse(input []byte) (*Model, error) {
 		return nil, fmt.Errorf("validate OpenAPI document: %w", err)
 	}
 
-	return p.buildModel(doc), nil
+	model := p.buildModel(doc)
+	return p.toActions(model), nil
+}
+
+// toActions transforms the HTTP-specific model into the Protocol-Agnostic Schema Actions.
+func (p *Parser) toActions(model *Model) []schema.Action {
+	var actions []schema.Action
+
+	for _, op := range model.Operations {
+		action := schema.Action{
+			Protocol:   "rest",
+			Method:     strings.ToUpper(op.Method),
+			Identifier: fmt.Sprintf("rest:%s:%s", strings.ToUpper(op.Method), op.Path),
+			Resource:   op.Path,
+			Depth:      strings.Count(op.Path, "/"),
+			Priority:   methodPriority(op.Method),
+		}
+
+		// Flatten Inputs (Parameters & Request Body)
+		for _, param := range op.Parameters {
+			p.flattenSchema(param.Schema, []string{strings.ToLower(param.In), param.Name}, false, &action.Inputs)
+		}
+		if op.RequestBody != nil {
+			for _, content := range op.RequestBody.Contents {
+				p.flattenSchema(content.Schema, []string{"body"}, false, &action.Inputs)
+			}
+		}
+
+		// Flatten Outputs (Only 2xx Success Responses)
+		for _, resp := range op.Responses {
+			if !strings.HasPrefix(resp.StatusCode, "2") {
+				continue
+			}
+			for _, header := range resp.Headers {
+				p.flattenSchema(header.Schema, []string{"header", header.Name}, true, &action.Outputs)
+			}
+			for _, content := range resp.Contents {
+				p.flattenSchema(content.Schema, []string{"body"}, false, &action.Outputs)
+			}
+		}
+
+		actions = append(actions, action)
+	}
+	return actions
+}
+
+func (p *Parser) flattenSchema(s *Schema, currentPath []string, isHeader bool, target *[]schema.Field) {
+	if s == nil {
+		return
+	}
+	visiting := make(map[*Schema]bool)
+	p.doFlattenSchema(s, currentPath, isHeader, target, visiting)
+}
+
+func (p *Parser) doFlattenSchema(s *Schema, currentPath []string, isHeader bool, target *[]schema.Field, visiting map[*Schema]bool) {
+	if s == nil || visiting[s] {
+		return
+	}
+	visiting[s] = true
+	defer func() { visiting[s] = false }()
+
+	// Capture field if it's a defined node (e.g., skips ["body"] root wrapper)
+	if len(currentPath) >= 2 {
+		*target = append(*target, schema.Field{
+			Name:     currentPath[len(currentPath)-1],
+			Path:     append([]string(nil), currentPath...),
+			Types:    s.Types,
+			Format:   s.Format,
+			IsHeader: isHeader,
+		})
+	}
+
+	if s.Items != nil {
+		p.doFlattenSchema(s.Items, currentPath, isHeader, target, visiting)
+	}
+	for _, prop := range s.Properties {
+		newPath := append(append([]string(nil), currentPath...), prop.Name)
+		p.doFlattenSchema(prop.Schema, newPath, isHeader, target, visiting)
+	}
+	for _, sub := range append(append(s.AllOf, s.AnyOf...), s.OneOf...) {
+		p.doFlattenSchema(sub, currentPath, isHeader, target, visiting)
+	}
 }
 
 func (p *Parser) loadDocument(input []byte) (*openapi3.T, error) {
@@ -136,9 +218,9 @@ func toOperations(paths *openapi3.Paths) []Operation {
 
 func methodPriority(method string) int {
 	switch strings.ToLower(method) {
-	case "get":
-		return 1
 	case "post":
+		return 1 // POST acts as canonical Root
+	case "get":
 		return 2
 	case "put":
 		return 3

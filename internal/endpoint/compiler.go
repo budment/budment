@@ -3,9 +3,8 @@ package endpoint
 import (
 	"log/slog"
 	"sort"
-	"strings"
 
-	"github.com/vunas/blaster/internal/openapi"
+	"github.com/vunas/blaster/internal/schema"
 )
 
 type Compiler struct {
@@ -19,33 +18,28 @@ func NewCompiler(s *Synchronizer, d *Discoverer, r *Resolver, log *slog.Logger) 
 	return &Compiler{sync: s, discoverer: d, resolver: r, log: log}
 }
 
-func (c *Compiler) Compile(apiModel *openapi.Model, oldEndpoints []*Endpoint) []*Endpoint {
-	c.log.Info("Ensuring deterministic state (Phase 0: Sort & Flatten)")
+func (c *Compiler) Compile(actions []schema.Action, oldEndpoints []*Endpoint) []*Endpoint {
+	c.log.Info("Ensuring deterministic state (Phase 0: Protocol-Agnostic Sort)")
 
 	// Sort operations to ensure deterministic discovery order
-	sort.SliceStable(apiModel.Operations, func(i, j int) bool {
-		depthI := strings.Count(apiModel.Operations[i].Path, "/")
-		depthJ := strings.Count(apiModel.Operations[j].Path, "/")
-
-		// Sort by depth (shallow paths first)
-		if depthI != depthJ {
-			return depthI < depthJ
+	sort.SliceStable(actions, func(i, j int) bool {
+		if actions[i].Depth != actions[j].Depth {
+			return actions[i].Depth < actions[j].Depth
 		}
-
-		// Sort alphabetically if depths are equal
-		if apiModel.Operations[i].Path != apiModel.Operations[j].Path {
-			return apiModel.Operations[i].Path < apiModel.Operations[j].Path
+		if actions[i].Resource != actions[j].Resource {
+			return actions[i].Resource < actions[j].Resource
 		}
-
-		// Sort by HTTP method as a final tie-breaker (e.g., GET before POST)
-		return apiModel.Operations[i].Method < apiModel.Operations[j].Method
+		if actions[i].Priority != actions[j].Priority {
+			return actions[i].Priority < actions[j].Priority
+		}
+		return actions[i].Identifier < actions[j].Identifier
 	})
 
 	c.log.Info("Starting Phase 1: Endpoint Reconciliation")
-	workingState := c.sync.Reconcile(oldEndpoints, apiModel)
+	workingState := c.sync.Reconcile(oldEndpoints, actions)
 
-	c.log.Info("Starting Phase 2: Candidate Discovery (Root, Branch, Relative)")
-	discoveryResult := c.discoverer.Discover(apiModel, workingState)
+	c.log.Info("Starting Phase 2: Candidate Discovery")
+	discoveryResult := c.discoverer.Discover(actions, workingState)
 
 	c.log.Info("Starting Phase 3: Build Graph and Resolve Branches")
 	graph := c.resolver.BuildGraphAndResolveBranches(&discoveryResult, workingState)
@@ -54,21 +48,20 @@ func (c *Compiler) Compile(apiModel *openapi.Model, oldEndpoints []*Endpoint) []
 	c.resolver.ResolveRelatives(&discoveryResult, graph)
 
 	c.log.Info("Phase 5: Building Final Endpoints for Output")
-	return c.buildEndpoints(apiModel, discoveryResult, workingState, graph)
+	return c.buildEndpoints(actions, discoveryResult, workingState, graph)
 }
 
-func (c *Compiler) buildEndpoints(apiModel *openapi.Model, result DiscoveryResult, state *WorkingState, graph *IdentityGraph) []*Endpoint {
+func (c *Compiler) buildEndpoints(actions []schema.Action, result DiscoveryResult, state *WorkingState, graph *IdentityGraph) []*Endpoint {
 	var endpoints []*Endpoint
 	epMap := make(map[string]*Endpoint)
 
-	for _, op := range apiModel.Operations {
-		epKey := "rest:" + op.Method + ":" + op.Path
-		epMap[epKey] = &Endpoint{
-			Protocol: "rest",
-			Method:   op.Method,
-			Path:     op.Path,
+	for _, action := range actions {
+		epMap[action.Identifier] = &Endpoint{
+			Protocol: action.Protocol,
+			Method:   action.Method,
+			Path:     action.Resource,
 		}
-		endpoints = append(endpoints, epMap[epKey])
+		endpoints = append(endpoints, epMap[action.Identifier])
 	}
 
 	slotIdentity := func(cand IdentityCandidate) {
