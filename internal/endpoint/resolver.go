@@ -212,27 +212,31 @@ func (r *Resolver) extractSemanticToken(originalName string) string {
 	}
 	base = strings.TrimRight(base, "_-.")
 
+	baseRunes := []rune(base)
+	bLen := len(baseRunes)
+
 	lastSep := -1
-	for i := len(base) - 1; i >= 0; i-- {
-		if base[i] == '_' || base[i] == '-' || base[i] == '.' {
+	for i := bLen - 1; i >= 0; i-- {
+		if baseRunes[i] == '_' || baseRunes[i] == '-' || baseRunes[i] == '.' {
 			lastSep = i
 			break
 		}
 	}
 
-	if lastSep >= 0 && lastSep < len(base)-1 {
-		return base[lastSep+1:]
+	if lastSep >= 0 && lastSep < bLen-1 {
+		return string(baseRunes[lastSep+1:])
 	}
 
 	lastUpper := -1
-	for i := 1; i < len(base); i++ {
-		if originalName[i] >= 'A' && originalName[i] <= 'Z' {
+	origRunes := []rune(originalName)
+	for i := 1; i < len(origRunes); i++ {
+		if origRunes[i] >= 'A' && origRunes[i] <= 'Z' {
 			lastUpper = i
 		}
 	}
 
-	if lastUpper > 0 && lastUpper < len(base)-1 {
-		return strings.ToLower(base[lastUpper:])
+	if lastUpper > 0 && lastUpper < bLen-1 {
+		return strings.ToLower(string(baseRunes[lastUpper:]))
 	}
 
 	return base

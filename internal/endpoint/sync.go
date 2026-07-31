@@ -23,7 +23,7 @@ func NewWorkingState() *WorkingState {
 }
 
 func (w *WorkingState) makeKey(epKey string, nodePath []string) string {
-	return epKey + "|" + strings.Join(nodePath, ".")
+	return epKey + "|" + strings.Join(nodePath, "\x00")
 }
 
 func (w *WorkingState) IsIgnored(epKey string, nodePath []string) bool {

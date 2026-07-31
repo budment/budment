@@ -110,21 +110,26 @@ func (d *Discoverer) categorizeIdentity(name string, path []string, types []stri
 func (d *Discoverer) resolveSemanticContext(name string, path []string, currentResource string) SemanticContext {
 	owner := ""
 	lowerName := strings.ToLower(name)
+	nameRunes := []rune(name)
+	nLen := len(nameRunes)
 
 	for _, token := range d.identifierTokens {
 		if lowerName == token {
 			break
 		}
-		if strings.HasSuffix(lowerName, token) && len(name) > len(token) {
-			tokenLen := len(token)
-			charBefore := name[len(name)-tokenLen-1]
+
+		tRunes := []rune(token)
+		tLen := len(tRunes)
+
+		if strings.HasSuffix(lowerName, token) && nLen > tLen {
+			charBefore := nameRunes[nLen-tLen-1]
 			if charBefore == '_' || charBefore == '-' || charBefore == '.' {
-				owner = name[:len(name)-tokenLen-1]
+				owner = string(nameRunes[:nLen-tLen-1])
 				break
 			}
-			firstCharOfSuffix := name[len(name)-tokenLen]
+			firstCharOfSuffix := nameRunes[nLen-tLen]
 			if firstCharOfSuffix >= 'A' && firstCharOfSuffix <= 'Z' {
-				owner = name[:len(name)-tokenLen]
+				owner = string(nameRunes[:nLen-tLen])
 				break
 			}
 		}
@@ -156,28 +161,35 @@ func (d *Discoverer) isIdentifier(name string) bool {
 		return false
 	}
 	lowerName := strings.ToLower(name)
+	nameRunes := []rune(name)
+	nLen := len(nameRunes)
+
 	for _, token := range d.identifierTokens {
-		tokenLen := len(token)
+		tRunes := []rune(token)
+		tLen := len(tRunes)
+
 		if lowerName == token {
 			return true
 		}
-		if strings.HasSuffix(lowerName, token) && len(name) > tokenLen {
-			charBefore := name[len(name)-tokenLen-1]
+
+		if strings.HasSuffix(lowerName, token) && nLen > tLen {
+			charBefore := nameRunes[nLen-tLen-1]
 			if charBefore == '_' || charBefore == '-' || charBefore == '.' {
 				return true
 			}
-			firstCharOfSuffix := name[len(name)-tokenLen]
+			firstCharOfSuffix := nameRunes[nLen-tLen]
 			isCamelCase := (firstCharOfSuffix >= 'A' && firstCharOfSuffix <= 'Z') && (charBefore >= 'a' && charBefore <= 'z')
 			if isCamelCase {
 				return true
 			}
 		}
-		if strings.HasPrefix(lowerName, token) && len(name) > tokenLen {
-			charAfter := name[tokenLen]
+
+		if strings.HasPrefix(lowerName, token) && nLen > tLen {
+			charAfter := nameRunes[tLen]
 			if charAfter == '_' || charAfter == '-' || charAfter == '.' {
 				return true
 			}
-			isCamelCase := (charAfter >= 'A' && charAfter <= 'Z') && (name[tokenLen-1] >= 'a' && name[tokenLen-1] <= 'z')
+			isCamelCase := (charAfter >= 'A' && charAfter <= 'Z') && (nameRunes[tLen-1] >= 'a' && nameRunes[tLen-1] <= 'z')
 			if isCamelCase {
 				return true
 			}
