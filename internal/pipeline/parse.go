@@ -9,6 +9,7 @@ import (
 	"github.com/vunas/blaster/internal/endpoint"
 	"github.com/vunas/blaster/internal/filesystem"
 	"github.com/vunas/blaster/internal/openapi"
+	"github.com/vunas/blaster/internal/schema"
 )
 
 type StageError struct {
@@ -41,8 +42,8 @@ func RunParse(cfg config.ParseConfig, fs filesystem.FS, log *slog.Logger) error 
 		return newStageErr("read_spec_file", err)
 	}
 
-	apiParser := openapi.NewParser()
-	apiModel, err := apiParser.Parse(rawBytes)
+	var parser schema.ParserPlugin = openapi.NewParser()
+	actions, err := parser.Parse(rawBytes)
 	if err != nil {
 		return newStageErr("openapi_parse", err)
 	}
@@ -59,7 +60,7 @@ func RunParse(cfg config.ParseConfig, fs filesystem.FS, log *slog.Logger) error 
 		log,
 	)
 
-	compiledEndpoints := compiler.Compile(apiModel, oldEndpoints)
+	compiledEndpoints := compiler.Compile(actions, oldEndpoints)
 
 	pendingCount := countPending(compiledEndpoints)
 	if pendingCount > 0 {

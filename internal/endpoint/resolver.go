@@ -43,31 +43,39 @@ func (r *Resolver) BuildGraphAndResolveBranches(result *DiscoveryResult, state *
 	for epKey, ident := range state.LockedIdentities {
 		parts := strings.Split(epKey, "|")
 		if len(parts) == 2 {
-			epRouteParts := strings.SplitN(parts[0], ":", 3)
-			if len(epRouteParts) == 3 {
-				protocol := epRouteParts[0]
-				method := epRouteParts[1]
-				path := epRouteParts[2]
+			epRouteParts := strings.Split(parts[0], ":")
 
-				if ident.Status == StatusResolved && ident.TargetID == "" {
-					owner := r.extractSemanticToken(ident.Name)
-					if owner == ident.Name {
-						owner = extractResource(path)
-					}
+			var protocol, method, path string
+			if len(epRouteParts) >= 3 {
+				protocol = epRouteParts[0]
+				method = epRouteParts[1]
+				path = strings.Join(epRouteParts[2:], ":")
+			} else if len(epRouteParts) == 2 {
+				protocol = epRouteParts[0]
+				method = "EVENT"
+				path = epRouteParts[1]
+			} else {
+				continue
+			}
 
-					node := &RootNode{
-						Protocol:      protocol,
-						Method:        method,
-						Resource:      path,
-						SemanticOwner: owner,
-						Name:          ident.Name,
-						Types:         ident.Types,
-					}
-
-					key := strings.ToLower(node.Protocol + ":" + node.Resource + ":" + node.Name)
-					canonicalMap[key] = node
-					graph.Roots[node.GlobalID()] = node
+			if ident.Status == StatusResolved && ident.TargetID == "" {
+				owner := r.extractSemanticToken(ident.Name)
+				if owner == ident.Name {
+					owner = extractResource(path)
 				}
+
+				node := &RootNode{
+					Protocol:      protocol,
+					Method:        method,
+					Resource:      path,
+					SemanticOwner: owner,
+					Name:          ident.Name,
+					Types:         ident.Types,
+				}
+
+				key := strings.ToLower(node.Protocol + ":" + node.Resource + ":" + node.Name)
+				canonicalMap[key] = node
+				graph.Roots[node.GlobalID()] = node
 			}
 		}
 	}
@@ -204,27 +212,31 @@ func (r *Resolver) extractSemanticToken(originalName string) string {
 	}
 	base = strings.TrimRight(base, "_-.")
 
+	baseRunes := []rune(base)
+	bLen := len(baseRunes)
+
 	lastSep := -1
-	for i := len(base) - 1; i >= 0; i-- {
-		if base[i] == '_' || base[i] == '-' || base[i] == '.' {
+	for i := bLen - 1; i >= 0; i-- {
+		if baseRunes[i] == '_' || baseRunes[i] == '-' || baseRunes[i] == '.' {
 			lastSep = i
 			break
 		}
 	}
 
-	if lastSep >= 0 && lastSep < len(base)-1 {
-		return base[lastSep+1:]
+	if lastSep >= 0 && lastSep < bLen-1 {
+		return string(baseRunes[lastSep+1:])
 	}
 
 	lastUpper := -1
-	for i := 1; i < len(base); i++ {
-		if originalName[i] >= 'A' && originalName[i] <= 'Z' {
+	origRunes := []rune(originalName)
+	for i := 1; i < len(origRunes); i++ {
+		if origRunes[i] >= 'A' && origRunes[i] <= 'Z' {
 			lastUpper = i
 		}
 	}
 
-	if lastUpper > 0 && lastUpper < len(base)-1 {
-		return strings.ToLower(base[lastUpper:])
+	if lastUpper > 0 && lastUpper < bLen-1 {
+		return strings.ToLower(string(baseRunes[lastUpper:]))
 	}
 
 	return base
@@ -249,8 +261,10 @@ func (r *Resolver) isTypeCompatible(consumerTypes, producerTypes []string) bool 
 	return false
 }
 
+// extractResource uses zero-allocation scanning to find the last clean resource name
 func extractResource(path string) string {
 	cleanPath := strings.Trim(path, "/")
+
 	for {
 		if cleanPath == "" {
 			return "root"

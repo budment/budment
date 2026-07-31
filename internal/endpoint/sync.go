@@ -3,7 +3,7 @@ package endpoint
 import (
 	"strings"
 
-	"github.com/vunas/blaster/internal/openapi"
+	"github.com/vunas/blaster/internal/schema"
 )
 
 // WorkingState holds configurations explicitly set by the developer or resolved in the past.
@@ -23,7 +23,7 @@ func NewWorkingState() *WorkingState {
 }
 
 func (w *WorkingState) makeKey(epKey string, nodePath []string) string {
-	return epKey + "|" + strings.Join(nodePath, ".")
+	return epKey + "|" + strings.Join(nodePath, "\x00")
 }
 
 func (w *WorkingState) IsIgnored(epKey string, nodePath []string) bool {
@@ -48,28 +48,21 @@ func NewSynchronizer() *Synchronizer {
 }
 
 // Reconcile extracts strictly valid, user-modified states from existing YAMLs.
-func (s *Synchronizer) Reconcile(oldEndpoints []*Endpoint, apiModel *openapi.Model) *WorkingState {
+func (s *Synchronizer) Reconcile(oldEndpoints []*Endpoint, actions []schema.Action) *WorkingState {
 	state := NewWorkingState()
 
-	validOps := make(map[string]string, len(apiModel.Operations))
-	for _, op := range apiModel.Operations {
-		lookupKey := strings.ToUpper(op.Method) + ":" + strings.TrimSuffix(op.Path, "/")
-		validOps[lookupKey] = op.Path
+	validOps := make(map[string]bool, len(actions))
+	for _, action := range actions {
+		validOps[action.Identifier] = true
 	}
 
 	for _, oldEp := range oldEndpoints {
-		if oldEp.Protocol != "rest" {
+		// Reconstruct the Global Key (e.g. rest:GET:/users)
+		epKey := oldEp.Protocol + ":" + strings.ToUpper(oldEp.Method) + ":" + strings.TrimSuffix(oldEp.Path, "/")
+
+		if !validOps[epKey] {
 			continue
 		}
-
-		lookupKey := strings.ToUpper(oldEp.Method) + ":" + strings.TrimSuffix(oldEp.Path, "/")
-
-		canonicalPath, exists := validOps[lookupKey]
-		if !exists {
-			continue
-		}
-
-		epKey := "rest:" + strings.ToUpper(oldEp.Method) + ":" + canonicalPath
 
 		for _, rel := range oldEp.Relatives {
 			stateKey := state.makeKey(epKey, rel.NodePath)

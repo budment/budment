@@ -13,7 +13,10 @@ import (
 func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 	var doc yaml.Node
 	if len(existingData) > 0 {
-		if err := yaml.Unmarshal(existingData, &doc); err != nil || len(doc.Content) == 0 {
+		if err := yaml.Unmarshal(existingData, &doc); err != nil {
+			return existingData // Fail-safe for syntax errors
+		}
+		if len(doc.Content) == 0 {
 			doc = createEmptyAST()
 		}
 	} else {
@@ -34,7 +37,7 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 	expectedPaths := make(map[string]string)
 
 	for _, ident := range ep.Identities {
-		pathKey := "response." + strings.Join(ident.NodePath, ".")
+		pathKey := "response\x00" + strings.Join(ident.NodePath, "\x00")
 		val := "identity" // Canonical Root default
 		if ident.Status == StatusPending {
 			val = "?"
@@ -47,7 +50,7 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 	}
 
 	for _, rel := range ep.Relatives {
-		pathKey := strings.Join(rel.NodePath, ".")
+		pathKey := strings.Join(rel.NodePath, "\x00")
 		val := "?"
 		switch rel.Status {
 		case StatusResolved:
@@ -95,13 +98,13 @@ func reconcileAST(node *yaml.Node, currentPath string, expectedPaths map[string]
 
 		fullPath := localKey
 		if currentPath != "" {
-			fullPath = currentPath + "." + localKey
+			fullPath = currentPath + "\x00" + localKey
 		}
 		existingLocalKeys[localKey] = true
 
 		keep := false
 		for expPath := range expectedPaths {
-			if expPath == fullPath || strings.HasPrefix(expPath, fullPath+".") {
+			if expPath == fullPath || strings.HasPrefix(expPath, fullPath+"\x00") {
 				keep = true
 				break
 			}
@@ -125,12 +128,12 @@ func reconcileAST(node *yaml.Node, currentPath string, expectedPaths map[string]
 	// Find and generate missing nodes
 	missingLocalKeys := make(map[string]bool)
 	for expPath := range expectedPaths {
-		if currentPath == "" || strings.HasPrefix(expPath, currentPath+".") {
+		if currentPath == "" || strings.HasPrefix(expPath, currentPath+"\x00") {
 			relPath := expPath
 			if currentPath != "" {
-				relPath = strings.TrimPrefix(expPath, currentPath+".")
+				relPath = strings.TrimPrefix(expPath, currentPath+"\x00")
 			}
-			localKey := strings.SplitN(relPath, ".", 2)[0]
+			localKey := strings.SplitN(relPath, "\x00", 2)[0]
 			if !existingLocalKeys[localKey] {
 				missingLocalKeys[localKey] = true
 			}
@@ -147,7 +150,7 @@ func reconcileAST(node *yaml.Node, currentPath string, expectedPaths map[string]
 	for _, localKey := range sortedMissing {
 		fullPath := localKey
 		if currentPath != "" {
-			fullPath = currentPath + "." + localKey
+			fullPath = currentPath + "\x00" + localKey
 		}
 
 		if expectedVal, isLeaf := expectedPaths[fullPath]; isLeaf {
