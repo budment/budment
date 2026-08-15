@@ -1,0 +1,17 @@
+{
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "emitDecoratorMetadata": false,
+    "experimentalDecorators": false,
+    "useDefineForClassFields": false,
+
+    "noEmit": false
+  }
+}

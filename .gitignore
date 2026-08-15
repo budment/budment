@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+dist/
+.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Golang
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work.sum
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
