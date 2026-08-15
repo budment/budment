@@ -218,9 +218,9 @@ func toOperations(paths *openapi3.Paths) []Operation {
 
 func methodPriority(method string) int {
 	switch strings.ToLower(method) {
-	case "post":
-		return 1 // POST acts as canonical Root
 	case "get":
+		return 1
+	case "post":
 		return 2
 	case "put":
 		return 3
