@@ -1,0 +1,8 @@
+{
+  "name": "@blaster/proto",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "generate": "buf generate"
+  }
+}

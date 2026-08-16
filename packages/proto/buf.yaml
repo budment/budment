@@ -1,0 +1,11 @@
+version: v2
+
+name: buf.build/blaster/blaster
+lint:
+  use:
+    - DEFAULT
+  except:
+    - PACKAGE_VERSION_SUFFIX
+breaking:
+  use:
+    - FILE

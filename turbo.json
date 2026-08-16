@@ -1,6 +1,5 @@
 {
   "globalDependencies": [".env.*local", "proto/*.proto", "buf.gen.yaml"],
-  "ui": "tui",
   "pipeline": {
     "generate": {
       "outputs": ["apps/core/internal/pb/", "packages/sdk/src/pb/"],

@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package blaster.ast.v1;
+
+option go_package = "github.com/vunas/blaster/core/pkg/pb/ast";
+
+message Scenario {
+  string         name      = 1;
+  Pipeline       setup     = 2;
+  Pipeline       execution = 3;
+  ScenarioConfig config    = 4;
+}
+
+message ScenarioConfig {
+  int32  vus          = 1;
+  string duration     = 2;
+  string max_duration = 3;
+  int32  order        = 4;
+}
+
+message Pipeline {
+  repeated Node steps = 1;
+}
+
+message Node {
+  string id = 1;
+
+  oneof type {
+    HttpNode http = 2;
+    BranchNode branch = 3;
+    MatchNode  match  = 4;
+    LoopNode   loop   = 5;
+    PollNode   poll   = 6;
+    ScriptNode script = 7;
+  }
+}
+
+message HttpNode {
+  string method         = 1;
+  string url            = 2;
+  string before_hook_id = 3;
+  string after_hook_id  = 4;
+}
+
+message BranchNode {
+  string   condition_hook_id = 1;
+  Pipeline true_path         = 2;
+  Pipeline false_path        = 3;
+}
+
+message MatchNode {
+  string                condition_hook_id = 1;
+  map<string, Pipeline> cases             = 2;
+  Pipeline              default_path      = 3;
+}
+
+message LoopNode {
+  oneof config {
+    int32       count         = 1;
+    RangeConfig range         = 2;
+    string      array_hook_id = 3;
+  }
+
+  Pipeline logic = 4;
+
+  message RangeConfig {
+    int32 from = 1;
+    int32 to   = 2;
+  }
+}
+
+message PollNode {
+  string     condition_hook_id = 1;
+  Pipeline   logic             = 2;
+  PollPolicy policy            = 3;
+}
+
+message PollPolicy {
+  string interval     = 1;
+  string timeout      = 2;
+  int32  max_attempts = 3;
+}
+
+message ScriptNode {
+  string hook_id = 1;
+}
