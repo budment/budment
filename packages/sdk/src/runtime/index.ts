@@ -1,4 +1,4 @@
-export { Context, SetupContext, SharedState, SyncOptions, RetryOptions } from './core/context';
+export { Context, SharedState, SyncOptions, RetryOptions } from './core/context';
 export { HttpRequest } from './core/request';
 export { HttpResponse } from './core/response';
 

@@ -16,10 +16,43 @@ export interface Scenario {
 }
 
 export interface ScenarioConfig {
+  /** Number of concurrent virtual users. Defaults to 1. */
   vus: number;
+  /** Scenario run duration. Stops when reached. */
   duration: string;
+  /** Hard upper limit for the entire scenario. */
   maxDuration: string;
+  /** Number of iterations to execute. Defaults to 1. */
+  iterations: number;
+  /** Exact time to start the scenario. Takes precedence over order. */
+  startAt: string;
+  /** Execution order. Scenarios with the same order start together. */
   order: number;
+  /** Optional load stages for gradually changing VUs. */
+  stages: Stage[];
+  /** Pass/fail conditions for scenario metrics. */
+  thresholds: { [key: string]: string };
+  /** Custom metadata attached to the scenario. */
+  tags: { [key: string]: string };
+  /** Disable TLS certificate verification. */
+  insecureSkipTlsVerify: boolean;
+}
+
+export interface ScenarioConfig_ThresholdsEntry {
+  key: string;
+  value: string;
+}
+
+export interface ScenarioConfig_TagsEntry {
+  key: string;
+  value: string;
+}
+
+export interface Stage {
+  /** Duration of this stage. */
+  duration: string;
+  /** Target number of virtual users. */
+  target: number;
 }
 
 export interface Pipeline {

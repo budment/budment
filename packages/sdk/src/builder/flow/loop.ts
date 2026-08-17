@@ -8,7 +8,7 @@ export type LoopRangeConfig = { from: number; to: number };
 export type ArrayHookCondition = (ctx: Context) => any[];
 
 /**
- * Root builder for scenario definition and configuration.
+ * Loop builder supporting fixed counts, numeric ranges, or dynamic array getters.
  */
 export class LoopBuilder implements BuilderNode {
     private uniqueId: string;

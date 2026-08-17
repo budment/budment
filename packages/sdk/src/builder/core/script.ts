@@ -1,4 +1,4 @@
-import { Node } from "../../pb/ast_schema";
+import { Node, ScriptNode } from "../../pb/ast_schema";
 import { HookRegistry } from "./registry";
 import { BuilderNode } from '../core/types';
 
@@ -19,7 +19,7 @@ export class ScriptBuilder implements BuilderNode {
             id: this.uniqueId,
             script: {
                 hookId: this.hookId,
-            },
+            } as ScriptNode
         };
     }
 }

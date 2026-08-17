@@ -25,7 +25,7 @@ export class ScenarioBuilder {
         return this;
     }
 
-    configure(config: ScenarioConfig): this {
+    use(config: ScenarioConfig): this {
         this.execConfig = config;
         return this;
     }

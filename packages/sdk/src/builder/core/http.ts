@@ -30,7 +30,7 @@ export class HttpBuilder implements BuilderNode {
     build(): Node {
         return {
             id: this.uniqueId,
-            http: this.ast
+            http: this.ast as HttpNode
         };
     }
 }

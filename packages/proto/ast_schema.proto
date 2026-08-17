@@ -12,10 +12,33 @@ message Scenario {
 }
 
 message ScenarioConfig {
-  int32  vus          = 1;
-  string duration     = 2;
+  // Number of concurrent virtual users. Defaults to 1.
+  int32 vus = 1;
+  // Scenario run duration. Stops when reached.
+  string duration = 2;
+  // Hard upper limit for the entire scenario.
   string max_duration = 3;
-  int32  order        = 4;
+  // Number of iterations to execute. Defaults to 1.
+  int32 iterations = 4;
+  // Exact time to start the scenario. Takes precedence over order.
+  string start_at = 5;
+  // Execution order. Scenarios with the same order start together.
+  int32 order = 6;
+  // Optional load stages for gradually changing VUs.
+  repeated Stage stages = 7;
+  // Pass/fail conditions for scenario metrics.
+  map<string, string> thresholds = 8;
+  // Custom metadata attached to the scenario.
+  map<string, string> tags = 9;
+  // Disable TLS certificate verification.
+  bool insecure_skip_tls_verify = 10;
+}
+
+message Stage {
+  // Duration of this stage.
+  string duration = 1;
+  // Target number of virtual users.
+  int32 target = 2;
 }
 
 message Pipeline {
