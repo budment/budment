@@ -87,27 +87,15 @@ export interface Context {
      */
     sync(name: string, options?: SyncOptions): never;
 
-    // --- Shared Memory ---
-    /** Memory shared across all workers within the current Scenario. */
-    readonly local: SharedState;
-    /** Memory shared globally across all Scenarios in the Engine. */
-    readonly global: SharedState;
-}
-
-/**
- * Scenario setup hook context.
- * Exclusively available during the scenario .setup() phase.
- */
-export interface SetupContext {
     /** Distributes array elements to workers using Round-Robin. */
     distribute(key: string, items: any[], fallback?: any): void;
 
     /** Distributes array elements to workers randomly. */
     distributeRandom(key: string, items: any[]): void;
 
-    /** Read/Write access to Scenario-scoped shared memory. */
+    // --- Shared Memory ---
+    /** Memory shared across all workers within the current Scenario. */
     readonly local: SharedState;
-
-    /** Read/Write access to Engine-scoped shared memory. */
+    /** Memory shared globally across all Scenarios in the Engine. */
     readonly global: SharedState;
 }
