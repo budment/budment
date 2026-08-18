@@ -36,6 +36,7 @@ export interface ScenarioConfig {
   tags: { [key: string]: string };
   /** Disable TLS certificate verification. */
   insecureSkipTlsVerify: boolean;
+  autoPlumb: boolean;
 }
 
 export interface ScenarioConfig_ThresholdsEntry {

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/endpoint"
+	"github.com/vunas/blaster/internal/discovery/endpoint"
 )
 
 type Resolver struct {

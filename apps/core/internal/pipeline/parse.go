@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/vunas/blaster/internal/ai"
 	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/endpoint"
+	"github.com/vunas/blaster/internal/discovery/ai"
+	"github.com/vunas/blaster/internal/discovery/endpoint"
+	"github.com/vunas/blaster/internal/discovery/openapi"
 	"github.com/vunas/blaster/internal/filesystem"
-	"github.com/vunas/blaster/internal/openapi"
 	"github.com/vunas/blaster/internal/schema"
 )
 

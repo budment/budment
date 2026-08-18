@@ -32,6 +32,8 @@ message ScenarioConfig {
   map<string, string> tags = 9;
   // Disable TLS certificate verification.
   bool insecure_skip_tls_verify = 10;
+
+  bool auto_plumb = 11;
 }
 
 message Stage {

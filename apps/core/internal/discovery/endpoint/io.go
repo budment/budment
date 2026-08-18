@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/vunas/blaster/internal/filesystem"
+	filesystem "github.com/vunas/blaster/internal/filesystem"
 )
 
 // Reader loads existing Endpoint configurations from storage.
