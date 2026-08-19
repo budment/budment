@@ -15,15 +15,28 @@ type EngineConfig struct {
 }
 
 type Stage struct {
-	Duration string   `yaml:"duration"`
-	Targets  []string `yaml:"targets"`
+	Duration string `yaml:"duration"`
+	Target   int    `yaml:"target"`
 }
 
-// ============================================================
-// PARSE CONFIG
-// ============================================================
+type OverrideConfig struct {
+	VUs             *int
+	Duration        *string
+	MaxDuration     *string
+	Iterations      *int
+	StartAt         *string
+	Order           *int
+	InsecureSkipTLS *bool
+	AutoPlumb       *bool
+}
 
-// ParseConfig contains configuration specific to `blaster parse`.
+type ASTOverrides struct {
+	OverrideConfig
+	Stages     []Stage
+	Thresholds map[string]string
+	Tags       map[string]string
+}
+
 type ParseConfig struct {
 	SpecFile       string
 	EndpointDir    string
@@ -31,11 +44,6 @@ type ParseConfig struct {
 	EndpointConfig EndpointConfig
 }
 
-// ============================================================
-// ENDPOINT CONFIG
-// ============================================================
-
-// EndpointConfig controls Endpoint discovery and resolution.
 type EndpointConfig struct {
 	IdentifierTokens   []string `yaml:"identifier_tokens"`
 	WrapperNames       []string `yaml:"wrapper_names"`
@@ -45,8 +53,7 @@ type EndpointConfig struct {
 	JaroPrefixSize     int      `yaml:"jaro_prefix_size"`
 }
 
-// DefaultEndpointConfig returns deterministic defaults for
-// automatic Endpoint discovery.
+// DefaultEndpointConfig returns deterministic defaults for automatic Endpoint discovery.
 func DefaultEndpointConfig() EndpointConfig {
 	return EndpointConfig{
 		IdentifierTokens:   []string{"id", "uuid", "code"},
@@ -73,6 +80,7 @@ func DefaultEngineConfig() EngineConfig {
 	return EngineConfig{
 		VUs:        1,
 		Iterations: 1,
+		Order:      0,
 		AutoPlumb:  false,
 	}
 }
