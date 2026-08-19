@@ -18,12 +18,12 @@ export class HttpBuilder implements BuilderNode {
     }
 
     before(callback: (ctx: Context, req: HttpRequest) => void): this {
-        this.ast.beforeHookId = HookRegistry.register(callback, 'before');
+        this.ast.beforeHookId = HookRegistry.register(this.uniqueId, 'before', callback);
         return this;
     }
 
     after(callback: (ctx: Context, req: HttpRequest, res: HttpResponse) => void): this {
-        this.ast.afterHookId = HookRegistry.register(callback, 'after');
+        this.ast.afterHookId = HookRegistry.register(this.uniqueId, 'after', callback);
         return this;
     }
 

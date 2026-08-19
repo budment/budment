@@ -17,17 +17,23 @@ export interface Scenario {
 
 export interface ScenarioConfig {
   /** Number of concurrent virtual users. Defaults to 1. */
-  vus: number;
+  vus?:
+    | number
+    | undefined;
   /** Scenario run duration. Stops when reached. */
   duration: string;
   /** Hard upper limit for the entire scenario. */
   maxDuration: string;
   /** Number of iterations to execute. Defaults to 1. */
-  iterations: number;
+  iterations?:
+    | number
+    | undefined;
   /** Exact time to start the scenario. Takes precedence over order. */
   startAt: string;
   /** Execution order. Scenarios with the same order start together. */
-  order: number;
+  order?:
+    | number
+    | undefined;
   /** Optional load stages for gradually changing VUs. */
   stages: Stage[];
   /** Pass/fail conditions for scenario metrics. */
@@ -35,8 +41,8 @@ export interface ScenarioConfig {
   /** Custom metadata attached to the scenario. */
   tags: { [key: string]: string };
   /** Disable TLS certificate verification. */
-  insecureSkipTlsVerify: boolean;
-  autoPlumb: boolean;
+  insecureSkipTlsVerify?: boolean | undefined;
+  autoPlumb?: boolean | undefined;
 }
 
 export interface ScenarioConfig_ThresholdsEntry {
