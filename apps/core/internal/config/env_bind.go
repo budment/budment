@@ -5,8 +5,8 @@ import (
 	"strconv"
 )
 
-func ParseEnv() OverrideConfig {
-	var env OverrideConfig
+func ParseEnv() EnvConfig {
+	var env EnvConfig
 
 	if vusStr := os.Getenv("BLASTER_VUS"); vusStr != "" {
 		if vus, err := strconv.Atoi(vusStr); err == nil {

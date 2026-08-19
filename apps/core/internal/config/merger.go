@@ -1,7 +1,7 @@
 package config
 
 // Default -> YAML -> AST (Script) -> ENV -> CLI
-func MergeEngineConfig(yamlConfig EngineConfig, astConfig ASTOverrides, env OverrideConfig, cli OverrideConfig) EngineConfig {
+func MergeEngineConfig(yamlConfig EngineConfig, astConfig ASTConfig, env EnvConfig, cli CLIConfig) EngineConfig {
 	// default config
 	final := yamlConfig
 	mergeASTOverrides(&final, astConfig)
@@ -11,7 +11,7 @@ func MergeEngineConfig(yamlConfig EngineConfig, astConfig ASTOverrides, env Over
 	return final
 }
 
-func mergeASTOverrides(dst *EngineConfig, src ASTOverrides) {
+func mergeASTOverrides(dst *EngineConfig, src ASTConfig) {
 	if src.VUs != nil {
 		dst.VUs = *src.VUs
 	}
@@ -47,7 +47,7 @@ func mergeASTOverrides(dst *EngineConfig, src ASTOverrides) {
 	}
 }
 
-func applyEnvOverrides(dst *EngineConfig, env OverrideConfig) {
+func applyEnvOverrides(dst *EngineConfig, env EnvConfig) {
 	if env.VUs != nil {
 		dst.VUs = *env.VUs
 	}
@@ -71,7 +71,7 @@ func applyEnvOverrides(dst *EngineConfig, env OverrideConfig) {
 	}
 }
 
-func applyCLIOverrides(dst *EngineConfig, cli OverrideConfig) {
+func applyCLIOverrides(dst *EngineConfig, cli CLIConfig) {
 	if cli.VUs != nil {
 		dst.VUs = *cli.VUs
 	}

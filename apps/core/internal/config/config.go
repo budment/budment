@@ -19,7 +19,7 @@ type Stage struct {
 	Target   int    `yaml:"target"`
 }
 
-type OverrideConfig struct {
+type ConfigVariable struct {
 	VUs             *int
 	Duration        *string
 	MaxDuration     *string
@@ -30,11 +30,19 @@ type OverrideConfig struct {
 	AutoPlumb       *bool
 }
 
-type ASTOverrides struct {
-	OverrideConfig
+type ASTConfig struct {
+	ConfigVariable
 	Stages     []Stage
 	Thresholds map[string]string
 	Tags       map[string]string
+}
+
+type EnvConfig struct {
+	ConfigVariable
+}
+
+type CLIConfig struct {
+	ConfigVariable
 }
 
 type ParseConfig struct {
