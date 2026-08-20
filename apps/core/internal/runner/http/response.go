@@ -29,3 +29,7 @@ func (r *Response) Get(path string) gjson.Result {
 	result := gjson.GetBytes(r.rawBody, path)
 	return result
 }
+
+func (r *Response) GetBody() string {
+	return string(r.rawBody)
+}

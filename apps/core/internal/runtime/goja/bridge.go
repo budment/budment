@@ -81,17 +81,31 @@ func (b *JSBridge) Delete(key string) {
 
 func (b *JSBridge) Log(msg string) {
 	if b.Sink != nil {
-		b.Sink.Log(b.VuId, "INFO", msg)
+		hookCtx := ""
+		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
+			hookCtx = "[Hook: " + b.CurrentHook + "] "
+		}
+		b.Sink.Log(b.VuId, "INFO", hookCtx+msg)
 	}
 }
+
 func (b *JSBridge) Warn(msg string) {
 	if b.Sink != nil {
-		b.Sink.Log(b.VuId, "WARN", msg)
+		hookCtx := ""
+		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
+			hookCtx = "[Hook: " + b.CurrentHook + "] "
+		}
+		b.Sink.Log(b.VuId, "WARN", hookCtx+msg)
 	}
 }
+
 func (b *JSBridge) Error(msg string) {
 	if b.Sink != nil {
-		b.Sink.Log(b.VuId, "ERROR", msg)
+		hookCtx := ""
+		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
+			hookCtx = "[Hook: " + b.CurrentHook + "] "
+		}
+		b.Sink.Log(b.VuId, "ERROR", hookCtx+msg)
 	}
 }
 

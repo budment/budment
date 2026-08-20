@@ -92,38 +92,63 @@ func (r *Reader) normalizeTargetID(raw string, currentProtocol string) string {
 
 func (r *Reader) walkYamlMap(node map[string]any, currentPath []string, ep *Endpoint) {
 	for key, val := range node {
+		if len(currentPath) == 0 && (key == "protocol" || key == "method" || key == "path") {
+			continue
+		}
+
 		newPath := append(append([]string(nil), currentPath...), key)
+
 		switch v := val.(type) {
 		case map[string]any:
-			r.walkYamlMap(v, newPath, ep)
-		case string:
-			if len(newPath) > 0 && newPath[0] == "response" {
-				ident := Identity{NodePath: newPath[1:], Name: key}
-				if v == "?" {
-					ident.Status = StatusPending
-				} else if v == "ignore" {
-					ident.Status = StatusIgnored
-				} else if v != "identity" { // Contains a Branch mapping
-					ident.Status = StatusResolved
-					ident.TargetID = r.normalizeTargetID(v, ep.Protocol)
-				} else {
-					ident.Status = StatusResolved
-				}
-				ep.Identities = append(ep.Identities, ident)
+			if mapTarget, ok := v["map"].(string); ok {
+				r.processLeafNode(newPath, mapTarget, ep)
 			} else {
-				rel := Relative{NodePath: newPath, Name: key}
-				switch v {
-				case "?":
-					rel.Status = StatusPending
-				case "ignore":
-					rel.Status = StatusIgnored
-				default:
-					rel.Status = StatusResolved
-					rel.TargetID = r.normalizeTargetID(v, ep.Protocol)
-				}
-				ep.Relatives = append(ep.Relatives, rel)
+				r.walkYamlMap(v, newPath, ep)
 			}
+		case string:
+			r.processLeafNode(newPath, v, ep)
 		}
+	}
+}
+
+// Determines whether the node is an Identity (Producer) or Relative (Consumer).
+func (r *Reader) processLeafNode(path []string, value string, ep *Endpoint) {
+	if len(path) < 2 {
+		return
+	}
+
+	rootCategory := path[0]
+	name := path[len(path)-1]
+	nodePath := path[1:]
+
+	switch rootCategory {
+	case "responses":
+		ident := Identity{NodePath: nodePath, Name: name}
+		if value == "?" {
+			ident.Status = StatusPending
+		} else if value == "ignore" {
+			ident.Status = StatusIgnored
+		} else if value != "identity" { // Contains a Branch mapping
+			ident.Status = StatusResolved
+			ident.TargetID = r.normalizeTargetID(value, ep.Protocol)
+		} else {
+			//'identity' -> Root
+			ident.Status = StatusResolved
+		}
+		ep.Identities = append(ep.Identities, ident)
+
+	case "request":
+		rel := Relative{NodePath: nodePath, Name: name}
+		switch value {
+		case "?":
+			rel.Status = StatusPending
+		case "ignore":
+			rel.Status = StatusIgnored
+		default:
+			rel.Status = StatusResolved
+			rel.TargetID = r.normalizeTargetID(value, ep.Protocol)
+		}
+		ep.Relatives = append(ep.Relatives, rel)
 	}
 }
 
@@ -222,3 +247,5 @@ func (w *Writer) removeEmptyDirs(dir string) bool {
 	}
 	return isEmpty
 }
+
+// (w *Writer) WriteAll, writeEndpoint, cleanOrphans...

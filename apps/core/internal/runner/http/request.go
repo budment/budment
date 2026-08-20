@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
+	"github.com/tidwall/gjson"
 )
 
 // Request is the "req" object passed to the .before(ctx, req) hook.
@@ -59,4 +60,14 @@ func (r *Request) SetQuery(key, val string) {
 	sb.WriteString("=")
 	sb.WriteString(val)
 	r.URL = sb.String()
+}
+
+func (r *Request) Get(path string) gjson.Result {
+	if len(r.Body) == 0 {
+		return gjson.Result{}
+	}
+	return gjson.GetBytes(r.Body, path)
+}
+func (r *Request) GetBody() string {
+	return string(r.Body)
 }

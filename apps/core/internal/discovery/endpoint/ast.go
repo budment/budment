@@ -50,7 +50,7 @@ func MarshalAST(ep *Endpoint, existingData []byte) []byte {
 	}
 
 	for _, rel := range ep.Relatives {
-		pathKey := strings.Join(rel.NodePath, "\x00")
+		pathKey := "request\x00" + strings.Join(rel.NodePath, "\x00")
 		val := "?"
 		switch rel.Status {
 		case StatusResolved:
@@ -204,17 +204,17 @@ func sortAST(node *yaml.Node) {
 
 func sortWeight(key string) int {
 	switch key {
-	case "response":
+	case "protocol":
 		return 1
-	case "path":
+	case "method":
 		return 2
-	case "query":
+	case "path":
 		return 3
-	case "header":
+	case "request":
 		return 4
-	case "cookie":
+	case "responses":
 		return 5
-	case "body":
+	case "path_param", "query", "header", "cookie", "body":
 		return 6
 	default:
 		return 100

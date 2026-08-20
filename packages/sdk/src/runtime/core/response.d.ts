@@ -7,10 +7,10 @@ export interface HttpResponse {
      * Returns 0 for network or physical layer failures.
      */
     readonly status: number;
-    
+
     /** Read-only map of response headers. */
     readonly headers: Record<string, string>;
-    
+
     /** Infrastructure or network error message, if any. */
     readonly error?: string;
 
@@ -22,7 +22,6 @@ export interface HttpResponse {
 
     /**
      * Extracts values from a JSON response using GJSON path syntax.
-     * Operates directly on native byte slices (Zero-Allocation).
      * 
      * @param path GJSON path (e.g., "data.user.id" or "items.#.name")
      */
