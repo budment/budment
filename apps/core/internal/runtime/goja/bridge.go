@@ -22,6 +22,22 @@ type MetricsSink interface {
 	Log(workerID int, level string, msg string)
 	RecordEvent(workerID int, eventType string, reason string)
 	Tag(workerID int, key string, value string)
+	RecordCustom(workerID int, mType string, name string, val float64)
+}
+
+// Exposes metrics APIs
+type JSMetricsAPI struct {
+	bridge *JSBridge
+}
+
+func (m *JSMetricsAPI) Trend(name string, val float64) {
+	m.bridge.Sink.RecordCustom(m.bridge.VuId, "trend", name, val)
+}
+func (m *JSMetricsAPI) Counter(name string, val float64) {
+	m.bridge.Sink.RecordCustom(m.bridge.VuId, "counter", name, val)
+}
+func (m *JSMetricsAPI) Gauge(name string, val float64) {
+	m.bridge.Sink.RecordCustom(m.bridge.VuId, "gauge", name, val)
 }
 
 type JSBridge struct {
@@ -29,6 +45,7 @@ type JSBridge struct {
 	Local                           SharedState
 	Global                          SharedState
 	Sink                            MetricsSink
+	Metrics                         *JSMetricsAPI
 	VuId                            int    `json:"vuId"`
 	Iteration                       int    `json:"iteration"`
 	Scenario                        string `json:"scenario"`
@@ -41,7 +58,9 @@ type JSBridge struct {
 }
 
 func NewJSBridge(global SharedState, local SharedState, sink MetricsSink) *JSBridge {
-	return &JSBridge{Global: global, Local: local, Sink: sink}
+	b := &JSBridge{Global: global, Local: local, Sink: sink}
+	b.Metrics = &JSMetricsAPI{bridge: b}
+	return b
 }
 
 func (b *JSBridge) AttachWorker(scope Scope, local SharedState, vuId int, iteration int, scenario string) {

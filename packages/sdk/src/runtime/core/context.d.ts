@@ -35,6 +35,15 @@ export interface RetryOptions {
     maxAttempts?: number;
 }
 
+export interface MetricsAPI {
+    /** Counts cumulative values, e.g. orders created. */
+    counter(name: string, value: number): void;
+    /** Tracks distributions such as latency and percentiles. */
+    trend(name: string, value: number): void;
+    /** Tracks the current value, e.g. CPU usage. */
+    gauge(name: string, value: number): void;
+}
+
 /**
  * Execution Context for individual Virtual Users (Workers).
  * State mutations here are isolated and cleared after each iteration.
@@ -93,6 +102,7 @@ export interface Context {
     /** Distributes array elements to workers randomly. */
     distributeRandom(key: string, items: any[]): void;
 
+    readonly metrics: MetricsAPI;
     // --- Shared Memory ---
     /** Memory shared across all workers within the current Scenario. */
     readonly local: SharedState;

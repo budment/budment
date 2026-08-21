@@ -15,15 +15,10 @@ export interface HttpResponse {
     readonly error?: string;
 
     /**
-     * Returns the full response body as a string. 
-     * This allocates memory in the JS VM. Use only for HTML, XML, or Text parsing.
-     */
-    readonly body: string;
-
-    /**
      * Extracts values from a JSON response using GJSON path syntax.
      * 
      * @param path GJSON path (e.g., "data.user.id" or "items.#.name")
      */
     get<T = any>(path: string): T | undefined;
+    getBody(): object | string;
 }

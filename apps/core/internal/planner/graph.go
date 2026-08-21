@@ -92,7 +92,6 @@ type ScriptNode struct {
 func (n *ScriptNode) NodeID() string { return n.ID }
 func (n *ScriptNode) Type() string   { return "SCRIPT" }
 
-/* STREAMING_CHUNK: Trình Biên Dịch (Compiler) */
 type GraphCompiler struct{}
 
 func NewGraphCompiler() *GraphCompiler { return &GraphCompiler{} }

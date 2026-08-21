@@ -4,12 +4,7 @@
 export interface HttpRequest {
     readonly url: string;
     readonly method: string;
-    /**
-    * Returns the full request body as a string. 
-    * This allocates memory in the JS VM. Use only for HTML, XML, or Text parsing.
-    */
-    readonly body: string;
-
+    
     /**
      * Extracts values from a JSON request using GJSON path syntax.
      * 

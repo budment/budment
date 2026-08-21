@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"sync"
 	"time"
 )
@@ -17,11 +18,19 @@ var bufferPool = sync.Pool{
 	},
 }
 
+type TraceTimings struct {
+	DNSLookup    int64
+	TCPConn      int64
+	TLSHandshake int64
+	TTFB         int64
+}
+
 type HttpResponse struct {
 	Status  int
 	Headers map[string]string
 	Body    []byte
 	Error   string
+	Timings TraceTimings
 	buf     *bytes.Buffer
 }
 
@@ -78,6 +87,42 @@ func (c *Client) Do(ctx context.Context, method, url string, headers map[string]
 		req.Header.Set(k, v)
 	}
 
+	var timings TraceTimings
+	var dnsStart, connStart, tlsStart, reqStart time.Time
+
+	trace := &httptrace.ClientTrace{
+		DNSStart: func(_ httptrace.DNSStartInfo) {
+			dnsStart = time.Now()
+		},
+		DNSDone: func(_ httptrace.DNSDoneInfo) {
+			timings.DNSLookup = time.Since(dnsStart).Microseconds()
+		},
+		ConnectStart: func(_, _ string) {
+			connStart = time.Now()
+		},
+		ConnectDone: func(net, addr string, err error) {
+			if err == nil {
+				timings.TCPConn = time.Since(connStart).Microseconds()
+			}
+		},
+		TLSHandshakeStart: func() {
+			tlsStart = time.Now()
+		},
+		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
+			if err == nil {
+				timings.TLSHandshake = time.Since(tlsStart).Microseconds()
+			}
+		},
+		GotConn: func(_ httptrace.GotConnInfo) {
+			reqStart = time.Now()
+		},
+		GotFirstResponseByte: func() {
+			timings.TTFB = time.Since(reqStart).Microseconds()
+		},
+	}
+
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return &HttpResponse{Status: 0, Error: "Network error: " + err.Error()}
@@ -103,6 +148,7 @@ func (c *Client) Do(ctx context.Context, method, url string, headers map[string]
 		Status:  resp.StatusCode,
 		Headers: respHeaders,
 		Body:    buf.Bytes(),
+		Timings: timings,
 		buf:     buf, // Retained for Release()
 	}
 }

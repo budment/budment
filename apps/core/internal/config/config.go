@@ -1,5 +1,25 @@
 package config
 
+// Handles report exports to various formats
+type ExportersConfig struct {
+	JSON       string `yaml:"json"`
+	HTML       string `yaml:"html"`
+	Prometheus string `yaml:"prometheus"`
+}
+
+// Customizes table results
+type SummaryConfig struct {
+	// Eg: ["avg", "p90", "p95", "p99", "max"]
+	TrendStats []string `yaml:"trend_stats"`
+}
+
+// Configures HTTP transport settings.
+type HTTPConfig struct {
+	Timeout         string `yaml:"timeout"`
+	MaxIdleConns    int    `yaml:"max_idle_conns"`
+	MaxConnsPerHost int    `yaml:"max_conns_per_host"`
+}
+
 type EngineConfig struct {
 	VUs             int               `yaml:"vus"`
 	Duration        string            `yaml:"duration"`
@@ -12,6 +32,9 @@ type EngineConfig struct {
 	Tags            map[string]string `yaml:"tags"`
 	InsecureSkipTLS bool              `yaml:"insecure_skip_tls_verify"`
 	AutoPlumb       bool              `yaml:"auto_plumb"`
+	Exporters       ExportersConfig   `yaml:"exporters"`
+	Summary         SummaryConfig     `yaml:"summary"`
+	HTTP            HTTPConfig        `yaml:"http"`
 }
 
 type Stage struct {
@@ -39,6 +62,10 @@ type ASTConfig struct {
 
 type EnvConfig struct {
 	ConfigVariable
+	HTTPTimeout   *string
+	ExportJSON    *string
+	ExportHTML    *string
+	PrometheusOut *string
 }
 
 type CLIConfig struct {
@@ -90,5 +117,13 @@ func DefaultEngineConfig() EngineConfig {
 		Iterations: 1,
 		Order:      0,
 		AutoPlumb:  false,
+		HTTP: HTTPConfig{
+			Timeout:         "30s",
+			MaxIdleConns:    10000,
+			MaxConnsPerHost: 10000,
+		},
+		Summary: SummaryConfig{
+			TrendStats: []string{"avg", "min", "med", "max", "p90", "p95", "p99"},
+		},
 	}
 }
