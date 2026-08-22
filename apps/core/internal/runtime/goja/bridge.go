@@ -31,13 +31,19 @@ type JSMetricsAPI struct {
 }
 
 func (m *JSMetricsAPI) Trend(name string, val float64) {
-	m.bridge.Sink.RecordCustom(m.bridge.VuId, "trend", name, val)
+	if m.bridge.Sink != nil {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "trend", name, val)
+	}
 }
 func (m *JSMetricsAPI) Counter(name string, val float64) {
-	m.bridge.Sink.RecordCustom(m.bridge.VuId, "counter", name, val)
+	if m.bridge.Sink != nil {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "counter", name, val)
+	}
 }
 func (m *JSMetricsAPI) Gauge(name string, val float64) {
-	m.bridge.Sink.RecordCustom(m.bridge.VuId, "gauge", name, val)
+	if m.bridge.Sink != nil {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "gauge", name, val)
+	}
 }
 
 type JSBridge struct {

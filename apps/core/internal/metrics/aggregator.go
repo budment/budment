@@ -1,0 +1,82 @@
+package metrics
+
+import (
+	"context"
+	"sync/atomic"
+	"time"
+)
+
+type MetricEvent struct {
+	WorkerID    int
+	NodeID      string
+	ErrorMsg    string
+	IsLogicFail bool
+	IsCustom    bool
+	CustomType  CustomMetricType
+	CustomName  string
+	CustomVal   float64
+}
+
+type Aggregator struct {
+	eventChan chan MetricEvent
+	Metrics   *EngineMetrics
+}
+
+func NewAggregator(bufferSize int) *Aggregator {
+	if bufferSize == 0 {
+		bufferSize = 100_000
+	}
+	return &Aggregator{
+		eventChan: make(chan MetricEvent, bufferSize),
+		Metrics:   NewEngineMetrics(),
+	}
+}
+
+func (a *Aggregator) PushEvent(e MetricEvent) {
+	select {
+	case a.eventChan <- e:
+	default:
+	}
+}
+
+func (a *Aggregator) Run(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	var lastTotalRequests int64 = 0
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+			currentTotal := atomic.LoadInt64(&a.Metrics.TotalRequests)
+			currentVUs := atomic.LoadInt64(&a.Metrics.ActiveVUs)
+
+			reqsThisSecond := currentTotal - lastTotalRequests
+			lastTotalRequests = currentTotal
+			a.Metrics.AppendHistory(float64(reqsThisSecond), currentVUs)
+			point := TimeSeriesPoint{
+				Timestamp: time.Now().Unix(),
+				RPS:       float64(reqsThisSecond),
+				VUs:       currentVUs,
+			}
+			a.Metrics.mu.Lock()
+			a.Metrics.TimeSeries = append(a.Metrics.TimeSeries, point)
+			a.Metrics.mu.Unlock()
+
+		case event := <-a.eventChan:
+			if event.IsCustom {
+				a.Metrics.Custom.Record(event.CustomType, event.CustomName, event.CustomVal)
+			} else {
+				if event.ErrorMsg != "" {
+					a.Metrics.RecordError(event.ErrorMsg)
+				}
+				if event.IsLogicFail {
+					a.Metrics.RecordLogicFail()
+				}
+			}
+		}
+	}
+}
