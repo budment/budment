@@ -10,6 +10,8 @@ import (
 	"net/http/httptrace"
 	"sync"
 	"time"
+
+	"github.com/vunas/blaster/internal/config"
 )
 
 var bufferPool = sync.Pool{
@@ -48,11 +50,15 @@ type Client struct {
 	httpClient *http.Client
 }
 
-func NewClient(insecureSkipVerify bool) *Client {
+func NewClient(insecureSkipVerify bool, httpCfg config.HTTPConfig) *Client {
+	timeoutDur, err := time.ParseDuration(httpCfg.Timeout)
+	if err != nil || timeoutDur <= 0 {
+		timeoutDur = 30 * time.Second
+	}
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   10 * time.Second,
+			Timeout:   timeoutDur,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
 		ForceAttemptHTTP2:     true,
@@ -67,7 +73,7 @@ func NewClient(insecureSkipVerify bool) *Client {
 	return &Client{
 		httpClient: &http.Client{
 			Transport: transport,
-			Timeout:   30 * time.Second,
+			Timeout:   timeoutDur,
 		},
 	}
 }
