@@ -19,7 +19,7 @@ export class BranchBuilder implements BuilderNode {
         falsePath?: BuilderNode[]
     ) {
         this.uniqueId = HookRegistry.generateNodeId('branch');
-        this.conditionHookId = HookRegistry.register(condition, 'branch_cond');
+        this.conditionHookId = HookRegistry.register(this.uniqueId, "cond", condition);
 
         this.truePipeline.add(...truePath);
 

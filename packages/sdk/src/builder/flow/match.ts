@@ -19,7 +19,7 @@ export class MatchBuilder implements BuilderNode {
         defaultPath?: BuilderNode[],
     ) {
         this.uniqueId = HookRegistry.generateNodeId("match");
-        this.conditionHookId = HookRegistry.register(condition, "match_cond");
+        this.conditionHookId = HookRegistry.register(this.uniqueId, "cond", condition);
 
         for (const [key, nodes] of Object.entries(cases)) {
             const pipeline = new Pipeline();

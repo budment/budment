@@ -23,7 +23,7 @@ export class LoopBuilder implements BuilderNode {
         this.logicPipeline.add(...logicPath);
 
         if (typeof config === "function") {
-            this.loopConfig.arrayHookId = HookRegistry.register(config, "loop_array");
+            this.loopConfig.arrayHookId = HookRegistry.register(this.uniqueId, "run", config);
         }
         else if (typeof config === "number") {
             this.loopConfig.count = config;

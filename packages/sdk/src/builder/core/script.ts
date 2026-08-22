@@ -11,7 +11,7 @@ export class ScriptBuilder implements BuilderNode {
 
     constructor(callback: (ctx: any) => void) {
         this.uniqueId = HookRegistry.generateNodeId("script");
-        this.hookId = HookRegistry.register(callback, "script");
+        this.hookId = HookRegistry.register(this.uniqueId, "run", callback);
     }
 
     build(): Node {

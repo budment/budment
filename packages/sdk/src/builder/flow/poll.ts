@@ -19,7 +19,7 @@ export class PollBuilder implements BuilderNode {
         policy?: PollPolicy,
     ) {
         this.uniqueId = HookRegistry.generateNodeId("poll");
-        this.conditionHookId = HookRegistry.register(condition, "poll_cond");
+        this.conditionHookId = HookRegistry.register(this.uniqueId, "cond", condition);
         this.logicPipeline.add(...logicPath);
         this.policy = policy;
     }
