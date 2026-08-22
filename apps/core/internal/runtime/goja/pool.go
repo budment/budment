@@ -10,6 +10,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/vunas/blaster/internal/runner/http"
+	"github.com/vunas/blaster/internal/runtime"
 )
 
 // VMInstance holds precompiled callables
@@ -26,7 +27,7 @@ type Pool struct {
 	registry *HookRegistry
 }
 
-func NewPool(registry *HookRegistry, global SharedState, local SharedState, sink MetricsSink) *Pool {
+func NewPool(registry *HookRegistry, global runtime.SharedState, local runtime.SharedState, sink runtime.MetricsSink) *Pool {
 	p := &Pool{
 		registry: registry,
 	}
@@ -131,7 +132,7 @@ func NewPool(registry *HookRegistry, global SharedState, local SharedState, sink
 }
 
 // Manage the VM pool.
-func (p *Pool) GetVM(scope Scope, local SharedState, workerID int, iteration int, scenario string) *VMInstance {
+func (p *Pool) GetVM(scope runtime.Scope, local runtime.SharedState, workerID int, iteration int, scenario string) *VMInstance {
 	inst := p.pool.Get().(*VMInstance)
 	inst.Bridge.AttachWorker(scope, local, workerID, iteration, scenario)
 	return inst

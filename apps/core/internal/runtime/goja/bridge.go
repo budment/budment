@@ -1,29 +1,6 @@
 package goja
 
-import (
-	"fmt"
-)
-
-type Scope interface {
-	Set(key string, val any)
-	Get(key string) (any, bool)
-	Delete(key string)
-}
-
-type SharedState interface {
-	Set(key string, val any)
-	Get(key string) (any, bool)
-	Push(queueName string, val any) bool
-	Pop(queueName string) any
-	StoreDistribution(key string, items []any)
-}
-
-type MetricsSink interface {
-	Log(workerID int, level string, msg string)
-	RecordEvent(workerID int, eventType string, reason string)
-	Tag(workerID int, key string, value string)
-	RecordCustom(workerID int, mType string, name string, val float64)
-}
+import "github.com/vunas/blaster/internal/runtime"
 
 // Exposes metrics APIs
 type JSMetricsAPI struct {
@@ -47,10 +24,10 @@ func (m *JSMetricsAPI) Gauge(name string, val float64) {
 }
 
 type JSBridge struct {
-	WorkerScope                     Scope
-	Local                           SharedState
-	Global                          SharedState
-	Sink                            MetricsSink
+	WorkerScope                     runtime.Scope
+	Local                           runtime.SharedState
+	Global                          runtime.SharedState
+	Sink                            runtime.MetricsSink
 	Metrics                         *JSMetricsAPI
 	VuId                            int    `json:"vuId"`
 	Iteration                       int    `json:"iteration"`
@@ -63,13 +40,13 @@ type JSBridge struct {
 	SyncOptions                     map[string]any
 }
 
-func NewJSBridge(global SharedState, local SharedState, sink MetricsSink) *JSBridge {
+func NewJSBridge(global runtime.SharedState, local runtime.SharedState, sink runtime.MetricsSink) *JSBridge {
 	b := &JSBridge{Global: global, Local: local, Sink: sink}
 	b.Metrics = &JSMetricsAPI{bridge: b}
 	return b
 }
 
-func (b *JSBridge) AttachWorker(scope Scope, local SharedState, vuId int, iteration int, scenario string) {
+func (b *JSBridge) AttachWorker(scope runtime.Scope, local runtime.SharedState, vuId int, iteration int, scenario string) {
 	b.WorkerScope = scope
 	b.Local = local
 	b.VuId = vuId
@@ -106,31 +83,19 @@ func (b *JSBridge) Delete(key string) {
 
 func (b *JSBridge) Log(msg string) {
 	if b.Sink != nil {
-		hookCtx := ""
-		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
-			hookCtx = "[Hook: " + b.CurrentHook + "] "
-		}
-		b.Sink.Log(b.VuId, "INFO", hookCtx+msg)
+		b.Sink.Log(b.VuId, b.CurrentHook, "INFO", msg)
 	}
 }
 
 func (b *JSBridge) Warn(msg string) {
 	if b.Sink != nil {
-		hookCtx := ""
-		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
-			hookCtx = "[Hook: " + b.CurrentHook + "] "
-		}
-		b.Sink.Log(b.VuId, "WARN", hookCtx+msg)
+		b.Sink.Log(b.VuId, b.CurrentHook, "WARN", msg)
 	}
 }
 
 func (b *JSBridge) Error(msg string) {
 	if b.Sink != nil {
-		hookCtx := ""
-		if b.CurrentHook != "unknown" && b.CurrentHook != "" {
-			hookCtx = "[Hook: " + b.CurrentHook + "] "
-		}
-		b.Sink.Log(b.VuId, "ERROR", hookCtx+msg)
+		b.Sink.Log(b.VuId, b.CurrentHook, "ERROR", msg)
 	}
 }
 
@@ -142,7 +107,7 @@ func (b *JSBridge) Tag(key string, value string) {
 
 func (b *JSBridge) Fail(reason string) {
 	if b.Sink != nil {
-		b.Sink.RecordEvent(b.VuId, "FAIL", fmt.Sprintf("[Hook: %s] %s", b.CurrentHook, reason))
+		b.Sink.RecordEvent(b.VuId, b.CurrentHook, "FAIL", reason)
 	}
 }
 
@@ -154,7 +119,7 @@ func (b *JSBridge) Skip(reason string) {
 func (b *JSBridge) Abort(reason string) {
 	b.AbortFlag = true
 	if b.Sink != nil {
-		b.Sink.RecordEvent(b.VuId, "ABORT", fmt.Sprintf("[Hook: %s] %s", b.CurrentHook, reason))
+		b.Sink.RecordEvent(b.VuId, b.CurrentHook, "ABORT", reason)
 	}
 	panic("BLASTER_ABORT")
 }
