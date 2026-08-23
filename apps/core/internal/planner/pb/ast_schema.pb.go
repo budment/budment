@@ -94,13 +94,13 @@ type ScenarioConfig struct {
 	// Number of concurrent virtual users. Defaults to 1.
 	Vus *int32 `protobuf:"varint,1,opt,name=vus,proto3,oneof" json:"vus,omitempty"`
 	// Scenario run duration. Stops when reached.
-	Duration string `protobuf:"bytes,2,opt,name=duration,proto3" json:"duration,omitempty"`
+	Duration *string `protobuf:"bytes,2,opt,name=duration,proto3,oneof" json:"duration,omitempty"`
 	// Hard upper limit for the entire scenario.
-	MaxDuration string `protobuf:"bytes,3,opt,name=max_duration,json=maxDuration,proto3" json:"max_duration,omitempty"`
+	MaxDuration *string `protobuf:"bytes,3,opt,name=max_duration,json=maxDuration,proto3,oneof" json:"max_duration,omitempty"`
 	// Number of iterations to execute. Defaults to 1.
 	Iterations *int32 `protobuf:"varint,4,opt,name=iterations,proto3,oneof" json:"iterations,omitempty"`
 	// Exact time to start the scenario. Takes precedence over order.
-	StartAt string `protobuf:"bytes,5,opt,name=start_at,json=startAt,proto3" json:"start_at,omitempty"`
+	StartAt *string `protobuf:"bytes,5,opt,name=start_at,json=startAt,proto3,oneof" json:"start_at,omitempty"`
 	// Execution order. Scenarios with the same order start together.
 	Order *int32 `protobuf:"varint,6,opt,name=order,proto3,oneof" json:"order,omitempty"`
 	// Optional load stages for gradually changing VUs.
@@ -154,15 +154,15 @@ func (x *ScenarioConfig) GetVus() int32 {
 }
 
 func (x *ScenarioConfig) GetDuration() string {
-	if x != nil {
-		return x.Duration
+	if x != nil && x.Duration != nil {
+		return *x.Duration
 	}
 	return ""
 }
 
 func (x *ScenarioConfig) GetMaxDuration() string {
-	if x != nil {
-		return x.MaxDuration
+	if x != nil && x.MaxDuration != nil {
+		return *x.MaxDuration
 	}
 	return ""
 }
@@ -175,8 +175,8 @@ func (x *ScenarioConfig) GetIterations() int32 {
 }
 
 func (x *ScenarioConfig) GetStartAt() string {
-	if x != nil {
-		return x.StartAt
+	if x != nil && x.StartAt != nil {
+		return *x.StartAt
 	}
 	return ""
 }
@@ -994,33 +994,36 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x05setup\x18\x02 \x01(\v2\x18.blaster.ast.v1.PipelineR\x05setup\x126\n" +
 	"\texecution\x18\x03 \x01(\v2\x18.blaster.ast.v1.PipelineR\texecution\x126\n" +
-	"\x06config\x18\x04 \x01(\v2\x1e.blaster.ast.v1.ScenarioConfigR\x06config\"\xa5\x05\n" +
+	"\x06config\x18\x04 \x01(\v2\x1e.blaster.ast.v1.ScenarioConfigR\x06config\"\xdf\x05\n" +
 	"\x0eScenarioConfig\x12\x15\n" +
-	"\x03vus\x18\x01 \x01(\x05H\x00R\x03vus\x88\x01\x01\x12\x1a\n" +
-	"\bduration\x18\x02 \x01(\tR\bduration\x12!\n" +
-	"\fmax_duration\x18\x03 \x01(\tR\vmaxDuration\x12#\n" +
+	"\x03vus\x18\x01 \x01(\x05H\x00R\x03vus\x88\x01\x01\x12\x1f\n" +
+	"\bduration\x18\x02 \x01(\tH\x01R\bduration\x88\x01\x01\x12&\n" +
+	"\fmax_duration\x18\x03 \x01(\tH\x02R\vmaxDuration\x88\x01\x01\x12#\n" +
 	"\n" +
-	"iterations\x18\x04 \x01(\x05H\x01R\n" +
-	"iterations\x88\x01\x01\x12\x19\n" +
-	"\bstart_at\x18\x05 \x01(\tR\astartAt\x12\x19\n" +
-	"\x05order\x18\x06 \x01(\x05H\x02R\x05order\x88\x01\x01\x12-\n" +
+	"iterations\x18\x04 \x01(\x05H\x03R\n" +
+	"iterations\x88\x01\x01\x12\x1e\n" +
+	"\bstart_at\x18\x05 \x01(\tH\x04R\astartAt\x88\x01\x01\x12\x19\n" +
+	"\x05order\x18\x06 \x01(\x05H\x05R\x05order\x88\x01\x01\x12-\n" +
 	"\x06stages\x18\a \x03(\v2\x15.blaster.ast.v1.StageR\x06stages\x12N\n" +
 	"\n" +
 	"thresholds\x18\b \x03(\v2..blaster.ast.v1.ScenarioConfig.ThresholdsEntryR\n" +
 	"thresholds\x12<\n" +
 	"\x04tags\x18\t \x03(\v2(.blaster.ast.v1.ScenarioConfig.TagsEntryR\x04tags\x12<\n" +
 	"\x18insecure_skip_tls_verify\x18\n" +
-	" \x01(\bH\x03R\x15insecureSkipTlsVerify\x88\x01\x01\x12\"\n" +
+	" \x01(\bH\x06R\x15insecureSkipTlsVerify\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"auto_plumb\x18\v \x01(\bH\x04R\tautoPlumb\x88\x01\x01\x1a=\n" +
+	"auto_plumb\x18\v \x01(\bH\aR\tautoPlumb\x88\x01\x01\x1a=\n" +
 	"\x0fThresholdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x06\n" +
-	"\x04_vusB\r\n" +
-	"\v_iterationsB\b\n" +
+	"\x04_vusB\v\n" +
+	"\t_durationB\x0f\n" +
+	"\r_max_durationB\r\n" +
+	"\v_iterationsB\v\n" +
+	"\t_start_atB\b\n" +
 	"\x06_orderB\x1b\n" +
 	"\x19_insecure_skip_tls_verifyB\r\n" +
 	"\v_auto_plumb\";\n" +

@@ -15,5 +15,6 @@ plugins:
       - outputClientImpl=false
       - forceLong=string
       - esModuleInterop=true
-
-     
+      - optionalToUndefined=true
+      - usePartialTypes=true
+      - useOptionals=all

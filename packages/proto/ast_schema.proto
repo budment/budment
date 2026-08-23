@@ -15,13 +15,13 @@ message ScenarioConfig {
   // Number of concurrent virtual users. Defaults to 1.
   optional int32 vus = 1;
   // Scenario run duration. Stops when reached.
-  string duration = 2;
+  optional string duration = 2;
   // Hard upper limit for the entire scenario.
-  string max_duration = 3;
+  optional string max_duration = 3;
   // Number of iterations to execute. Defaults to 1.
   optional int32 iterations = 4;
   // Exact time to start the scenario. Takes precedence over order.
-  string start_at = 5;
+  optional string start_at = 5;
   // Execution order. Scenarios with the same order start together.
   optional int32 order = 6;
   // Optional load stages for gradually changing VUs.

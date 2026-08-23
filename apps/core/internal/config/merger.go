@@ -1,17 +1,26 @@
 package config
 
-// Default -> YAML -> AST (Script) -> ENV -> CLI
+import "maps"
+
 func MergeEngineConfig(yamlConfig EngineConfig, astConfig ASTConfig, env EnvConfig, cli CLIConfig) EngineConfig {
-	// default config
 	final := yamlConfig
-	mergeASTOverrides(&final, astConfig)
-	applyEnvOverrides(&final, env)
-	applyCLIOverrides(&final, cli)
+
+	applyConfigVariable(&final, astConfig.ConfigVariable)
+	if len(astConfig.Stages) > 0 {
+		final.Stages = astConfig.Stages
+	}
+	final.Thresholds = mergeMaps(final.Thresholds, astConfig.Thresholds)
+	final.Tags = mergeMaps(final.Tags, astConfig.Tags)
+
+	applyConfigVariable(&final, env.ConfigVariable)
+	applyEnvExtraOverrides(&final, env)
+
+	applyConfigVariable(&final, cli.ConfigVariable)
 
 	return final
 }
 
-func mergeASTOverrides(dst *EngineConfig, src ASTConfig) {
+func applyConfigVariable(dst *EngineConfig, src ConfigVariable) {
 	if src.VUs != nil {
 		dst.VUs = *src.VUs
 	}
@@ -27,18 +36,9 @@ func mergeASTOverrides(dst *EngineConfig, src ASTConfig) {
 	if src.StartAt != nil {
 		dst.StartAt = *src.StartAt
 	}
-
 	if src.Order != nil {
 		dst.Order = *src.Order
 	}
-
-	if len(src.Stages) > 0 {
-		dst.Stages = src.Stages
-	}
-
-	dst.Thresholds = mergeMaps(dst.Thresholds, src.Thresholds)
-	dst.Tags = mergeMaps(dst.Tags, src.Tags)
-
 	if src.InsecureSkipTLS != nil {
 		dst.InsecureSkipTLS = *src.InsecureSkipTLS
 	}
@@ -47,67 +47,27 @@ func mergeASTOverrides(dst *EngineConfig, src ASTConfig) {
 	}
 }
 
-func applyEnvOverrides(dst *EngineConfig, env EnvConfig) {
-	if env.VUs != nil {
-		dst.VUs = *env.VUs
+func applyEnvExtraOverrides(dst *EngineConfig, env EnvConfig) {
+	if env.HTTPTimeout != nil {
+		dst.HTTP.Timeout = *env.HTTPTimeout
 	}
-	if env.Duration != nil {
-		dst.Duration = *env.Duration
+	if env.ExportJSON != nil {
+		dst.Exporters.JSON = *env.ExportJSON
 	}
-	if env.MaxDuration != nil {
-		dst.MaxDuration = *env.MaxDuration
+	if env.ExportHTML != nil {
+		dst.Exporters.HTML = *env.ExportHTML
 	}
-	if env.Iterations != nil {
-		dst.Iterations = *env.Iterations
-	}
-	if env.StartAt != nil {
-		dst.StartAt = *env.StartAt
-	}
-	if env.InsecureSkipTLS != nil {
-		dst.InsecureSkipTLS = *env.InsecureSkipTLS
-	}
-	if env.AutoPlumb != nil {
-		dst.AutoPlumb = *env.AutoPlumb
-	}
-}
-
-func applyCLIOverrides(dst *EngineConfig, cli CLIConfig) {
-	if cli.VUs != nil {
-		dst.VUs = *cli.VUs
-	}
-	if cli.Duration != nil {
-		dst.Duration = *cli.Duration
-	}
-	if cli.MaxDuration != nil {
-		dst.MaxDuration = *cli.MaxDuration
-	}
-	if cli.Iterations != nil {
-		dst.Iterations = *cli.Iterations
-	}
-	if cli.StartAt != nil {
-		dst.StartAt = *cli.StartAt
-	}
-	if cli.Order != nil {
-		dst.Order = *cli.Order
-	}
-	if cli.InsecureSkipTLS != nil {
-		dst.InsecureSkipTLS = *cli.InsecureSkipTLS
-	}
-	if cli.AutoPlumb != nil {
-		dst.AutoPlumb = *cli.AutoPlumb
+	if env.PrometheusOut != nil {
+		dst.Exporters.Prometheus = *env.PrometheusOut
 	}
 }
 
 func mergeMaps(base, src map[string]string) map[string]string {
-	if base == nil && src == nil {
+	if len(base) == 0 && len(src) == 0 {
 		return nil
 	}
-	result := make(map[string]string)
-	for k, v := range base {
-		result[k] = v
-	}
-	for k, v := range src {
-		result[k] = v
-	}
-	return result
+	res := make(map[string]string, len(base)+len(src))
+	maps.Copy(res, base)
+	maps.Copy(res, src)
+	return res
 }
