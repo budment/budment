@@ -57,14 +57,7 @@ func (a *Aggregator) Run(ctx context.Context) {
 			reqsThisSecond := currentTotal - lastTotalRequests
 			lastTotalRequests = currentTotal
 			a.Metrics.AppendHistory(float64(reqsThisSecond), currentVUs)
-			point := TimeSeriesPoint{
-				Timestamp: time.Now().Unix(),
-				RPS:       float64(reqsThisSecond),
-				VUs:       currentVUs,
-			}
-			a.Metrics.mu.Lock()
-			a.Metrics.TimeSeries = append(a.Metrics.TimeSeries, point)
-			a.Metrics.mu.Unlock()
+			a.Metrics.RecordTimeSeriesPoint(float64(reqsThisSecond), currentVUs)
 
 		case event := <-a.eventChan:
 			if event.IsCustom {

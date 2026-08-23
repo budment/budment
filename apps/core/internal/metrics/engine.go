@@ -3,6 +3,7 @@ package metrics
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type TimeSeriesPoint struct {
@@ -216,4 +217,16 @@ func (m *EngineMetrics) GetAllScripts() map[string]*ScriptMetrics {
 	res := make(map[string]*ScriptMetrics)
 	m.scripts.Range(func(k, v any) bool { res[k.(string)] = v.(*ScriptMetrics); return true })
 	return res
+}
+
+func (m *EngineMetrics) RecordTimeSeriesPoint(rps float64, vus int64) {
+	point := TimeSeriesPoint{
+		Timestamp: time.Now().Unix(),
+		RPS:       rps,
+		VUs:       vus,
+	}
+
+	m.mu.Lock()
+	m.TimeSeries = append(m.TimeSeries, point)
+	m.mu.Unlock()
 }

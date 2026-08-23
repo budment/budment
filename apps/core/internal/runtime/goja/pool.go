@@ -223,3 +223,25 @@ func (inst *VMInstance) EvaluateString(hookID string) (result string, err error)
 func (inst *VMInstance) IsAborted() bool {
 	return inst.Bridge.AbortFlag
 }
+
+func (inst *VMInstance) GetSleepTime() int {
+	return inst.Bridge.SleepTime
+}
+
+func (inst *VMInstance) GetSyncInfo() (string, int) {
+	quorum := 10
+	if inst.Bridge.SyncOptions != nil {
+		if q, ok := inst.Bridge.SyncOptions["quorum"].(float64); ok {
+			quorum = int(q)
+		}
+	}
+	return inst.Bridge.SyncName, quorum
+}
+
+func (inst *VMInstance) GetRetryInfo() (bool, int, int, string) {
+	return inst.Bridge.RetryFlag, inst.Bridge.RetryDelay, inst.Bridge.RetryMax, inst.Bridge.RetryScope
+}
+
+func (inst *VMInstance) GetFlags() (bool, bool) {
+	return inst.Bridge.SkipFlag, inst.Bridge.AbortFlag
+}

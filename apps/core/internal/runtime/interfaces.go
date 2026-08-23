@@ -13,7 +13,7 @@ type SharedState interface {
 	Get(key string) (any, bool)
 	Push(queueName string, val any) bool
 	Pop(queueName string) any
-	StoreDistribution(key string, items []any)
+	StoreDistribution(key string, items []any, fallback any)
 }
 
 // MetricsSink receives metrics, logs, and lifecycle events from workers and hooks.

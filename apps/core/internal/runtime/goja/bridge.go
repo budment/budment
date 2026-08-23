@@ -153,12 +153,12 @@ func (b *JSBridge) Retry(options map[string]any) {
 
 func (b *JSBridge) Distribute(key string, items []any, fallback any) {
 	if b.Local != nil {
-		b.Local.StoreDistribution(key, items)
+		b.Local.StoreDistribution(key, items, fallback)
 	}
 }
 
 func (b *JSBridge) DistributeRandom(key string, items []any) {
 	if b.Local != nil {
-		b.Local.StoreDistribution(key, items)
+		b.Local.StoreDistribution(key, items, nil)
 	}
 }
