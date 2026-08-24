@@ -27,7 +27,7 @@ func RenderProgress(percent float64, width int) string {
 	if empty > 0 {
 		sb.WriteString(theme.TextDim(strings.Repeat("-", empty)))
 	}
-	sb.WriteString(theme.TextDim(">"))
+	sb.WriteString(theme.TextCyan(">"))
 
 	return sb.String()
 }

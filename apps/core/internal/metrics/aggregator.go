@@ -39,7 +39,22 @@ func (a *Aggregator) PushEvent(e MetricEvent) {
 	}
 }
 
-func (a *Aggregator) Run(ctx context.Context) {
+func (a *Aggregator) processEvent(event MetricEvent) {
+	if event.IsCustom {
+		a.Metrics.Custom.Record(event.CustomType, event.CustomName, event.CustomVal)
+	} else {
+		if event.ErrorMsg != "" {
+			a.Metrics.RecordError(event.ErrorMsg)
+		}
+		if event.IsLogicFail {
+			a.Metrics.RecordLogicFail()
+		}
+	}
+}
+
+func (a *Aggregator) Run(ctx context.Context, done chan struct{}) {
+	defer close(done) // Signal completion to the Director
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -48,7 +63,15 @@ func (a *Aggregator) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			// Drain any remaining events from the channel
+			for {
+				select {
+				case event := <-a.eventChan:
+					a.processEvent(event)
+				default:
+					return // Safe exit when channel is empty
+				}
+			}
 
 		case <-ticker.C:
 			currentTotal := atomic.LoadInt64(&a.Metrics.TotalRequests)
@@ -60,16 +83,7 @@ func (a *Aggregator) Run(ctx context.Context) {
 			a.Metrics.RecordTimeSeriesPoint(float64(reqsThisSecond), currentVUs)
 
 		case event := <-a.eventChan:
-			if event.IsCustom {
-				a.Metrics.Custom.Record(event.CustomType, event.CustomName, event.CustomVal)
-			} else {
-				if event.ErrorMsg != "" {
-					a.Metrics.RecordError(event.ErrorMsg)
-				}
-				if event.IsLogicFail {
-					a.Metrics.RecordLogicFail()
-				}
-			}
+			a.processEvent(event)
 		}
 	}
 }

@@ -1,4 +1,4 @@
-export type { Context, SharedState, SyncOptions, RetryOptions } from "./core/context";
+export type { Context, SharedState, BarrierOptions, RetryOptions } from "./core/context";
 export type { HttpRequest } from "./core/request";
 export type { HttpResponse } from "./core/response";
 

@@ -13,12 +13,12 @@ export interface SharedState {
     pop<T = any>(queueName: string): T | undefined;
 }
 
-export interface SyncOptions {
+export interface BarrierOptions {
     /** Minimum number of workers required to release the synchronization barrier. */
     quorum?: number;
     /** Additional wait time (in ms) allowed for other workers after quorum is reached. */
     gracePeriod?: number;
-    /** Maximum time to wait (in ms) from the first arrival before aborting the sync. */
+    /** Maximum time to wait (in ms) from the first arrival before aborting the barrier. */
     maxWait?: number;
 }
 
@@ -94,7 +94,7 @@ export interface Context {
      * Pauses the worker at a synchronization barrier. 
      * Terminates current JS execution and returns VM to the pool.
      */
-    sync(name: string, options?: SyncOptions): never;
+    barrier(name: string, options?: BarrierOptions): never;
 
     /** Distributes array elements to workers using Round-Robin. */
     distribute(key: string, items: any[], fallback?: any): void;

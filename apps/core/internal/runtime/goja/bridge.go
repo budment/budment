@@ -36,8 +36,8 @@ type JSBridge struct {
 	AbortFlag, SkipFlag, RetryFlag  bool
 	RetryScope                      string
 	RetryDelay, RetryMax, SleepTime int
-	SyncName                        string
-	SyncOptions                     map[string]any
+	BarrierName                     string
+	BarrierOptions                  map[string]any
 }
 
 func NewJSBridge(global runtime.SharedState, local runtime.SharedState, sink runtime.MetricsSink) *JSBridge {
@@ -56,7 +56,7 @@ func (b *JSBridge) AttachWorker(scope runtime.Scope, local runtime.SharedState, 
 
 	b.AbortFlag, b.SkipFlag, b.RetryFlag = false, false, false
 	b.RetryScope, b.RetryDelay, b.RetryMax, b.SleepTime = "hook", 0, 3, 0
-	b.SyncName, b.SyncOptions = "", nil
+	b.BarrierName, b.BarrierOptions = "", nil
 }
 
 func (b *JSBridge) Set(key string, val any) {
@@ -129,10 +129,10 @@ func (b *JSBridge) Sleep(ms int) {
 	panic("BLASTER_SLEEP")
 }
 
-func (b *JSBridge) Sync(name string, options map[string]any) {
-	b.SyncName = name
-	b.SyncOptions = options
-	panic("BLASTER_SYNC")
+func (b *JSBridge) Barrier(name string, options map[string]any) {
+	b.BarrierName = name
+	b.BarrierOptions = options
+	panic("BLASTER_BARRIER")
 }
 
 func (b *JSBridge) Retry(options map[string]any) {

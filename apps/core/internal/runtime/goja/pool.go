@@ -228,14 +228,14 @@ func (inst *VMInstance) GetSleepTime() int {
 	return inst.Bridge.SleepTime
 }
 
-func (inst *VMInstance) GetSyncInfo() (string, int) {
+func (inst *VMInstance) GetBarrierInfo() (string, int) {
 	quorum := 10
-	if inst.Bridge.SyncOptions != nil {
-		if q, ok := inst.Bridge.SyncOptions["quorum"].(float64); ok {
+	if inst.Bridge.BarrierOptions != nil {
+		if q, ok := inst.Bridge.BarrierOptions["quorum"].(float64); ok {
 			quorum = int(q)
 		}
 	}
-	return inst.Bridge.SyncName, quorum
+	return inst.Bridge.BarrierName, quorum
 }
 
 func (inst *VMInstance) GetRetryInfo() (bool, int, int, string) {
