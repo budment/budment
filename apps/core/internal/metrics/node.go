@@ -6,6 +6,7 @@ import (
 
 // Stores isolated metrics per API/Logic node
 type NodeMetrics struct {
+	Name           string
 	TotalRequests  int64
 	SuccessCount   int64
 	FailCount      int64

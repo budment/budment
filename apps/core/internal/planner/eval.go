@@ -15,7 +15,7 @@ func NewEvaluator() *Evaluator {
 	return &Evaluator{}
 }
 
-func (e *Evaluator) Evaluate(jsBundle string) (*pb.Scenario, error) {
+func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	vm := goja.New()
 
 	// Evaluate the compiled JS bundle.
@@ -24,33 +24,35 @@ func (e *Evaluator) Evaluate(jsBundle string) (*pb.Scenario, error) {
 		return nil, fmt.Errorf("failed to evaluate JS bundle: %w", err)
 	}
 
-	// Resolve the exported AST from the bundle.
-	astValue, err := vm.RunString("__BLASTER_AST__.default")
-	if err != nil || astValue == nil || goja.IsUndefined(astValue) {
-
-		// Fall back to the raw AST when no default export is present.
-		astValue, err = vm.RunString("__BLASTER_AST__")
-		if err != nil || astValue == nil || goja.IsUndefined(astValue) {
-			return nil, fmt.Errorf("không thể tìm thấy AST trong Goja VM. Đảm bảo file JS có export kịch bản. Lỗi: %v", err)
-		}
+	astArrayValue, err := vm.RunString("__BLASTER_SCENARIOS__")
+	if err != nil || astArrayValue == nil || goja.IsUndefined(astArrayValue) {
+		return nil, fmt.Errorf("Failed to get scenarios array. Ensure that you have called .build() at least once in your script: %w", err)
 	}
 
-	// Serialize the JS AST to JSON.
-	astObj := astValue.ToObject(vm)
+	astObj := astArrayValue.ToObject(vm)
 	rawJSON, err := json.Marshal(astObj.Export())
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize JS AST into JSON: %w", err)
 	}
 
+	var rawMessages []json.RawMessage
+	if err := json.Unmarshal(rawJSON, &rawMessages); err != nil {
+		return nil, fmt.Errorf("failed to parse scenarios array: %w", err)
+	}
+
 	// Deserialize the JSON into the Protobuf Scenario.
-	var scenario pb.Scenario
+	var scenarios []*pb.Scenario
 	unmarshaler := protojson.UnmarshalOptions{
 		DiscardUnknown: true, // Ignore unknown fields for forward compatibility.
 	}
 
-	if err := unmarshaler.Unmarshal(rawJSON, &scenario); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON into Protobuf Scenario: %w\nJSON sinh ra là: %s", err, string(rawJSON))
+	for _, rawMsg := range rawMessages {
+		var scn pb.Scenario
+		if err := unmarshaler.Unmarshal(rawMsg, &scn); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal JSON into Protobuf Scenario: %w", err)
+		}
+		scenarios = append(scenarios, &scn)
 	}
 
-	return &scenario, nil
+	return scenarios, nil
 }

@@ -177,10 +177,32 @@ func (r *TerminalReporter) Export(
 	for nodeID := range nodeMetrics {
 		nodeIDs = append(nodeIDs, nodeID)
 	}
-	sort.Strings(nodeIDs)
-	nodeTable := widgets.NewTable("Node", "Req", "Fail", "Min", "Avg", "p90", "p95", "p99", "Max", "TTFB")
+	sort.Slice(nodeIDs, func(i, j int) bool {
+		extractNum := func(s string) int {
+			parts := strings.Split(s, "_n")
+			if len(parts) == 2 {
+				var num int
+				fmt.Sscanf(parts[1], "%d", &num)
+				return num
+			}
+			return 0
+		}
+
+		numI := extractNum(nodeIDs[i])
+		numJ := extractNum(nodeIDs[j])
+
+		if numI != numJ {
+			return numI < numJ
+		}
+		return nodeIDs[i] < nodeIDs[j]
+	})
+	nodeTable := widgets.NewTable("Endpoint / Node", "Req", "Fail", "Min", "Avg", "p90", "p95", "p99", "Max", "TTFB")
 	for _, nodeID := range nodeIDs {
 		nodeMet := nodeMetrics[nodeID]
+		displayName := fmt.Sprintf("%s [%s]", nodeMet.Name, nodeID)
+		if nodeMet.Name == "" {
+			displayName = nodeID
+		}
 		reqs := atomic.LoadInt64(&nodeMet.TotalRequests)
 		if reqs == 0 {
 			continue
@@ -202,7 +224,7 @@ func (r *TerminalReporter) Export(
 		p95 := formatPercentile(nodeMet.ReqDuration.Percentile(95), reqs)
 		p99 := formatPercentile(nodeMet.ReqDuration.Percentile(99), reqs)
 		ttfb := formatPercentile(nodeMet.TTFB.Percentile(90), reqs)
-		nodeTable.AddRow(nodeID, fmt.Sprint(reqs), failStr, min, fmt.Sprintf("%.1f", avgMs), p90, p95, p99, max, ttfb)
+		nodeTable.AddRow(displayName, fmt.Sprint(reqs), failStr, min, fmt.Sprintf("%.1f", avgMs), p90, p95, p99, max, ttfb)
 	}
 	fmt.Print(nodeTable.Render())
 

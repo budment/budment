@@ -236,7 +236,17 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 					latency := time.Since(start).Microseconds()
 					isSuccess := resp.Status >= 200 && resp.Status < 400 && resp.Error == ""
 
-					w.Aggregator.Metrics.RecordRequest(n.ID, isSuccess, latency,
+					path := n.URL
+					if idx := strings.Index(path, "://"); idx != -1 {
+						if slashIdx := strings.Index(path[idx+3:], "/"); slashIdx != -1 {
+							path = path[idx+3+slashIdx:]
+						} else {
+							path = "/"
+						}
+					}
+					nodeName := n.Method + "   " + path
+
+					w.Aggregator.Metrics.RecordRequest(n.ID, nodeName, isSuccess, latency,
 						resp.Timings.TTFB, resp.Timings.TCPConn, resp.Timings.TLSHandshake,
 						int64(len(jsReq.Body)), int64(len(resp.Body)), resp.Status)
 					if !isSuccess || resp.Error != "" {

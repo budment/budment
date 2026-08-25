@@ -31,12 +31,17 @@ export class ScenarioBuilder {
     }
 
     build(): ProtoScenario {
-        return {
+        const scn = {
             name: this.scenarioName,
             setup: this.setupPipeline.build(),
             execution: this.executionPipeline.build(),
             config: this.execConfig,
         };
+        const _global = globalThis as any;
+        _global.__BLASTER_SCENARIOS__ = _global.__BLASTER_SCENARIOS__ || [];
+        _global.__BLASTER_SCENARIOS__.push(scn);
+
+        return scn;
     }
 }
 
