@@ -51,20 +51,39 @@ message Node {
   string id = 1;
 
   oneof type {
-    HttpNode   http   = 2;
-    BranchNode branch = 3;
-    MatchNode  match  = 4;
-    LoopNode   loop   = 5;
-    PollNode   poll   = 6;
-    ScriptNode script = 7;
+    HttpNode       http       = 2;
+    BranchNode     branch     = 3;
+    MatchNode      match      = 4;
+    LoopNode       loop       = 5;
+    PollNode       poll       = 6;
+    ScriptNode     script     = 7;
+    SleepNode      sleep      = 8;
+    LogNode        log        = 9;
+    BarrierNode    barrier    = 10;
+    SetNode        set        = 11;
+    DistributeNode distribute = 12;
+    MetricNode     metric     = 13;
+    ReqMutateNode  req_mutate = 14;
+    ResAssertNode  res_assert = 15;
   }
 }
 
 message HttpNode {
-  string method         = 1;
-  string url            = 2;
-  string before_hook_id = 3;
-  string after_hook_id  = 4;
+  string   method = 1;
+  string   url    = 2;
+  Pipeline before = 3;
+  Pipeline after  = 4;
+}
+
+message ReqMutateNode {
+  map<string, string> headers = 1;
+  string              body    = 2;
+}
+
+message ResAssertNode {
+  int32               expect_status        = 1;
+  string              expect_body_contains = 2;
+  map<string, string> extract              = 4;
 }
 
 message BranchNode {
@@ -108,4 +127,34 @@ message PollPolicy {
 
 message ScriptNode {
   string hook_id = 1;
+}
+
+message SleepNode {
+  double duration_s = 1;
+}
+
+message LogNode {
+  string message = 1;
+}
+
+message BarrierNode {
+  string name   = 1;
+  int32  quorum = 2;
+}
+
+message SetNode {
+  string key        = 1;
+  string value_json = 2;
+  string scope      = 3;
+}
+
+message DistributeNode {
+  string key        = 1;
+  string items_json = 2;
+}
+
+message MetricNode {
+  string metric_type = 1;
+  string name        = 2;
+  string value       = 3;
 }

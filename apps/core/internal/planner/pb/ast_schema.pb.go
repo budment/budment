@@ -332,6 +332,14 @@ type Node struct {
 	//	*Node_Loop
 	//	*Node_Poll
 	//	*Node_Script
+	//	*Node_Sleep
+	//	*Node_Log
+	//	*Node_Barrier
+	//	*Node_Set
+	//	*Node_Distribute
+	//	*Node_Metric
+	//	*Node_ReqMutate
+	//	*Node_ResAssert
 	Type          isNode_Type `protobuf_oneof:"type"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -435,6 +443,78 @@ func (x *Node) GetScript() *ScriptNode {
 	return nil
 }
 
+func (x *Node) GetSleep() *SleepNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Sleep); ok {
+			return x.Sleep
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetLog() *LogNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Log); ok {
+			return x.Log
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetBarrier() *BarrierNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Barrier); ok {
+			return x.Barrier
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetSet() *SetNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Set); ok {
+			return x.Set
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetDistribute() *DistributeNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Distribute); ok {
+			return x.Distribute
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetMetric() *MetricNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Metric); ok {
+			return x.Metric
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetReqMutate() *ReqMutateNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_ReqMutate); ok {
+			return x.ReqMutate
+		}
+	}
+	return nil
+}
+
+func (x *Node) GetResAssert() *ResAssertNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_ResAssert); ok {
+			return x.ResAssert
+		}
+	}
+	return nil
+}
+
 type isNode_Type interface {
 	isNode_Type()
 }
@@ -463,6 +543,38 @@ type Node_Script struct {
 	Script *ScriptNode `protobuf:"bytes,7,opt,name=script,proto3,oneof"`
 }
 
+type Node_Sleep struct {
+	Sleep *SleepNode `protobuf:"bytes,8,opt,name=sleep,proto3,oneof"`
+}
+
+type Node_Log struct {
+	Log *LogNode `protobuf:"bytes,9,opt,name=log,proto3,oneof"`
+}
+
+type Node_Barrier struct {
+	Barrier *BarrierNode `protobuf:"bytes,10,opt,name=barrier,proto3,oneof"`
+}
+
+type Node_Set struct {
+	Set *SetNode `protobuf:"bytes,11,opt,name=set,proto3,oneof"`
+}
+
+type Node_Distribute struct {
+	Distribute *DistributeNode `protobuf:"bytes,12,opt,name=distribute,proto3,oneof"`
+}
+
+type Node_Metric struct {
+	Metric *MetricNode `protobuf:"bytes,13,opt,name=metric,proto3,oneof"`
+}
+
+type Node_ReqMutate struct {
+	ReqMutate *ReqMutateNode `protobuf:"bytes,14,opt,name=req_mutate,json=reqMutate,proto3,oneof"`
+}
+
+type Node_ResAssert struct {
+	ResAssert *ResAssertNode `protobuf:"bytes,15,opt,name=res_assert,json=resAssert,proto3,oneof"`
+}
+
 func (*Node_Http) isNode_Type() {}
 
 func (*Node_Branch) isNode_Type() {}
@@ -475,12 +587,28 @@ func (*Node_Poll) isNode_Type() {}
 
 func (*Node_Script) isNode_Type() {}
 
+func (*Node_Sleep) isNode_Type() {}
+
+func (*Node_Log) isNode_Type() {}
+
+func (*Node_Barrier) isNode_Type() {}
+
+func (*Node_Set) isNode_Type() {}
+
+func (*Node_Distribute) isNode_Type() {}
+
+func (*Node_Metric) isNode_Type() {}
+
+func (*Node_ReqMutate) isNode_Type() {}
+
+func (*Node_ResAssert) isNode_Type() {}
+
 type HttpNode struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Method        string                 `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
 	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	BeforeHookId  string                 `protobuf:"bytes,3,opt,name=before_hook_id,json=beforeHookId,proto3" json:"before_hook_id,omitempty"`
-	AfterHookId   string                 `protobuf:"bytes,4,opt,name=after_hook_id,json=afterHookId,proto3" json:"after_hook_id,omitempty"`
+	Before        *Pipeline              `protobuf:"bytes,3,opt,name=before,proto3" json:"before,omitempty"`
+	After         *Pipeline              `protobuf:"bytes,4,opt,name=after,proto3" json:"after,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -529,18 +657,130 @@ func (x *HttpNode) GetUrl() string {
 	return ""
 }
 
-func (x *HttpNode) GetBeforeHookId() string {
+func (x *HttpNode) GetBefore() *Pipeline {
 	if x != nil {
-		return x.BeforeHookId
+		return x.Before
+	}
+	return nil
+}
+
+func (x *HttpNode) GetAfter() *Pipeline {
+	if x != nil {
+		return x.After
+	}
+	return nil
+}
+
+type ReqMutateNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Headers       map[string]string      `protobuf:"bytes,1,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReqMutateNode) Reset() {
+	*x = ReqMutateNode{}
+	mi := &file_ast_schema_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReqMutateNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReqMutateNode) ProtoMessage() {}
+
+func (x *ReqMutateNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReqMutateNode.ProtoReflect.Descriptor instead.
+func (*ReqMutateNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ReqMutateNode) GetHeaders() map[string]string {
+	if x != nil {
+		return x.Headers
+	}
+	return nil
+}
+
+func (x *ReqMutateNode) GetBody() string {
+	if x != nil {
+		return x.Body
 	}
 	return ""
 }
 
-func (x *HttpNode) GetAfterHookId() string {
+type ResAssertNode struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ExpectStatus       int32                  `protobuf:"varint,1,opt,name=expect_status,json=expectStatus,proto3" json:"expect_status,omitempty"`
+	ExpectBodyContains string                 `protobuf:"bytes,2,opt,name=expect_body_contains,json=expectBodyContains,proto3" json:"expect_body_contains,omitempty"`
+	Extract            map[string]string      `protobuf:"bytes,4,rep,name=extract,proto3" json:"extract,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ResAssertNode) Reset() {
+	*x = ResAssertNode{}
+	mi := &file_ast_schema_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResAssertNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResAssertNode) ProtoMessage() {}
+
+func (x *ResAssertNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[7]
 	if x != nil {
-		return x.AfterHookId
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResAssertNode.ProtoReflect.Descriptor instead.
+func (*ResAssertNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ResAssertNode) GetExpectStatus() int32 {
+	if x != nil {
+		return x.ExpectStatus
+	}
+	return 0
+}
+
+func (x *ResAssertNode) GetExpectBodyContains() string {
+	if x != nil {
+		return x.ExpectBodyContains
 	}
 	return ""
+}
+
+func (x *ResAssertNode) GetExtract() map[string]string {
+	if x != nil {
+		return x.Extract
+	}
+	return nil
 }
 
 type BranchNode struct {
@@ -554,7 +794,7 @@ type BranchNode struct {
 
 func (x *BranchNode) Reset() {
 	*x = BranchNode{}
-	mi := &file_ast_schema_proto_msgTypes[6]
+	mi := &file_ast_schema_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +806,7 @@ func (x *BranchNode) String() string {
 func (*BranchNode) ProtoMessage() {}
 
 func (x *BranchNode) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[6]
+	mi := &file_ast_schema_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +819,7 @@ func (x *BranchNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BranchNode.ProtoReflect.Descriptor instead.
 func (*BranchNode) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{6}
+	return file_ast_schema_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *BranchNode) GetConditionHookId() string {
@@ -614,7 +854,7 @@ type MatchNode struct {
 
 func (x *MatchNode) Reset() {
 	*x = MatchNode{}
-	mi := &file_ast_schema_proto_msgTypes[7]
+	mi := &file_ast_schema_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -626,7 +866,7 @@ func (x *MatchNode) String() string {
 func (*MatchNode) ProtoMessage() {}
 
 func (x *MatchNode) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[7]
+	mi := &file_ast_schema_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -639,7 +879,7 @@ func (x *MatchNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchNode.ProtoReflect.Descriptor instead.
 func (*MatchNode) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{7}
+	return file_ast_schema_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MatchNode) GetConditionHookId() string {
@@ -678,7 +918,7 @@ type LoopNode struct {
 
 func (x *LoopNode) Reset() {
 	*x = LoopNode{}
-	mi := &file_ast_schema_proto_msgTypes[8]
+	mi := &file_ast_schema_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -690,7 +930,7 @@ func (x *LoopNode) String() string {
 func (*LoopNode) ProtoMessage() {}
 
 func (x *LoopNode) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[8]
+	mi := &file_ast_schema_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -703,7 +943,7 @@ func (x *LoopNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoopNode.ProtoReflect.Descriptor instead.
 func (*LoopNode) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{8}
+	return file_ast_schema_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LoopNode) GetConfig() isLoopNode_Config {
@@ -780,7 +1020,7 @@ type PollNode struct {
 
 func (x *PollNode) Reset() {
 	*x = PollNode{}
-	mi := &file_ast_schema_proto_msgTypes[9]
+	mi := &file_ast_schema_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -792,7 +1032,7 @@ func (x *PollNode) String() string {
 func (*PollNode) ProtoMessage() {}
 
 func (x *PollNode) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[9]
+	mi := &file_ast_schema_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -805,7 +1045,7 @@ func (x *PollNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PollNode.ProtoReflect.Descriptor instead.
 func (*PollNode) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{9}
+	return file_ast_schema_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PollNode) GetConditionHookId() string {
@@ -840,7 +1080,7 @@ type PollPolicy struct {
 
 func (x *PollPolicy) Reset() {
 	*x = PollPolicy{}
-	mi := &file_ast_schema_proto_msgTypes[10]
+	mi := &file_ast_schema_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -852,7 +1092,7 @@ func (x *PollPolicy) String() string {
 func (*PollPolicy) ProtoMessage() {}
 
 func (x *PollPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[10]
+	mi := &file_ast_schema_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -865,7 +1105,7 @@ func (x *PollPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PollPolicy.ProtoReflect.Descriptor instead.
 func (*PollPolicy) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{10}
+	return file_ast_schema_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PollPolicy) GetInterval() string {
@@ -898,7 +1138,7 @@ type ScriptNode struct {
 
 func (x *ScriptNode) Reset() {
 	*x = ScriptNode{}
-	mi := &file_ast_schema_proto_msgTypes[11]
+	mi := &file_ast_schema_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -910,7 +1150,7 @@ func (x *ScriptNode) String() string {
 func (*ScriptNode) ProtoMessage() {}
 
 func (x *ScriptNode) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[11]
+	mi := &file_ast_schema_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -923,12 +1163,324 @@ func (x *ScriptNode) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScriptNode.ProtoReflect.Descriptor instead.
 func (*ScriptNode) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{11}
+	return file_ast_schema_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ScriptNode) GetHookId() string {
 	if x != nil {
 		return x.HookId
+	}
+	return ""
+}
+
+type SleepNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DurationS     float64                `protobuf:"fixed64,1,opt,name=duration_s,json=durationS,proto3" json:"duration_s,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SleepNode) Reset() {
+	*x = SleepNode{}
+	mi := &file_ast_schema_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SleepNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SleepNode) ProtoMessage() {}
+
+func (x *SleepNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SleepNode.ProtoReflect.Descriptor instead.
+func (*SleepNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SleepNode) GetDurationS() float64 {
+	if x != nil {
+		return x.DurationS
+	}
+	return 0
+}
+
+type LogNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogNode) Reset() {
+	*x = LogNode{}
+	mi := &file_ast_schema_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogNode) ProtoMessage() {}
+
+func (x *LogNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogNode.ProtoReflect.Descriptor instead.
+func (*LogNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *LogNode) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type BarrierNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Quorum        int32                  `protobuf:"varint,2,opt,name=quorum,proto3" json:"quorum,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BarrierNode) Reset() {
+	*x = BarrierNode{}
+	mi := &file_ast_schema_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BarrierNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BarrierNode) ProtoMessage() {}
+
+func (x *BarrierNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BarrierNode.ProtoReflect.Descriptor instead.
+func (*BarrierNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *BarrierNode) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *BarrierNode) GetQuorum() int32 {
+	if x != nil {
+		return x.Quorum
+	}
+	return 0
+}
+
+type SetNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	ValueJson     string                 `protobuf:"bytes,2,opt,name=value_json,json=valueJson,proto3" json:"value_json,omitempty"`
+	Scope         string                 `protobuf:"bytes,3,opt,name=scope,proto3" json:"scope,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetNode) Reset() {
+	*x = SetNode{}
+	mi := &file_ast_schema_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetNode) ProtoMessage() {}
+
+func (x *SetNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetNode.ProtoReflect.Descriptor instead.
+func (*SetNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *SetNode) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *SetNode) GetValueJson() string {
+	if x != nil {
+		return x.ValueJson
+	}
+	return ""
+}
+
+func (x *SetNode) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+type DistributeNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	ItemsJson     string                 `protobuf:"bytes,2,opt,name=items_json,json=itemsJson,proto3" json:"items_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DistributeNode) Reset() {
+	*x = DistributeNode{}
+	mi := &file_ast_schema_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DistributeNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DistributeNode) ProtoMessage() {}
+
+func (x *DistributeNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DistributeNode.ProtoReflect.Descriptor instead.
+func (*DistributeNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *DistributeNode) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *DistributeNode) GetItemsJson() string {
+	if x != nil {
+		return x.ItemsJson
+	}
+	return ""
+}
+
+type MetricNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MetricType    string                 `protobuf:"bytes,1,opt,name=metric_type,json=metricType,proto3" json:"metric_type,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Value         string                 `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MetricNode) Reset() {
+	*x = MetricNode{}
+	mi := &file_ast_schema_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MetricNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetricNode) ProtoMessage() {}
+
+func (x *MetricNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetricNode.ProtoReflect.Descriptor instead.
+func (*MetricNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *MetricNode) GetMetricType() string {
+	if x != nil {
+		return x.MetricType
+	}
+	return ""
+}
+
+func (x *MetricNode) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MetricNode) GetValue() string {
+	if x != nil {
+		return x.Value
 	}
 	return ""
 }
@@ -943,7 +1495,7 @@ type LoopNode_RangeConfig struct {
 
 func (x *LoopNode_RangeConfig) Reset() {
 	*x = LoopNode_RangeConfig{}
-	mi := &file_ast_schema_proto_msgTypes[15]
+	mi := &file_ast_schema_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -955,7 +1507,7 @@ func (x *LoopNode_RangeConfig) String() string {
 func (*LoopNode_RangeConfig) ProtoMessage() {}
 
 func (x *LoopNode_RangeConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[15]
+	mi := &file_ast_schema_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -968,7 +1520,7 @@ func (x *LoopNode_RangeConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoopNode_RangeConfig.ProtoReflect.Descriptor instead.
 func (*LoopNode_RangeConfig) Descriptor() ([]byte, []int) {
-	return file_ast_schema_proto_rawDescGZIP(), []int{8, 0}
+	return file_ast_schema_proto_rawDescGZIP(), []int{10, 0}
 }
 
 func (x *LoopNode_RangeConfig) GetFrom() int32 {
@@ -1031,7 +1583,7 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\bduration\x18\x01 \x01(\tR\bduration\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\x05R\x06target\"6\n" +
 	"\bPipeline\x12*\n" +
-	"\x05steps\x18\x01 \x03(\v2\x14.blaster.ast.v1.NodeR\x05steps\"\xcd\x02\n" +
+	"\x05steps\x18\x01 \x03(\v2\x14.blaster.ast.v1.NodeR\x05steps\"\x8b\x06\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
 	"\x04http\x18\x02 \x01(\v2\x18.blaster.ast.v1.HttpNodeH\x00R\x04http\x124\n" +
@@ -1039,13 +1591,39 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\x05match\x18\x04 \x01(\v2\x19.blaster.ast.v1.MatchNodeH\x00R\x05match\x12.\n" +
 	"\x04loop\x18\x05 \x01(\v2\x18.blaster.ast.v1.LoopNodeH\x00R\x04loop\x12.\n" +
 	"\x04poll\x18\x06 \x01(\v2\x18.blaster.ast.v1.PollNodeH\x00R\x04poll\x124\n" +
-	"\x06script\x18\a \x01(\v2\x1a.blaster.ast.v1.ScriptNodeH\x00R\x06scriptB\x06\n" +
-	"\x04type\"~\n" +
+	"\x06script\x18\a \x01(\v2\x1a.blaster.ast.v1.ScriptNodeH\x00R\x06script\x121\n" +
+	"\x05sleep\x18\b \x01(\v2\x19.blaster.ast.v1.SleepNodeH\x00R\x05sleep\x12+\n" +
+	"\x03log\x18\t \x01(\v2\x17.blaster.ast.v1.LogNodeH\x00R\x03log\x127\n" +
+	"\abarrier\x18\n" +
+	" \x01(\v2\x1b.blaster.ast.v1.BarrierNodeH\x00R\abarrier\x12+\n" +
+	"\x03set\x18\v \x01(\v2\x17.blaster.ast.v1.SetNodeH\x00R\x03set\x12@\n" +
+	"\n" +
+	"distribute\x18\f \x01(\v2\x1e.blaster.ast.v1.DistributeNodeH\x00R\n" +
+	"distribute\x124\n" +
+	"\x06metric\x18\r \x01(\v2\x1a.blaster.ast.v1.MetricNodeH\x00R\x06metric\x12>\n" +
+	"\n" +
+	"req_mutate\x18\x0e \x01(\v2\x1d.blaster.ast.v1.ReqMutateNodeH\x00R\treqMutate\x12>\n" +
+	"\n" +
+	"res_assert\x18\x0f \x01(\v2\x1d.blaster.ast.v1.ResAssertNodeH\x00R\tresAssertB\x06\n" +
+	"\x04type\"\x96\x01\n" +
 	"\bHttpNode\x12\x16\n" +
 	"\x06method\x18\x01 \x01(\tR\x06method\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\x12$\n" +
-	"\x0ebefore_hook_id\x18\x03 \x01(\tR\fbeforeHookId\x12\"\n" +
-	"\rafter_hook_id\x18\x04 \x01(\tR\vafterHookId\"\xa8\x01\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x120\n" +
+	"\x06before\x18\x03 \x01(\v2\x18.blaster.ast.v1.PipelineR\x06before\x12.\n" +
+	"\x05after\x18\x04 \x01(\v2\x18.blaster.ast.v1.PipelineR\x05after\"\xa5\x01\n" +
+	"\rReqMutateNode\x12D\n" +
+	"\aheaders\x18\x01 \x03(\v2*.blaster.ast.v1.ReqMutateNode.HeadersEntryR\aheaders\x12\x12\n" +
+	"\x04body\x18\x02 \x01(\tR\x04body\x1a:\n" +
+	"\fHeadersEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe8\x01\n" +
+	"\rResAssertNode\x12#\n" +
+	"\rexpect_status\x18\x01 \x01(\x05R\fexpectStatus\x120\n" +
+	"\x14expect_body_contains\x18\x02 \x01(\tR\x12expectBodyContains\x12D\n" +
+	"\aextract\x18\x04 \x03(\v2*.blaster.ast.v1.ResAssertNode.ExtractEntryR\aextract\x1a:\n" +
+	"\fExtractEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa8\x01\n" +
 	"\n" +
 	"BranchNode\x12*\n" +
 	"\x11condition_hook_id\x18\x01 \x01(\tR\x0fconditionHookId\x125\n" +
@@ -1080,7 +1658,30 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\fmax_attempts\x18\x03 \x01(\x05R\vmaxAttempts\"%\n" +
 	"\n" +
 	"ScriptNode\x12\x17\n" +
-	"\ahook_id\x18\x01 \x01(\tR\x06hookIdB*Z(github.com/vunas/blaster/core/pkg/pb/astb\x06proto3"
+	"\ahook_id\x18\x01 \x01(\tR\x06hookId\"*\n" +
+	"\tSleepNode\x12\x1d\n" +
+	"\n" +
+	"duration_s\x18\x01 \x01(\x01R\tdurationS\"#\n" +
+	"\aLogNode\x12\x18\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage\"9\n" +
+	"\vBarrierNode\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06quorum\x18\x02 \x01(\x05R\x06quorum\"P\n" +
+	"\aSetNode\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1d\n" +
+	"\n" +
+	"value_json\x18\x02 \x01(\tR\tvalueJson\x12\x14\n" +
+	"\x05scope\x18\x03 \x01(\tR\x05scope\"A\n" +
+	"\x0eDistributeNode\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x1d\n" +
+	"\n" +
+	"items_json\x18\x02 \x01(\tR\titemsJson\"W\n" +
+	"\n" +
+	"MetricNode\x12\x1f\n" +
+	"\vmetric_type\x18\x01 \x01(\tR\n" +
+	"metricType\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05valueB*Z(github.com/vunas/blaster/core/pkg/pb/astb\x06proto3"
 
 var (
 	file_ast_schema_proto_rawDescOnce sync.Once
@@ -1094,7 +1695,7 @@ func file_ast_schema_proto_rawDescGZIP() []byte {
 	return file_ast_schema_proto_rawDescData
 }
 
-var file_ast_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_ast_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_ast_schema_proto_goTypes = []any{
 	(*Scenario)(nil),             // 0: blaster.ast.v1.Scenario
 	(*ScenarioConfig)(nil),       // 1: blaster.ast.v1.ScenarioConfig
@@ -1102,45 +1703,67 @@ var file_ast_schema_proto_goTypes = []any{
 	(*Pipeline)(nil),             // 3: blaster.ast.v1.Pipeline
 	(*Node)(nil),                 // 4: blaster.ast.v1.Node
 	(*HttpNode)(nil),             // 5: blaster.ast.v1.HttpNode
-	(*BranchNode)(nil),           // 6: blaster.ast.v1.BranchNode
-	(*MatchNode)(nil),            // 7: blaster.ast.v1.MatchNode
-	(*LoopNode)(nil),             // 8: blaster.ast.v1.LoopNode
-	(*PollNode)(nil),             // 9: blaster.ast.v1.PollNode
-	(*PollPolicy)(nil),           // 10: blaster.ast.v1.PollPolicy
-	(*ScriptNode)(nil),           // 11: blaster.ast.v1.ScriptNode
-	nil,                          // 12: blaster.ast.v1.ScenarioConfig.ThresholdsEntry
-	nil,                          // 13: blaster.ast.v1.ScenarioConfig.TagsEntry
-	nil,                          // 14: blaster.ast.v1.MatchNode.CasesEntry
-	(*LoopNode_RangeConfig)(nil), // 15: blaster.ast.v1.LoopNode.RangeConfig
+	(*ReqMutateNode)(nil),        // 6: blaster.ast.v1.ReqMutateNode
+	(*ResAssertNode)(nil),        // 7: blaster.ast.v1.ResAssertNode
+	(*BranchNode)(nil),           // 8: blaster.ast.v1.BranchNode
+	(*MatchNode)(nil),            // 9: blaster.ast.v1.MatchNode
+	(*LoopNode)(nil),             // 10: blaster.ast.v1.LoopNode
+	(*PollNode)(nil),             // 11: blaster.ast.v1.PollNode
+	(*PollPolicy)(nil),           // 12: blaster.ast.v1.PollPolicy
+	(*ScriptNode)(nil),           // 13: blaster.ast.v1.ScriptNode
+	(*SleepNode)(nil),            // 14: blaster.ast.v1.SleepNode
+	(*LogNode)(nil),              // 15: blaster.ast.v1.LogNode
+	(*BarrierNode)(nil),          // 16: blaster.ast.v1.BarrierNode
+	(*SetNode)(nil),              // 17: blaster.ast.v1.SetNode
+	(*DistributeNode)(nil),       // 18: blaster.ast.v1.DistributeNode
+	(*MetricNode)(nil),           // 19: blaster.ast.v1.MetricNode
+	nil,                          // 20: blaster.ast.v1.ScenarioConfig.ThresholdsEntry
+	nil,                          // 21: blaster.ast.v1.ScenarioConfig.TagsEntry
+	nil,                          // 22: blaster.ast.v1.ReqMutateNode.HeadersEntry
+	nil,                          // 23: blaster.ast.v1.ResAssertNode.ExtractEntry
+	nil,                          // 24: blaster.ast.v1.MatchNode.CasesEntry
+	(*LoopNode_RangeConfig)(nil), // 25: blaster.ast.v1.LoopNode.RangeConfig
 }
 var file_ast_schema_proto_depIdxs = []int32{
 	3,  // 0: blaster.ast.v1.Scenario.setup:type_name -> blaster.ast.v1.Pipeline
 	3,  // 1: blaster.ast.v1.Scenario.execution:type_name -> blaster.ast.v1.Pipeline
 	1,  // 2: blaster.ast.v1.Scenario.config:type_name -> blaster.ast.v1.ScenarioConfig
 	2,  // 3: blaster.ast.v1.ScenarioConfig.stages:type_name -> blaster.ast.v1.Stage
-	12, // 4: blaster.ast.v1.ScenarioConfig.thresholds:type_name -> blaster.ast.v1.ScenarioConfig.ThresholdsEntry
-	13, // 5: blaster.ast.v1.ScenarioConfig.tags:type_name -> blaster.ast.v1.ScenarioConfig.TagsEntry
+	20, // 4: blaster.ast.v1.ScenarioConfig.thresholds:type_name -> blaster.ast.v1.ScenarioConfig.ThresholdsEntry
+	21, // 5: blaster.ast.v1.ScenarioConfig.tags:type_name -> blaster.ast.v1.ScenarioConfig.TagsEntry
 	4,  // 6: blaster.ast.v1.Pipeline.steps:type_name -> blaster.ast.v1.Node
 	5,  // 7: blaster.ast.v1.Node.http:type_name -> blaster.ast.v1.HttpNode
-	6,  // 8: blaster.ast.v1.Node.branch:type_name -> blaster.ast.v1.BranchNode
-	7,  // 9: blaster.ast.v1.Node.match:type_name -> blaster.ast.v1.MatchNode
-	8,  // 10: blaster.ast.v1.Node.loop:type_name -> blaster.ast.v1.LoopNode
-	9,  // 11: blaster.ast.v1.Node.poll:type_name -> blaster.ast.v1.PollNode
-	11, // 12: blaster.ast.v1.Node.script:type_name -> blaster.ast.v1.ScriptNode
-	3,  // 13: blaster.ast.v1.BranchNode.true_path:type_name -> blaster.ast.v1.Pipeline
-	3,  // 14: blaster.ast.v1.BranchNode.false_path:type_name -> blaster.ast.v1.Pipeline
-	14, // 15: blaster.ast.v1.MatchNode.cases:type_name -> blaster.ast.v1.MatchNode.CasesEntry
-	3,  // 16: blaster.ast.v1.MatchNode.default_path:type_name -> blaster.ast.v1.Pipeline
-	15, // 17: blaster.ast.v1.LoopNode.range:type_name -> blaster.ast.v1.LoopNode.RangeConfig
-	3,  // 18: blaster.ast.v1.LoopNode.logic:type_name -> blaster.ast.v1.Pipeline
-	3,  // 19: blaster.ast.v1.PollNode.logic:type_name -> blaster.ast.v1.Pipeline
-	10, // 20: blaster.ast.v1.PollNode.policy:type_name -> blaster.ast.v1.PollPolicy
-	3,  // 21: blaster.ast.v1.MatchNode.CasesEntry.value:type_name -> blaster.ast.v1.Pipeline
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	8,  // 8: blaster.ast.v1.Node.branch:type_name -> blaster.ast.v1.BranchNode
+	9,  // 9: blaster.ast.v1.Node.match:type_name -> blaster.ast.v1.MatchNode
+	10, // 10: blaster.ast.v1.Node.loop:type_name -> blaster.ast.v1.LoopNode
+	11, // 11: blaster.ast.v1.Node.poll:type_name -> blaster.ast.v1.PollNode
+	13, // 12: blaster.ast.v1.Node.script:type_name -> blaster.ast.v1.ScriptNode
+	14, // 13: blaster.ast.v1.Node.sleep:type_name -> blaster.ast.v1.SleepNode
+	15, // 14: blaster.ast.v1.Node.log:type_name -> blaster.ast.v1.LogNode
+	16, // 15: blaster.ast.v1.Node.barrier:type_name -> blaster.ast.v1.BarrierNode
+	17, // 16: blaster.ast.v1.Node.set:type_name -> blaster.ast.v1.SetNode
+	18, // 17: blaster.ast.v1.Node.distribute:type_name -> blaster.ast.v1.DistributeNode
+	19, // 18: blaster.ast.v1.Node.metric:type_name -> blaster.ast.v1.MetricNode
+	6,  // 19: blaster.ast.v1.Node.req_mutate:type_name -> blaster.ast.v1.ReqMutateNode
+	7,  // 20: blaster.ast.v1.Node.res_assert:type_name -> blaster.ast.v1.ResAssertNode
+	3,  // 21: blaster.ast.v1.HttpNode.before:type_name -> blaster.ast.v1.Pipeline
+	3,  // 22: blaster.ast.v1.HttpNode.after:type_name -> blaster.ast.v1.Pipeline
+	22, // 23: blaster.ast.v1.ReqMutateNode.headers:type_name -> blaster.ast.v1.ReqMutateNode.HeadersEntry
+	23, // 24: blaster.ast.v1.ResAssertNode.extract:type_name -> blaster.ast.v1.ResAssertNode.ExtractEntry
+	3,  // 25: blaster.ast.v1.BranchNode.true_path:type_name -> blaster.ast.v1.Pipeline
+	3,  // 26: blaster.ast.v1.BranchNode.false_path:type_name -> blaster.ast.v1.Pipeline
+	24, // 27: blaster.ast.v1.MatchNode.cases:type_name -> blaster.ast.v1.MatchNode.CasesEntry
+	3,  // 28: blaster.ast.v1.MatchNode.default_path:type_name -> blaster.ast.v1.Pipeline
+	25, // 29: blaster.ast.v1.LoopNode.range:type_name -> blaster.ast.v1.LoopNode.RangeConfig
+	3,  // 30: blaster.ast.v1.LoopNode.logic:type_name -> blaster.ast.v1.Pipeline
+	3,  // 31: blaster.ast.v1.PollNode.logic:type_name -> blaster.ast.v1.Pipeline
+	12, // 32: blaster.ast.v1.PollNode.policy:type_name -> blaster.ast.v1.PollPolicy
+	3,  // 33: blaster.ast.v1.MatchNode.CasesEntry.value:type_name -> blaster.ast.v1.Pipeline
+	34, // [34:34] is the sub-list for method output_type
+	34, // [34:34] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_ast_schema_proto_init() }
@@ -1156,8 +1779,16 @@ func file_ast_schema_proto_init() {
 		(*Node_Loop)(nil),
 		(*Node_Poll)(nil),
 		(*Node_Script)(nil),
+		(*Node_Sleep)(nil),
+		(*Node_Log)(nil),
+		(*Node_Barrier)(nil),
+		(*Node_Set)(nil),
+		(*Node_Distribute)(nil),
+		(*Node_Metric)(nil),
+		(*Node_ReqMutate)(nil),
+		(*Node_ResAssert)(nil),
 	}
-	file_ast_schema_proto_msgTypes[8].OneofWrappers = []any{
+	file_ast_schema_proto_msgTypes[10].OneofWrappers = []any{
 		(*LoopNode_Count)(nil),
 		(*LoopNode_Range)(nil),
 		(*LoopNode_ArrayHookId)(nil),
@@ -1168,7 +1799,7 @@ func file_ast_schema_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ast_schema_proto_rawDesc), len(file_ast_schema_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

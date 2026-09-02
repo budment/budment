@@ -88,13 +88,42 @@ export interface Node {
   loop?: LoopNode | undefined;
   poll?: PollNode | undefined;
   script?: ScriptNode | undefined;
+  sleep?: SleepNode | undefined;
+  log?: LogNode | undefined;
+  barrier?: BarrierNode | undefined;
+  set?: SetNode | undefined;
+  distribute?: DistributeNode | undefined;
+  metric?: MetricNode | undefined;
+  reqMutate?: ReqMutateNode | undefined;
+  resAssert?: ResAssertNode | undefined;
 }
 
 export interface HttpNode {
   method?: string | undefined;
   url?: string | undefined;
-  beforeHookId?: string | undefined;
-  afterHookId?: string | undefined;
+  before?: Pipeline | undefined;
+  after?: Pipeline | undefined;
+}
+
+export interface ReqMutateNode {
+  headers?: { [key: string]: string } | undefined;
+  body?: string | undefined;
+}
+
+export interface ReqMutateNode_HeadersEntry {
+  key: string;
+  value: string;
+}
+
+export interface ResAssertNode {
+  expectStatus?: number | undefined;
+  expectBodyContains?: string | undefined;
+  extract?: { [key: string]: string } | undefined;
+}
+
+export interface ResAssertNode_ExtractEntry {
+  key: string;
+  value: string;
 }
 
 export interface BranchNode {
@@ -140,4 +169,34 @@ export interface PollPolicy {
 
 export interface ScriptNode {
   hookId?: string | undefined;
+}
+
+export interface SleepNode {
+  durationS?: number | undefined;
+}
+
+export interface LogNode {
+  message?: string | undefined;
+}
+
+export interface BarrierNode {
+  name?: string | undefined;
+  quorum?: number | undefined;
+}
+
+export interface SetNode {
+  key?: string | undefined;
+  valueJson?: string | undefined;
+  scope?: string | undefined;
+}
+
+export interface DistributeNode {
+  key?: string | undefined;
+  itemsJson?: string | undefined;
+}
+
+export interface MetricNode {
+  metricType?: string | undefined;
+  name?: string | undefined;
+  value?: string | undefined;
 }
