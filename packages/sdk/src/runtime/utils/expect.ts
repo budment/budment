@@ -1,3 +1,5 @@
+import { _g, dummyNode } from "../globals";
+
 export interface Expectation<T = any> {
     toBe(expected: T): void;
     toBeGreaterThan(expected: number): void;
@@ -17,4 +19,4 @@ export interface Expectation<T = any> {
  * expect(res.status).toBe(200);
  * expect(res.get("role")).toBe("admin");
  */
-export declare function expect<T = any>(value: T): Expectation<T>;
+export const expect: <T = any>(value: T) => Expectation<T> = _g.expect || (() => dummyNode as any);

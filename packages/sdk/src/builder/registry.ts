@@ -8,7 +8,7 @@ export const HookRegistry = {
     hooks: new Map<string, Function>(),
 
     generateNodeId(prefix: string): string {
-        return `${prefix}_n${++nodeCounter}`;
+        return `${prefix}_${++nodeCounter}`;
     },
 
     register(nodeId: string, hookType: string, fn: Function): string {

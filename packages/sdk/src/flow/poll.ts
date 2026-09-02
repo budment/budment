@@ -1,8 +1,7 @@
-import { Node,PollNode, PollPolicy } from "../../pb/ast_schema";
-import { HookRegistry } from "../core/registry";
-import { Pipeline } from "../core/pipeline";
-import { BuilderNode } from "../core/types";
-import { Context } from '../../runtime/core/context';
+import { Node, PollNode, PollPolicy } from "../pb/ast_schema";
+import { HookRegistry } from "../builder/registry";
+import { Pipeline } from "../builder/pipeline";
+import { BuilderNode } from "../builder/types";
 
 /**
  * Poll builder for asynchronous polling loops.
@@ -14,7 +13,7 @@ export class PollBuilder implements BuilderNode {
     private policy?: PollPolicy;
 
     constructor(
-        condition: (ctx: Context) => boolean,
+        condition: () => boolean, 
         logicPath: BuilderNode[],
         policy?: PollPolicy,
     ) {
@@ -36,10 +35,6 @@ export class PollBuilder implements BuilderNode {
     }
 }
 
-export function poll(
-    condition: (ctx: Context) => boolean,
-    logicPath: BuilderNode[],
-    policy?: PollPolicy,
-) {
+export function poll(condition: () => boolean, logicPath: BuilderNode[], policy?: PollPolicy) {
     return new PollBuilder(condition, logicPath, policy);
 }

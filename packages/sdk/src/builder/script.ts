@@ -1,7 +1,6 @@
-import { Node, ScriptNode } from "../../pb/ast_schema";
+import { Node, ScriptNode } from "../pb/ast_schema";
 import { HookRegistry } from "./registry";
-import { BuilderNode } from '../core/types';
-import { Context } from "../../runtime";
+import { BuilderNode } from './types';
 
 /**
  * Script execution node builder.
@@ -10,7 +9,7 @@ export class ScriptBuilder implements BuilderNode {
     private hookId: string;
     private uniqueId: string;
 
-    constructor(callback: (ctx: Context) => void) {
+    constructor(callback: () => void) {
         this.uniqueId = HookRegistry.generateNodeId("script");
         this.hookId = HookRegistry.register(this.uniqueId, "run", callback);
     }
@@ -25,6 +24,6 @@ export class ScriptBuilder implements BuilderNode {
     }
 }
 
-export function script(callback: (ctx: any) => void) {
+export function script(callback: () => void) {
     return new ScriptBuilder(callback);
 }

@@ -1,8 +1,7 @@
-import { Node, BranchNode } from '../../pb/ast_schema';
-import { HookRegistry } from '../core/registry';
-import { Pipeline } from '../core/pipeline';
-import { BuilderNode } from '../core/types';
-import { Context } from '../../runtime/core/context';
+import { Node, BranchNode } from '../pb/ast_schema';
+import { HookRegistry } from '../builder/registry';
+import { Pipeline } from '../builder/pipeline';
+import { BuilderNode } from '../builder/types';
 
 /**
  * Branch builder for conditional execution (If/Else).
@@ -14,7 +13,7 @@ export class BranchBuilder implements BuilderNode {
     private falsePipeline?: Pipeline;
 
     constructor(
-        condition: (ctx: Context) => boolean,
+        condition: () => boolean,
         truePath: BuilderNode[],
         falsePath?: BuilderNode[]
     ) {
@@ -36,13 +35,13 @@ export class BranchBuilder implements BuilderNode {
                 conditionHookId: this.conditionHookId,
                 truePath: this.truePipeline.build(),
                 falsePath: this.falsePipeline ? this.falsePipeline.build() : undefined
-            } as BranchNode 
-        }; 
+            } as BranchNode
+        };
     }
 }
 
 export function branch(
-    condition: (ctx: Context) => boolean,
+    condition: () => boolean,
     truePath: BuilderNode[],
     falsePath?: BuilderNode[]
 ) {

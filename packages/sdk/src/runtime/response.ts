@@ -14,11 +14,13 @@ export interface HttpResponse {
     /** Infrastructure or network error message, if any. */
     readonly error?: string;
 
-    /**
+    /** 
      * Extracts values from a JSON response using GJSON path syntax.
      * 
      * @param path GJSON path (e.g., "data.user.id" or "items.#.name")
      */
     get<T = any>(path: string): T | undefined;
+
+    /** Returns the raw string body of the response. */
     getBody(): object | string;
 }

@@ -1,8 +1,9 @@
-import { MatchNode, Node, Pipeline as ProtoPipeline } from "../../pb/ast_schema";
-import { HookRegistry } from "../core/registry";
-import { Pipeline } from "../core/pipeline";
-import { BuilderNode } from "../core/types";
-import { Context } from '../../runtime/core/context';
+import { Node, MatchNode } from '../pb/ast_schema';
+import { HookRegistry } from '../builder/registry';
+import { Pipeline } from '../builder/pipeline';
+import { BuilderNode } from '../builder/types';
+
+export type NodeInput = BuilderNode | BuilderNode[];
 
 /**
  * Match node builder for multi-way branching (switch/case).
@@ -14,27 +15,31 @@ export class MatchBuilder implements BuilderNode {
     private defaultPipeline?: Pipeline;
 
     constructor(
-        condition: (ctx: Context) => string | number,
-        cases: Record<string | number, BuilderNode[]>,
-        defaultPath?: BuilderNode[],
+        condition: () => string | number,
+        cases: Record<string | number, NodeInput>,
+        defaultPath?: NodeInput,
     ) {
         this.uniqueId = HookRegistry.generateNodeId("match");
         this.conditionHookId = HookRegistry.register(this.uniqueId, "cond", condition);
 
-        for (const [key, nodes] of Object.entries(cases)) {
+        for (const [key, nodesOrNode] of Object.entries(cases)) {
             const pipeline = new Pipeline();
+            const nodes = Array.isArray(nodesOrNode) ? nodesOrNode : [nodesOrNode];
             pipeline.add(...nodes);
-            this.casePipelines[String(key)] = pipeline; 
+            this.casePipelines[String(key)] = pipeline;
         }
 
-        if (defaultPath && defaultPath.length > 0) {
+        if (defaultPath) {
             this.defaultPipeline = new Pipeline();
-            this.defaultPipeline.add(...defaultPath);
+            const nodes = Array.isArray(defaultPath) ? defaultPath : [defaultPath];
+            if (nodes.length > 0) {
+                this.defaultPipeline.add(...nodes);
+            }
         }
     }
 
     build(): Node {
-        const compiledCases: Record<string, ProtoPipeline> = {};
+        const compiledCases: Record<string, any> = {};
         for (const [key, pipeline] of Object.entries(this.casePipelines)) {
             compiledCases[key] = pipeline.build();
         }
@@ -46,14 +51,14 @@ export class MatchBuilder implements BuilderNode {
                 cases: compiledCases,
                 defaultPath: this.defaultPipeline ? this.defaultPipeline.build() : undefined,
             } as MatchNode
-        }; 
+        };
     }
 }
 
 export function match(
-    condition: (ctx: Context) => string | number,
-    cases: Record<string | number, BuilderNode[]>,
-    defaultPath?: BuilderNode[],
+    condition: () => string | number,
+    cases: Record<string | number, NodeInput>,
+    defaultPath?: NodeInput,
 ) {
     return new MatchBuilder(condition, cases, defaultPath);
 }

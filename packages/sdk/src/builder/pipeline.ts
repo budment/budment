@@ -1,4 +1,4 @@
-import { Node, Pipeline as ProtoPipeline } from "../../pb/ast_schema";
+import { Node, Pipeline as ProtoPipeline } from "../pb/ast_schema";
 import { BuilderNode } from "./types";
 
 /**

@@ -1,4 +1,4 @@
-import { Scenario as ProtoScenario, ScenarioConfig } from "../../pb/ast_schema";
+import { Scenario as ProtoScenario, ScenarioConfig } from "../pb/ast_schema";
 import { Pipeline } from "./pipeline";
 import { BuilderNode } from "./types";
 
@@ -9,7 +9,6 @@ export class ScenarioBuilder {
     private scenarioName: string;
     private setupPipeline = new Pipeline();
     private executionPipeline = new Pipeline();
-    private execConfig?: ScenarioConfig;
 
     constructor(name: string) {
         this.scenarioName = name;
@@ -25,18 +24,14 @@ export class ScenarioBuilder {
         return this;
     }
 
-    use(config: ScenarioConfig): this {
-        this.execConfig = config;
-        return this;
-    }
-
-    build(): ProtoScenario {
+    build(config?: ScenarioConfig): ProtoScenario {
         const scn = {
             name: this.scenarioName,
             setup: this.setupPipeline.build(),
             execution: this.executionPipeline.build(),
-            config: this.execConfig,
+            config: config,
         };
+
         const _global = globalThis as any;
         _global.__BLASTER_SCENARIOS__ = _global.__BLASTER_SCENARIOS__ || [];
         _global.__BLASTER_SCENARIOS__.push(scn);

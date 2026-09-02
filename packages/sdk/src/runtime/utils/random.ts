@@ -1,3 +1,5 @@
+import { _g, dummyNode } from "../globals";
+
 export interface RandomUtils {
     /** Generates a fast UUID v4 via the native Go engine. */
     uuid(): string;
@@ -15,4 +17,4 @@ export interface RandomUtils {
 /**
  * Random data generation utilities backed by Go native methods.
  */
-export declare const random: RandomUtils;
+export const random: RandomUtils = _g.random || (dummyNode as any);
