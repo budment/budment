@@ -27,11 +27,6 @@ func ParseEnv() EnvConfig {
 	if v := os.Getenv("BLASTER_START_AT"); v != "" {
 		env.StartAt = &v
 	}
-	if v := os.Getenv("BLASTER_AUTO_PLUMB"); v != "" {
-		if plumb, err := strconv.ParseBool(v); err == nil {
-			env.AutoPlumb = &plumb
-		}
-	}
 	if v := os.Getenv("BLASTER_INSECURE_SKIP_TLS_VERIFY"); v != "" {
 		if skip, err := strconv.ParseBool(v); err == nil {
 			env.InsecureSkipTLS = &skip

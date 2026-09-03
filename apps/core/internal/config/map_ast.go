@@ -36,9 +36,6 @@ func MapScenarioConfigToAST(astGraph *ast.Scenario, astCfg *ASTConfig) {
 	if cfg.InsecureSkipTlsVerify != nil {
 		astCfg.InsecureSkipTLS = Ptr(cfg.GetInsecureSkipTlsVerify())
 	}
-	if cfg.AutoPlumb != nil {
-		astCfg.AutoPlumb = Ptr(cfg.GetAutoPlumb())
-	}
 	if len(cfg.Stages) > 0 {
 		astCfg.Stages = make([]Stage, len(cfg.Stages))
 		for i, s := range cfg.Stages {

@@ -42,9 +42,6 @@ func applyConfigVariable(dst *EngineConfig, src ConfigVariable) {
 	if src.InsecureSkipTLS != nil {
 		dst.InsecureSkipTLS = *src.InsecureSkipTLS
 	}
-	if src.AutoPlumb != nil {
-		dst.AutoPlumb = *src.AutoPlumb
-	}
 }
 
 func applyEnvExtraOverrides(dst *EngineConfig, env EnvConfig) {
