@@ -1,19 +1,16 @@
 package goja
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strings"
 	"sync"
 
 	"github.com/dop251/goja"
-	"github.com/vunas/blaster/internal/runner/http"
+	"github.com/vunas/blaster/internal/runner"
 	"github.com/vunas/blaster/internal/runtime"
+	"github.com/vunas/blaster/internal/template"
 )
 
-// VMInstance holds precompiled callables
 type VMInstance struct {
 	Runtime        *goja.Runtime
 	Bridge         *JSBridge
@@ -27,7 +24,7 @@ type Pool struct {
 	registry *HookRegistry
 }
 
-func NewPool(registry *HookRegistry, global runtime.SharedState, local runtime.SharedState, sink runtime.MetricsSink) *Pool {
+func NewPool(registry *HookRegistry, global runtime.SharedState, sink runtime.MetricsSink) *Pool {
 	p := &Pool{
 		registry: registry,
 	}
@@ -36,81 +33,87 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, local runtime.S
 		vm := goja.New()
 		vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 
-		bridge := NewJSBridge(global, local, sink)
-		vm.Set("ctx", bridge)
+		bridge := NewJSBridge(global, sink)
 
-		vm.Set("expect", func(val any) map[string]any {
-			return map[string]any{
-				"toBe": func(expected any) {
-					if val != expected {
-						bridge.Fail(fmt.Sprintf("Expectation failed: Expected %v, got %v", expected, val))
-					}
-				},
-				"toBeGreaterThan": func(expected float64) {
-					vFloat, ok := val.(float64)
-					if !ok || vFloat <= expected {
-						bridge.Fail(fmt.Sprintf("Expectation failed: %v is not greater than %v", val, expected))
-					}
-				},
-			}
+		vm.Set("console", map[string]interface{}{
+			"log": func(msg string) {
+				if sink != nil {
+					sink.Log(bridge.VuId, "console", "INFO", msg)
+				}
+			},
+			"warn": func(msg string) {
+				if sink != nil {
+					sink.Log(bridge.VuId, "console", "WARN", msg)
+				}
+			},
+			"error": func(msg string) {
+				if sink != nil {
+					sink.Log(bridge.VuId, "console", "ERROR", msg)
+				}
+			},
 		})
 
 		vm.Set("random", map[string]interface{}{
-			"uuid": func() string {
-				b := make([]byte, 16)
-				_, _ = rand.Read(b)
-				b[6] = (b[6] & 0x0f) | 0x40
-				b[8] = (b[8] & 0x3f) | 0x80
-
-				var buf [36]byte
-				hex.Encode(buf[0:8], b[0:4])
-				buf[8] = '-'
-				hex.Encode(buf[9:13], b[4:6])
-				buf[13] = '-'
-				hex.Encode(buf[14:18], b[6:8])
-				buf[18] = '-'
-				hex.Encode(buf[19:23], b[8:10])
-				buf[23] = '-'
-				hex.Encode(buf[24:36], b[10:])
-
-				return string(buf[:])
-			},
+			"uuid": template.FastUUID,
 			"string": func(length int) string {
-				const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-				b := make([]byte, length)
-				for i := range b {
-					n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-					b[i] = charset[n.Int64()]
-				}
-				return string(b)
+				return template.FastRandomString(length)
 			},
 		})
 
-		vm.Set("console", map[string]interface{}{
-			"log":   bridge.Log,
-			"warn":  bridge.Warn,
-			"error": bridge.Error,
+		vm.Set("get", bridge.Get)
+		vm.Set("set", bridge.Set)
+		vm.Set("load", bridge.Load)
+		vm.Set("distribute", bridge.Distribute)
+
+		vm.Set("sleep", bridge.Sleep)
+		vm.Set("abort", bridge.Abort)
+		vm.Set("fail", bridge.Fail)
+		vm.Set("barrier", bridge.Barrier)
+
+		vm.Set("log", bridge.Log)
+		vm.Set("warn", bridge.Warn)
+		vm.Set("error", bridge.Error)
+		vm.Set("tag", bridge.Tag)
+
+		vm.Set("local", bridge.GetLocalNamespace())
+		vm.Set("global", bridge.GetGlobalNamespace())
+		vm.Set("metrics", map[string]interface{}{
+			"trend":   bridge.Metrics.Trend,
+			"counter": bridge.Metrics.Counter,
+			"gauge":   bridge.Metrics.Gauge,
 		})
 
-		// Load the compiled scenario.
-		_, _ = vm.RunString(registry.GetCode())
+		vm.Set("__GET_VUID", func() int {
+			return bridge.VuId
+		})
+		vm.Set("__GET_ITER", func() int {
+			return bridge.Iteration
+		})
+		vm.Set("__GET_SCEN", func() string {
+			return bridge.Scenario
+		})
+		_, _ = vm.RunString(`globalThis.info = { get vuId() { return __GET_VUID(); }, get iteration() { return __GET_ITER(); }, get scenario() { return __GET_SCEN(); } };`)
 
-		// Precompile helper functions.
+		_, err := vm.RunString(registry.GetCode())
+		if err != nil {
+			fmt.Printf("[POOL WARNING] Failed to load script into VM: %v\n", err)
+		}
+
 		_, _ = vm.RunString(`
-			globalThis.__invokeHook = function(id, ctx, req, res) {
+			globalThis.__invokeHook = function(id, req, res) {
 				if (globalThis.HookRegistry && globalThis.HookRegistry.hooks.has(id)) {
-					return globalThis.HookRegistry.hooks.get(id)(ctx, req, res);
+					return globalThis.HookRegistry.hooks.get(id)(req, res); 
 				}
 			};
-			globalThis.__evalBool = function(id, ctx) {
-				if (globalThis.HookRegistry && globalThis.HookRegistry.hooks.has(id)) {
-					return Boolean(globalThis.HookRegistry.hooks.get(id)(ctx));
-				}
+			globalThis.__evalBool = function(id) {
+				if (globalThis.HookRegistry && globalThis.HookRegistry.hooks.has(id)) { 
+					return Boolean(globalThis.HookRegistry.hooks.get(id)());
+				} 
 				return false;
 			};
-			globalThis.__evalStr = function(id, ctx) {
-				if (globalThis.HookRegistry && globalThis.HookRegistry.hooks.has(id)) {
-					return String(globalThis.HookRegistry.hooks.get(id)(ctx));
+			globalThis.__evalStr = function(id) {
+				if (globalThis.HookRegistry && globalThis.HookRegistry.hooks.has(id)) { 
+					return String(globalThis.HookRegistry.hooks.get(id)()); 
 				}
 				return "";
 			};
@@ -132,7 +135,7 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, local runtime.S
 }
 
 // Manage the VM pool.
-func (p *Pool) GetVM(scope runtime.Scope, local runtime.SharedState, workerID int, iteration int, scenario string) *VMInstance {
+func (p *Pool) GetVM(scope runtime.VUContext, local runtime.SharedState, workerID int, iteration int, scenario string) *VMInstance {
 	inst := p.pool.Get().(*VMInstance)
 	inst.Bridge.AttachWorker(scope, local, workerID, iteration, scenario)
 	return inst
@@ -143,7 +146,7 @@ func (p *Pool) PutVM(inst *VMInstance) {
 	p.pool.Put(inst)
 }
 
-func (inst *VMInstance) ExecuteHook(hookID string, req *http.Request, res *http.Response) (err error) {
+func (inst *VMInstance) ExecuteHook(hookID string, req runner.ProtocolRequest, res runner.ProtocolResponse) (err error) {
 	if hookID == "" {
 		return nil
 	}
@@ -164,7 +167,6 @@ func (inst *VMInstance) ExecuteHook(hookID string, req *http.Request, res *http.
 	_, err = inst.invokeHookFunc(
 		goja.Undefined(),
 		inst.Runtime.ToValue(hookID),
-		inst.Runtime.ToValue(inst.Bridge),
 		inst.Runtime.ToValue(req),
 		inst.Runtime.ToValue(res),
 	)
@@ -187,7 +189,6 @@ func (inst *VMInstance) EvaluateBoolean(hookID string) (result bool, err error) 
 	v, err := inst.evalBoolFunc(
 		goja.Undefined(),
 		inst.Runtime.ToValue(hookID),
-		inst.Runtime.ToValue(inst.Bridge),
 	)
 
 	if err != nil {
@@ -211,7 +212,6 @@ func (inst *VMInstance) EvaluateString(hookID string) (result string, err error)
 	v, err := inst.evalStrFunc(
 		goja.Undefined(),
 		inst.Runtime.ToValue(hookID),
-		inst.Runtime.ToValue(inst.Bridge),
 	)
 
 	if err != nil {
@@ -236,12 +236,4 @@ func (inst *VMInstance) GetBarrierInfo() (string, int) {
 		}
 	}
 	return inst.Bridge.BarrierName, quorum
-}
-
-func (inst *VMInstance) GetRetryInfo() (bool, int, int, string) {
-	return inst.Bridge.RetryFlag, inst.Bridge.RetryDelay, inst.Bridge.RetryMax, inst.Bridge.RetryScope
-}
-
-func (inst *VMInstance) GetFlags() (bool, bool) {
-	return inst.Bridge.SkipFlag, inst.Bridge.AbortFlag
 }

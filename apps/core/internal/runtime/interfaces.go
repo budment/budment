@@ -1,13 +1,15 @@
 package runtime
 
-// Scope manages execution context and variables for a single VU iteration.
-type Scope interface {
-	Set(key string, val any)
+// manages execution context and variables for a single VU iteration.
+type VUContext interface {
 	Get(key string) (any, bool)
+	Set(key string, val any)
 	Delete(key string)
+	SetFlags(abort bool)
+	IsAbortFlag() bool
 }
 
-// SharedState handles cross-VU state sharing and data distribution.
+// handles cross-VU state sharing and data distribution.
 type SharedState interface {
 	Set(key string, val any)
 	Get(key string) (any, bool)
@@ -16,7 +18,7 @@ type SharedState interface {
 	StoreDistribution(key string, items []any, fallback any)
 }
 
-// MetricsSink receives metrics, logs, and lifecycle events from workers and hooks.
+// receives metrics, logs, and lifecycle events from workers and hooks.
 type MetricsSink interface {
 	Log(workerID int, nodeID string, level string, msg string)
 	RecordEvent(workerID int, nodeID string, eventType string, reason string)
