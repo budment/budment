@@ -111,7 +111,6 @@ type ScenarioConfig struct {
 	Tags map[string]string `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Disable TLS certificate verification.
 	InsecureSkipTlsVerify *bool `protobuf:"varint,10,opt,name=insecure_skip_tls_verify,json=insecureSkipTlsVerify,proto3,oneof" json:"insecure_skip_tls_verify,omitempty"`
-	AutoPlumb             *bool `protobuf:"varint,11,opt,name=auto_plumb,json=autoPlumb,proto3,oneof" json:"auto_plumb,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -212,13 +211,6 @@ func (x *ScenarioConfig) GetTags() map[string]string {
 func (x *ScenarioConfig) GetInsecureSkipTlsVerify() bool {
 	if x != nil && x.InsecureSkipTlsVerify != nil {
 		return *x.InsecureSkipTlsVerify
-	}
-	return false
-}
-
-func (x *ScenarioConfig) GetAutoPlumb() bool {
-	if x != nil && x.AutoPlumb != nil {
-		return *x.AutoPlumb
 	}
 	return false
 }
@@ -326,7 +318,7 @@ type Node struct {
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Types that are valid to be assigned to Type:
 	//
-	//	*Node_Http
+	//	*Node_Action
 	//	*Node_Branch
 	//	*Node_Match
 	//	*Node_Loop
@@ -389,10 +381,10 @@ func (x *Node) GetType() isNode_Type {
 	return nil
 }
 
-func (x *Node) GetHttp() *HttpNode {
+func (x *Node) GetAction() *ActionNode {
 	if x != nil {
-		if x, ok := x.Type.(*Node_Http); ok {
-			return x.Http
+		if x, ok := x.Type.(*Node_Action); ok {
+			return x.Action
 		}
 	}
 	return nil
@@ -519,8 +511,8 @@ type isNode_Type interface {
 	isNode_Type()
 }
 
-type Node_Http struct {
-	Http *HttpNode `protobuf:"bytes,2,opt,name=http,proto3,oneof"`
+type Node_Action struct {
+	Action *ActionNode `protobuf:"bytes,2,opt,name=action,proto3,oneof"`
 }
 
 type Node_Branch struct {
@@ -575,7 +567,7 @@ type Node_ResAssert struct {
 	ResAssert *ResAssertNode `protobuf:"bytes,15,opt,name=res_assert,json=resAssert,proto3,oneof"`
 }
 
-func (*Node_Http) isNode_Type() {}
+func (*Node_Action) isNode_Type() {}
 
 func (*Node_Branch) isNode_Type() {}
 
@@ -603,30 +595,31 @@ func (*Node_ReqMutate) isNode_Type() {}
 
 func (*Node_ResAssert) isNode_Type() {}
 
-type HttpNode struct {
+type ActionNode struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Method        string                 `protobuf:"bytes,1,opt,name=method,proto3" json:"method,omitempty"`
-	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	Before        *Pipeline              `protobuf:"bytes,3,opt,name=before,proto3" json:"before,omitempty"`
-	After         *Pipeline              `protobuf:"bytes,4,opt,name=after,proto3" json:"after,omitempty"`
+	Protocol      string                 `protobuf:"bytes,1,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	Method        string                 `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
+	Target        string                 `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	Before        *Pipeline              `protobuf:"bytes,4,opt,name=before,proto3" json:"before,omitempty"`
+	After         *Pipeline              `protobuf:"bytes,5,opt,name=after,proto3" json:"after,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HttpNode) Reset() {
-	*x = HttpNode{}
+func (x *ActionNode) Reset() {
+	*x = ActionNode{}
 	mi := &file_ast_schema_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HttpNode) String() string {
+func (x *ActionNode) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HttpNode) ProtoMessage() {}
+func (*ActionNode) ProtoMessage() {}
 
-func (x *HttpNode) ProtoReflect() protoreflect.Message {
+func (x *ActionNode) ProtoReflect() protoreflect.Message {
 	mi := &file_ast_schema_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -638,33 +631,40 @@ func (x *HttpNode) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HttpNode.ProtoReflect.Descriptor instead.
-func (*HttpNode) Descriptor() ([]byte, []int) {
+// Deprecated: Use ActionNode.ProtoReflect.Descriptor instead.
+func (*ActionNode) Descriptor() ([]byte, []int) {
 	return file_ast_schema_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *HttpNode) GetMethod() string {
+func (x *ActionNode) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+func (x *ActionNode) GetMethod() string {
 	if x != nil {
 		return x.Method
 	}
 	return ""
 }
 
-func (x *HttpNode) GetUrl() string {
+func (x *ActionNode) GetTarget() string {
 	if x != nil {
-		return x.Url
+		return x.Target
 	}
 	return ""
 }
 
-func (x *HttpNode) GetBefore() *Pipeline {
+func (x *ActionNode) GetBefore() *Pipeline {
 	if x != nil {
 		return x.Before
 	}
 	return nil
 }
 
-func (x *HttpNode) GetAfter() *Pipeline {
+func (x *ActionNode) GetAfter() *Pipeline {
 	if x != nil {
 		return x.After
 	}
@@ -673,8 +673,8 @@ func (x *HttpNode) GetAfter() *Pipeline {
 
 type ReqMutateNode struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Headers       map[string]string      `protobuf:"bytes,1,rep,name=headers,proto3" json:"headers,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Metadata      map[string]string      `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -709,27 +709,27 @@ func (*ReqMutateNode) Descriptor() ([]byte, []int) {
 	return file_ast_schema_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *ReqMutateNode) GetHeaders() map[string]string {
+func (x *ReqMutateNode) GetMetadata() map[string]string {
 	if x != nil {
-		return x.Headers
+		return x.Metadata
 	}
 	return nil
 }
 
-func (x *ReqMutateNode) GetBody() string {
+func (x *ReqMutateNode) GetPayload() string {
 	if x != nil {
-		return x.Body
+		return x.Payload
 	}
 	return ""
 }
 
 type ResAssertNode struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	ExpectStatus       int32                  `protobuf:"varint,1,opt,name=expect_status,json=expectStatus,proto3" json:"expect_status,omitempty"`
-	ExpectBodyContains string                 `protobuf:"bytes,2,opt,name=expect_body_contains,json=expectBodyContains,proto3" json:"expect_body_contains,omitempty"`
-	Extract            map[string]string      `protobuf:"bytes,4,rep,name=extract,proto3" json:"extract,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	ExpectCode            int32                  `protobuf:"varint,1,opt,name=expect_code,json=expectCode,proto3" json:"expect_code,omitempty"`
+	ExpectPayloadContains string                 `protobuf:"bytes,2,opt,name=expect_payload_contains,json=expectPayloadContains,proto3" json:"expect_payload_contains,omitempty"`
+	Extract               map[string]string      `protobuf:"bytes,4,rep,name=extract,proto3" json:"extract,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ResAssertNode) Reset() {
@@ -762,16 +762,16 @@ func (*ResAssertNode) Descriptor() ([]byte, []int) {
 	return file_ast_schema_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *ResAssertNode) GetExpectStatus() int32 {
+func (x *ResAssertNode) GetExpectCode() int32 {
 	if x != nil {
-		return x.ExpectStatus
+		return x.ExpectCode
 	}
 	return 0
 }
 
-func (x *ResAssertNode) GetExpectBodyContains() string {
+func (x *ResAssertNode) GetExpectPayloadContains() string {
 	if x != nil {
-		return x.ExpectBodyContains
+		return x.ExpectPayloadContains
 	}
 	return ""
 }
@@ -1546,7 +1546,7 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x05setup\x18\x02 \x01(\v2\x18.blaster.ast.v1.PipelineR\x05setup\x126\n" +
 	"\texecution\x18\x03 \x01(\v2\x18.blaster.ast.v1.PipelineR\texecution\x126\n" +
-	"\x06config\x18\x04 \x01(\v2\x1e.blaster.ast.v1.ScenarioConfigR\x06config\"\xdf\x05\n" +
+	"\x06config\x18\x04 \x01(\v2\x1e.blaster.ast.v1.ScenarioConfigR\x06config\"\xac\x05\n" +
 	"\x0eScenarioConfig\x12\x15\n" +
 	"\x03vus\x18\x01 \x01(\x05H\x00R\x03vus\x88\x01\x01\x12\x1f\n" +
 	"\bduration\x18\x02 \x01(\tH\x01R\bduration\x88\x01\x01\x12&\n" +
@@ -1562,9 +1562,7 @@ const file_ast_schema_proto_rawDesc = "" +
 	"thresholds\x12<\n" +
 	"\x04tags\x18\t \x03(\v2(.blaster.ast.v1.ScenarioConfig.TagsEntryR\x04tags\x12<\n" +
 	"\x18insecure_skip_tls_verify\x18\n" +
-	" \x01(\bH\x06R\x15insecureSkipTlsVerify\x88\x01\x01\x12\"\n" +
-	"\n" +
-	"auto_plumb\x18\v \x01(\bH\aR\tautoPlumb\x88\x01\x01\x1a=\n" +
+	" \x01(\bH\x06R\x15insecureSkipTlsVerify\x88\x01\x01\x1a=\n" +
 	"\x0fThresholdsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a7\n" +
@@ -1577,16 +1575,15 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\v_iterationsB\v\n" +
 	"\t_start_atB\b\n" +
 	"\x06_orderB\x1b\n" +
-	"\x19_insecure_skip_tls_verifyB\r\n" +
-	"\v_auto_plumb\";\n" +
+	"\x19_insecure_skip_tls_verify\";\n" +
 	"\x05Stage\x12\x1a\n" +
 	"\bduration\x18\x01 \x01(\tR\bduration\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\x05R\x06target\"6\n" +
 	"\bPipeline\x12*\n" +
-	"\x05steps\x18\x01 \x03(\v2\x14.blaster.ast.v1.NodeR\x05steps\"\x8b\x06\n" +
+	"\x05steps\x18\x01 \x03(\v2\x14.blaster.ast.v1.NodeR\x05steps\"\x91\x06\n" +
 	"\x04Node\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12.\n" +
-	"\x04http\x18\x02 \x01(\v2\x18.blaster.ast.v1.HttpNodeH\x00R\x04http\x124\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
+	"\x06action\x18\x02 \x01(\v2\x1a.blaster.ast.v1.ActionNodeH\x00R\x06action\x124\n" +
 	"\x06branch\x18\x03 \x01(\v2\x1a.blaster.ast.v1.BranchNodeH\x00R\x06branch\x121\n" +
 	"\x05match\x18\x04 \x01(\v2\x19.blaster.ast.v1.MatchNodeH\x00R\x05match\x12.\n" +
 	"\x04loop\x18\x05 \x01(\v2\x18.blaster.ast.v1.LoopNodeH\x00R\x04loop\x12.\n" +
@@ -1605,21 +1602,24 @@ const file_ast_schema_proto_rawDesc = "" +
 	"req_mutate\x18\x0e \x01(\v2\x1d.blaster.ast.v1.ReqMutateNodeH\x00R\treqMutate\x12>\n" +
 	"\n" +
 	"res_assert\x18\x0f \x01(\v2\x1d.blaster.ast.v1.ResAssertNodeH\x00R\tresAssertB\x06\n" +
-	"\x04type\"\x96\x01\n" +
-	"\bHttpNode\x12\x16\n" +
-	"\x06method\x18\x01 \x01(\tR\x06method\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\x120\n" +
-	"\x06before\x18\x03 \x01(\v2\x18.blaster.ast.v1.PipelineR\x06before\x12.\n" +
-	"\x05after\x18\x04 \x01(\v2\x18.blaster.ast.v1.PipelineR\x05after\"\xa5\x01\n" +
-	"\rReqMutateNode\x12D\n" +
-	"\aheaders\x18\x01 \x03(\v2*.blaster.ast.v1.ReqMutateNode.HeadersEntryR\aheaders\x12\x12\n" +
-	"\x04body\x18\x02 \x01(\tR\x04body\x1a:\n" +
-	"\fHeadersEntry\x12\x10\n" +
+	"\x04type\"\xba\x01\n" +
+	"\n" +
+	"ActionNode\x12\x1a\n" +
+	"\bprotocol\x18\x01 \x01(\tR\bprotocol\x12\x16\n" +
+	"\x06method\x18\x02 \x01(\tR\x06method\x12\x16\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\x120\n" +
+	"\x06before\x18\x04 \x01(\v2\x18.blaster.ast.v1.PipelineR\x06before\x12.\n" +
+	"\x05after\x18\x05 \x01(\v2\x18.blaster.ast.v1.PipelineR\x05after\"\xaf\x01\n" +
+	"\rReqMutateNode\x12G\n" +
+	"\bmetadata\x18\x01 \x03(\v2+.blaster.ast.v1.ReqMutateNode.MetadataEntryR\bmetadata\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe8\x01\n" +
-	"\rResAssertNode\x12#\n" +
-	"\rexpect_status\x18\x01 \x01(\x05R\fexpectStatus\x120\n" +
-	"\x14expect_body_contains\x18\x02 \x01(\tR\x12expectBodyContains\x12D\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xea\x01\n" +
+	"\rResAssertNode\x12\x1f\n" +
+	"\vexpect_code\x18\x01 \x01(\x05R\n" +
+	"expectCode\x126\n" +
+	"\x17expect_payload_contains\x18\x02 \x01(\tR\x15expectPayloadContains\x12D\n" +
 	"\aextract\x18\x04 \x03(\v2*.blaster.ast.v1.ResAssertNode.ExtractEntryR\aextract\x1a:\n" +
 	"\fExtractEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -1702,7 +1702,7 @@ var file_ast_schema_proto_goTypes = []any{
 	(*Stage)(nil),                // 2: blaster.ast.v1.Stage
 	(*Pipeline)(nil),             // 3: blaster.ast.v1.Pipeline
 	(*Node)(nil),                 // 4: blaster.ast.v1.Node
-	(*HttpNode)(nil),             // 5: blaster.ast.v1.HttpNode
+	(*ActionNode)(nil),           // 5: blaster.ast.v1.ActionNode
 	(*ReqMutateNode)(nil),        // 6: blaster.ast.v1.ReqMutateNode
 	(*ResAssertNode)(nil),        // 7: blaster.ast.v1.ResAssertNode
 	(*BranchNode)(nil),           // 8: blaster.ast.v1.BranchNode
@@ -1719,7 +1719,7 @@ var file_ast_schema_proto_goTypes = []any{
 	(*MetricNode)(nil),           // 19: blaster.ast.v1.MetricNode
 	nil,                          // 20: blaster.ast.v1.ScenarioConfig.ThresholdsEntry
 	nil,                          // 21: blaster.ast.v1.ScenarioConfig.TagsEntry
-	nil,                          // 22: blaster.ast.v1.ReqMutateNode.HeadersEntry
+	nil,                          // 22: blaster.ast.v1.ReqMutateNode.MetadataEntry
 	nil,                          // 23: blaster.ast.v1.ResAssertNode.ExtractEntry
 	nil,                          // 24: blaster.ast.v1.MatchNode.CasesEntry
 	(*LoopNode_RangeConfig)(nil), // 25: blaster.ast.v1.LoopNode.RangeConfig
@@ -1732,7 +1732,7 @@ var file_ast_schema_proto_depIdxs = []int32{
 	20, // 4: blaster.ast.v1.ScenarioConfig.thresholds:type_name -> blaster.ast.v1.ScenarioConfig.ThresholdsEntry
 	21, // 5: blaster.ast.v1.ScenarioConfig.tags:type_name -> blaster.ast.v1.ScenarioConfig.TagsEntry
 	4,  // 6: blaster.ast.v1.Pipeline.steps:type_name -> blaster.ast.v1.Node
-	5,  // 7: blaster.ast.v1.Node.http:type_name -> blaster.ast.v1.HttpNode
+	5,  // 7: blaster.ast.v1.Node.action:type_name -> blaster.ast.v1.ActionNode
 	8,  // 8: blaster.ast.v1.Node.branch:type_name -> blaster.ast.v1.BranchNode
 	9,  // 9: blaster.ast.v1.Node.match:type_name -> blaster.ast.v1.MatchNode
 	10, // 10: blaster.ast.v1.Node.loop:type_name -> blaster.ast.v1.LoopNode
@@ -1746,9 +1746,9 @@ var file_ast_schema_proto_depIdxs = []int32{
 	19, // 18: blaster.ast.v1.Node.metric:type_name -> blaster.ast.v1.MetricNode
 	6,  // 19: blaster.ast.v1.Node.req_mutate:type_name -> blaster.ast.v1.ReqMutateNode
 	7,  // 20: blaster.ast.v1.Node.res_assert:type_name -> blaster.ast.v1.ResAssertNode
-	3,  // 21: blaster.ast.v1.HttpNode.before:type_name -> blaster.ast.v1.Pipeline
-	3,  // 22: blaster.ast.v1.HttpNode.after:type_name -> blaster.ast.v1.Pipeline
-	22, // 23: blaster.ast.v1.ReqMutateNode.headers:type_name -> blaster.ast.v1.ReqMutateNode.HeadersEntry
+	3,  // 21: blaster.ast.v1.ActionNode.before:type_name -> blaster.ast.v1.Pipeline
+	3,  // 22: blaster.ast.v1.ActionNode.after:type_name -> blaster.ast.v1.Pipeline
+	22, // 23: blaster.ast.v1.ReqMutateNode.metadata:type_name -> blaster.ast.v1.ReqMutateNode.MetadataEntry
 	23, // 24: blaster.ast.v1.ResAssertNode.extract:type_name -> blaster.ast.v1.ResAssertNode.ExtractEntry
 	3,  // 25: blaster.ast.v1.BranchNode.true_path:type_name -> blaster.ast.v1.Pipeline
 	3,  // 26: blaster.ast.v1.BranchNode.false_path:type_name -> blaster.ast.v1.Pipeline
@@ -1773,7 +1773,7 @@ func file_ast_schema_proto_init() {
 	}
 	file_ast_schema_proto_msgTypes[1].OneofWrappers = []any{}
 	file_ast_schema_proto_msgTypes[4].OneofWrappers = []any{
-		(*Node_Http)(nil),
+		(*Node_Action)(nil),
 		(*Node_Branch)(nil),
 		(*Node_Match)(nil),
 		(*Node_Loop)(nil),

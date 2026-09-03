@@ -54,7 +54,6 @@ export interface ScenarioConfig {
     | undefined;
   /** Disable TLS certificate verification. */
   insecureSkipTlsVerify?: boolean | undefined;
-  autoPlumb?: boolean | undefined;
 }
 
 export interface ScenarioConfig_ThresholdsEntry {
@@ -82,7 +81,7 @@ export interface Pipeline {
 
 export interface Node {
   id?: string | undefined;
-  http?: HttpNode | undefined;
+  action?: ActionNode | undefined;
   branch?: BranchNode | undefined;
   match?: MatchNode | undefined;
   loop?: LoopNode | undefined;
@@ -98,26 +97,27 @@ export interface Node {
   resAssert?: ResAssertNode | undefined;
 }
 
-export interface HttpNode {
+export interface ActionNode {
+  protocol?: string | undefined;
   method?: string | undefined;
-  url?: string | undefined;
+  target?: string | undefined;
   before?: Pipeline | undefined;
   after?: Pipeline | undefined;
 }
 
 export interface ReqMutateNode {
-  headers?: { [key: string]: string } | undefined;
-  body?: string | undefined;
+  metadata?: { [key: string]: string } | undefined;
+  payload?: string | undefined;
 }
 
-export interface ReqMutateNode_HeadersEntry {
+export interface ReqMutateNode_MetadataEntry {
   key: string;
   value: string;
 }
 
 export interface ResAssertNode {
-  expectStatus?: number | undefined;
-  expectBodyContains?: string | undefined;
+  expectCode?: number | undefined;
+  expectPayloadContains?: string | undefined;
   extract?: { [key: string]: string } | undefined;
 }
 

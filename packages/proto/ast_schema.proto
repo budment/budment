@@ -32,8 +32,6 @@ message ScenarioConfig {
   map<string, string> tags = 9;
   // Disable TLS certificate verification.
   optional bool insecure_skip_tls_verify = 10;
-
-  optional bool auto_plumb = 11;
 }
 
 message Stage {
@@ -51,7 +49,7 @@ message Node {
   string id = 1;
 
   oneof type {
-    HttpNode       http       = 2;
+    ActionNode     action     = 2;
     BranchNode     branch     = 3;
     MatchNode      match      = 4;
     LoopNode       loop       = 5;
@@ -68,22 +66,23 @@ message Node {
   }
 }
 
-message HttpNode {
-  string   method = 1;
-  string   url    = 2;
-  Pipeline before = 3;
-  Pipeline after  = 4;
+message ActionNode {
+  string   protocol = 1;
+  string   method   = 2;
+  string   target   = 3;
+  Pipeline before   = 4;
+  Pipeline after    = 5;
 }
 
 message ReqMutateNode {
-  map<string, string> headers = 1;
-  string              body    = 2;
+  map<string, string> metadata = 1;
+  string              payload  = 2;
 }
 
 message ResAssertNode {
-  int32               expect_status        = 1;
-  string              expect_body_contains = 2;
-  map<string, string> extract              = 4;
+  int32               expect_code             = 1;
+  string              expect_payload_contains = 2;
+  map<string, string> extract                 = 4;
 }
 
 message BranchNode {
