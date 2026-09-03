@@ -6,59 +6,18 @@ import (
 	"crypto/tls"
 	"io"
 	"net"
-	"net/http"
+	nethttp "net/http"
+	"net/http/cookiejar"
 	"net/http/httptrace"
-	"sync"
+	"strings"
 	"time"
-
-	"github.com/vunas/blaster/internal/config"
 )
 
-var bufferPool = sync.Pool{
-	New: func() any {
-		return bytes.NewBuffer(make([]byte, 0, 4096))
-	},
-}
-
-type TraceTimings struct {
-	DNSLookup    int64
-	TCPConn      int64
-	TLSHandshake int64
-	TTFB         int64
-}
-
-type HttpResponse struct {
-	Status  int
-	Headers map[string]string
-	Body    []byte
-	Error   string
-	Timings TraceTimings
-	buf     *bytes.Buffer
-}
-
-// Release cleans up and returns the buffer to the pool.
-func (r *HttpResponse) Release() {
-	if r.buf != nil {
-		r.buf.Reset()
-		bufferPool.Put(r.buf)
-		r.buf = nil
-		r.Body = nil
-	}
-}
-
-type Client struct {
-	httpClient *http.Client
-}
-
-func NewClient(insecureSkipVerify bool, httpCfg config.HTTPConfig) *Client {
-	timeoutDur, err := time.ParseDuration(httpCfg.Timeout)
-	if err != nil || timeoutDur <= 0 {
-		timeoutDur = 30 * time.Second
-	}
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+func NewSharedTransport(insecureSkipVerify bool) *nethttp.Transport {
+	return &nethttp.Transport{
+		Proxy: nethttp.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   timeoutDur,
+			Timeout:   10 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
 		ForceAttemptHTTP2:     true,
@@ -69,24 +28,32 @@ func NewClient(insecureSkipVerify bool, httpCfg config.HTTPConfig) *Client {
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{InsecureSkipVerify: insecureSkipVerify},
 	}
+}
 
+type Client struct {
+	httpClient *nethttp.Client
+}
+
+func NewVUClient(transport *nethttp.Transport) *Client {
+	jar, _ := cookiejar.New(nil)
 	return &Client{
-		httpClient: &http.Client{
+		httpClient: &nethttp.Client{
 			Transport: transport,
-			Timeout:   timeoutDur,
+			Jar:       jar,
+			Timeout:   30 * time.Second,
 		},
 	}
 }
 
-func (c *Client) Do(ctx context.Context, method, url string, headers map[string]string, body []byte) *HttpResponse {
+func (c *Client) Do(ctx context.Context, method, url string, headers map[string]string, body []byte) *Response {
 	var reqBody io.Reader
 	if len(body) > 0 {
 		reqBody = bytes.NewReader(body)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, url, reqBody)
+	req, err := nethttp.NewRequestWithContext(ctx, method, url, reqBody)
 	if err != nil {
-		return &HttpResponse{Status: 0, Error: "Failed to build request: " + err.Error()}
+		return &Response{Status: 0, Error: "Failed to build request: " + err.Error()}
 	}
 
 	for k, v := range headers {
@@ -94,44 +61,32 @@ func (c *Client) Do(ctx context.Context, method, url string, headers map[string]
 	}
 
 	var timings TraceTimings
-	var dnsStart, connStart, tlsStart, reqStart time.Time
+	var dnsStart, connStart, tlsStart time.Time
+	reqStart := time.Now()
 
 	trace := &httptrace.ClientTrace{
-		DNSStart: func(_ httptrace.DNSStartInfo) {
-			dnsStart = time.Now()
-		},
-		DNSDone: func(_ httptrace.DNSDoneInfo) {
-			timings.DNSLookup = time.Since(dnsStart).Microseconds()
-		},
-		ConnectStart: func(_, _ string) {
-			connStart = time.Now()
-		},
+		DNSStart:     func(_ httptrace.DNSStartInfo) { dnsStart = time.Now() },
+		DNSDone:      func(_ httptrace.DNSDoneInfo) { timings.DNSLookup = time.Since(dnsStart).Microseconds() },
+		ConnectStart: func(_, _ string) { connStart = time.Now() },
 		ConnectDone: func(net, addr string, err error) {
 			if err == nil {
 				timings.TCPConn = time.Since(connStart).Microseconds()
 			}
 		},
-		TLSHandshakeStart: func() {
-			tlsStart = time.Now()
-		},
+		TLSHandshakeStart: func() { tlsStart = time.Now() },
 		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
 			if err == nil {
 				timings.TLSHandshake = time.Since(tlsStart).Microseconds()
 			}
 		},
-		GotConn: func(_ httptrace.GotConnInfo) {
-			reqStart = time.Now()
-		},
-		GotFirstResponseByte: func() {
-			timings.TTFB = time.Since(reqStart).Microseconds()
-		},
+		GotFirstResponseByte: func() { timings.TTFB = time.Since(reqStart).Microseconds() },
 	}
 
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return &HttpResponse{Status: 0, Error: "Network error: " + err.Error()}
+		return &Response{Status: 0, Error: "Network error: " + err.Error()}
 	}
 	defer resp.Body.Close()
 
@@ -140,17 +95,15 @@ func (c *Client) Do(ctx context.Context, method, url string, headers map[string]
 	if err != nil {
 		buf.Reset()
 		bufferPool.Put(buf)
-		return &HttpResponse{Status: resp.StatusCode, Error: "Failed to read body: " + err.Error()}
+		return &Response{Status: resp.StatusCode, Error: "Failed to read body: " + err.Error()}
 	}
 
 	respHeaders := make(map[string]string, len(resp.Header))
 	for k, v := range resp.Header {
-		if len(v) > 0 {
-			respHeaders[k] = v[0]
-		}
+		respHeaders[k] = strings.Join(v, ", ")
 	}
 
-	return &HttpResponse{
+	return &Response{
 		Status:  resp.StatusCode,
 		Headers: respHeaders,
 		Body:    buf.Bytes(),

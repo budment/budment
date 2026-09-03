@@ -1,13 +1,16 @@
 package http
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/tidwall/gjson"
+
+	"github.com/vunas/blaster/internal/fastconv"
 )
 
-// Request is the "req" object passed to the .before(ctx, req) hook.
+// Request is the "req" object passed to the .before(req) hook.
 type Request struct {
 	URL     string
 	Method  string
@@ -15,59 +18,75 @@ type Request struct {
 	Body    []byte
 }
 
-func (r *Request) Reset() {
-	r.URL = ""
-	r.Method = ""
-	r.Body = r.Body[:0]
-	clear(r.Headers)
-}
+func (r *Request) Set(body any, options map[string]any) {
+	if body != nil {
+		switch v := body.(type) {
+		case []byte:
+			r.Body = v
+		case string:
+			r.Body = fastconv.StringToBytes(v)
+		default:
+			if bytesVal, err := json.Marshal(v); err == nil {
+				r.Body = bytesVal
+			}
+		}
+	}
 
-func (r *Request) SetBody(data any) {
-	if data == nil {
+	if options == nil {
 		return
 	}
 
-	switch v := data.(type) {
-	case string:
-		r.Body = append(r.Body[:0], v...)
-	case []byte:
-		r.Body = append(r.Body[:0], v...)
-	default:
-		bytes, err := json.Marshal(v)
-		if err == nil {
-			r.Body = bytes
+	if rawHeaders, ok := options["headers"].(map[string]any); ok {
+		if r.Headers == nil {
+			r.Headers = make(map[string]string, len(rawHeaders))
+		}
+		for k, v := range rawHeaders {
+			r.Headers[k] = fastconv.String(v)
+		}
+	}
+
+	if pathVal, ok := options["path"].(string); ok && pathVal != "" {
+		if strings.HasPrefix(pathVal, "http://") || strings.HasPrefix(pathVal, "https://") {
+			r.URL = pathVal
+		} else if u, err := url.Parse(r.URL); err == nil {
+			if strings.HasPrefix(pathVal, "/") {
+				u.Path = pathVal
+			} else {
+				u.Path = strings.TrimSuffix(u.Path, "/") + "/" + pathVal
+			}
+			r.URL = u.String()
+		}
+	}
+
+	if rawParams, ok := options["params"].(map[string]any); ok {
+		if u, err := url.Parse(r.URL); err == nil {
+			q := u.Query()
+			for k, v := range rawParams {
+				q.Set(k, fastconv.String(v))
+			}
+			u.RawQuery = q.Encode()
+			r.URL = u.String()
 		}
 	}
 }
 
-func (r *Request) SetHeader(key, val string) {
-	r.Headers[key] = val
-}
-
-func (r *Request) SetPath(key, val string) {
-	r.URL = strings.Replace(r.URL, "{"+key+"}", val, 1)
-}
-
-func (r *Request) SetQuery(key, val string) {
-	var sb strings.Builder
-	sb.WriteString(r.URL)
-	if strings.Contains(r.URL, "?") {
-		sb.WriteString("&")
-	} else {
-		sb.WriteString("?")
-	}
-	sb.WriteString(key)
-	sb.WriteString("=")
-	sb.WriteString(val)
-	r.URL = sb.String()
-}
-
-func (r *Request) Get(path string) gjson.Result {
+// Quickly extract a single node using GJSON or unmarshal the entire body.
+func (r *Request) JSON(selector ...string) any {
 	if len(r.Body) == 0 {
-		return gjson.Result{}
+		return nil
 	}
-	return gjson.GetBytes(r.Body, path)
-}
-func (r *Request) GetBody() string {
-	return string(r.Body)
+
+	if len(selector) > 0 && selector[0] != "" {
+		res := gjson.GetBytes(r.Body, selector[0])
+		if !res.Exists() {
+			return nil
+		}
+		return res.Value()
+	}
+
+	var out any
+	if err := json.Unmarshal(r.Body, &out); err != nil {
+		return nil
+	}
+	return out
 }

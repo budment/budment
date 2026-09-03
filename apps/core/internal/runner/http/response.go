@@ -1,35 +1,65 @@
 package http
 
 import (
+	"bytes"
+	"sync"
+
+	"github.com/goccy/go-json"
 	"github.com/tidwall/gjson"
+	"github.com/vunas/blaster/internal/fastconv"
 )
 
-// Response is the "res" object passed to the .after(ctx, req, res) hook.
+var bufferPool = sync.Pool{
+	New: func() any { return bytes.NewBuffer(make([]byte, 0, 4096)) },
+}
+
+type TraceTimings struct {
+	DNSLookup    int64
+	TCPConn      int64
+	TLSHandshake int64
+	TTFB         int64
+}
+
+// Response is the "res" object passed to the .after(res) hook.
 type Response struct {
 	Status  int
 	Headers map[string]string
-	Error   string
 	Body    []byte
+	Error   string
+	Timings TraceTimings
+	buf     *bytes.Buffer
 }
 
-func NewResponse(status int, headers map[string]string, body []byte, errStr string) *Response {
-	return &Response{
-		Status:  status,
-		Headers: headers,
-		Error:   errStr,
-		Body:    body,
-	}
-}
-
-func (r *Response) Get(path string) gjson.Result {
+func (r *Response) JSON(selector ...string) any {
 	if len(r.Body) == 0 {
-		return gjson.Result{}
+		return nil
 	}
 
-	result := gjson.GetBytes(r.Body, path)
-	return result
+	if len(selector) > 0 && selector[0] != "" {
+		res := gjson.GetBytes(r.Body, selector[0])
+		if !res.Exists() {
+			return nil
+		}
+		return res.Value()
+	}
+
+	var out any
+	_ = json.Unmarshal(r.Body, &out)
+	return out
 }
 
-func (r *Response) GetBody() string {
-	return string(r.Body)
+func (r *Response) Contains(substr string) bool {
+	if len(r.Body) == 0 || substr == "" {
+		return false
+	}
+	return bytes.Contains(r.Body, fastconv.StringToBytes(substr))
+}
+
+func (r *Response) Release() {
+	if r.buf != nil {
+		r.buf.Reset()
+		bufferPool.Put(r.buf)
+		r.buf = nil
+		r.Body = nil
+	}
 }
