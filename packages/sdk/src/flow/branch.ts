@@ -3,6 +3,8 @@ import { HookRegistry } from '../builder/registry';
 import { Pipeline } from '../builder/pipeline';
 import { BuilderNode } from '../builder/types';
 
+export type NodeInput = BuilderNode | BuilderNode[];
+
 /**
  * Branch builder for conditional execution (If/Else).
  */
@@ -14,17 +16,21 @@ export class BranchBuilder implements BuilderNode {
 
     constructor(
         condition: () => boolean,
-        truePath: BuilderNode[],
-        falsePath?: BuilderNode[]
+        truePath: NodeInput,
+        falsePath?: NodeInput
     ) {
         this.uniqueId = HookRegistry.generateNodeId('branch');
         this.conditionHookId = HookRegistry.register(this.uniqueId, "cond", condition);
 
-        this.truePipeline.add(...truePath);
+        const trueNodes = Array.isArray(truePath) ? truePath : [truePath];
+        this.truePipeline.add(...trueNodes);
 
-        if (falsePath && falsePath.length > 0) {
-            this.falsePipeline = new Pipeline();
-            this.falsePipeline.add(...falsePath);
+        if (falsePath) {
+            const falseNodes = Array.isArray(falsePath) ? falsePath : [falsePath];
+            if (falseNodes.length > 0) {
+                this.falsePipeline = new Pipeline();
+                this.falsePipeline.add(...falseNodes);
+            }
         }
     }
 
@@ -42,8 +48,8 @@ export class BranchBuilder implements BuilderNode {
 
 export function branch(
     condition: () => boolean,
-    truePath: BuilderNode[],
-    falsePath?: BuilderNode[]
+    truePath: NodeInput,
+    falsePath?: NodeInput
 ) {
     return new BranchBuilder(condition, truePath, falsePath);
 }

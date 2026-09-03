@@ -1,4 +1,4 @@
-import { Node, HttpNode, ReqMutateNode, ResAssertNode } from '../pb/ast_schema';
+import { ActionNode, Node, ReqMutateNode, ResAssertNode } from '../pb/ast_schema';
 import { HttpRequest } from '../runtime/request';
 import { HttpResponse } from '../runtime/response';
 import { HookRegistry } from './registry';
@@ -14,7 +14,7 @@ class JSHookNode implements BuilderNode {
 
 export interface StaticRequest {
     headers?: Record<string, string>;
-    body?: string;
+    body?: string | object;
 }
 
 export interface StaticExpect {
@@ -28,8 +28,8 @@ export interface StaticAssert {
 }
 
 export type NodeInput = BuilderNode | BuilderNode[];
-export type BeforeAction = (((req: HttpRequest) => void) | NodeInput | StaticRequest);
-export type AfterAction = (((res: HttpResponse, req: HttpRequest) => void) | NodeInput | StaticAssert);
+export type BeforeAction = (((req: HttpRequest) => void) | NodeInput | StaticRequest | undefined | null);
+export type AfterAction = (((res: HttpResponse, req: HttpRequest) => void) | NodeInput | StaticAssert | undefined | null);
 
 export class HttpBuilder implements BuilderNode {
     private method: string;
@@ -42,30 +42,39 @@ export class HttpBuilder implements BuilderNode {
     constructor(method: string, url: string) {
         this.uniqueId = HookRegistry.generateNodeId('http');
         this.method = method;
-        this.url = url;
+        this.url = url || "http://0.0.0.0";
     }
 
     before(...args: BeforeAction[]): this {
         for (const arg of args) {
+            if (!arg) continue; 
+
             if (typeof arg === 'function') {
                 const hookId = HookRegistry.register(this.uniqueId, 'before', arg);
                 this.beforePipeline.add(new JSHookNode(hookId));
             }
             else if (arg && typeof arg === 'object' && !Array.isArray(arg) && !('build' in arg)) {
                 const reqNode = arg as StaticRequest;
+                let finalBody = "";
+                if (typeof reqNode.body === 'string') {
+                    finalBody = reqNode.body;
+                } else if (reqNode.body !== undefined) {
+                    finalBody = JSON.stringify(reqNode.body);
+                }
+
                 this.beforePipeline.add({
                     build: () => ({
                         id: HookRegistry.generateNodeId('req_mutate'),
                         reqMutate: {
-                            headers: reqNode.headers || {},
-                            body: reqNode.body || ""
+                            metadata: reqNode.headers || {},
+                            payload: finalBody
                         } as ReqMutateNode
                     })
                 });
             }
             else {
                 const nodes = Array.isArray(arg) ? arg : [arg];
-                this.beforePipeline.add(...nodes);
+                this.beforePipeline.add(...(nodes as BuilderNode[]));
             }
         }
         return this;
@@ -73,6 +82,8 @@ export class HttpBuilder implements BuilderNode {
 
     after(...args: AfterAction[]): this {
         for (const arg of args) {
+            if (!arg) continue;
+
             if (typeof arg === 'function') {
                 const wrapperFn = (req: HttpRequest, res: HttpResponse) => arg(res, req);
                 const hookId = HookRegistry.register(this.uniqueId, 'after', wrapperFn);
@@ -93,7 +104,7 @@ export class HttpBuilder implements BuilderNode {
             }
             else {
                 const nodes = Array.isArray(arg) ? arg : [arg];
-                this.afterPipeline.add(...nodes);
+                this.afterPipeline.add(...(nodes as BuilderNode[]));
             }
         }
         return this;
@@ -102,12 +113,13 @@ export class HttpBuilder implements BuilderNode {
     build(): Node {
         return {
             id: this.uniqueId,
-            http: {
+            action: {
+                protocol: "http",
                 method: this.method,
-                url: this.url,
+                target: this.url,
                 before: this.beforePipeline.build(),
                 after: this.afterPipeline.build()
-            } as unknown as HttpNode
+            } as unknown as ActionNode
         };
     }
 }
