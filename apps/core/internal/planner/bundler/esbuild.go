@@ -9,12 +9,19 @@ import (
 
 func BundleInMemory(entryPoint string) ([]byte, error) {
 	options := api.BuildOptions{
-		EntryPoints:       []string{entryPoint},
-		Bundle:            true,
-		Write:             false,
-		Format:            api.FormatIIFE,
-		GlobalName:        "__BLASTER_AST__",
-		Target:            api.ES2015,
+		EntryPoints: []string{entryPoint},
+		Bundle:      true,
+		Write:       false,
+		Format:      api.FormatIIFE,
+		GlobalName:  "__BLASTER_EXPORTS__",
+		Platform:    api.PlatformNeutral,
+		Target:      api.ES2017,
+		Loader: map[string]api.Loader{
+			".json": api.LoaderJSON,
+			".ts":   api.LoaderTS,
+			".js":   api.LoaderJS,
+		},
+
 		MinifyWhitespace:  true,
 		MinifyIdentifiers: false,
 		MinifySyntax:      true,
