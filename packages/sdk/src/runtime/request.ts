@@ -1,37 +1,44 @@
 /**
+ * Dynamic options passed to request mutate method.
+ */
+export interface RequestOptions {
+    /** Headers to inject or override. Values can be strings, numbers, or booleans. */
+    headers?: Record<string, any>;
+
+    /** Overrides the URL path (e.g. "/api/v2/login") or the entire target URL. */
+    path?: string;
+
+    /** URL query parameters to append or update. */
+    params?: Record<string, any>;
+}
+
+/**
  * Mutable request context passed to `.before()` hooks.
  */
 export interface HttpRequest {
-        readonly url: string;
-        readonly method: string;
+    /** Target URL of the request */
+    readonly url: string;
 
-    /** 
-     * Extracts values from a JSON request using GJSON path syntax.
+    /** HTTP Method (GET, POST, PUT, DELETE, ...) */
+    readonly method: string;
+
+    /**
+     * Overrides request payload and configuration options (headers, path, query params).
+     * Objects are automatically serialized to JSON.
      * 
-     * @param path GJSON path (e.g., "data.user.id" or "items.#.name")
+     * @example
+     * req.set({ user: "admin" }, { 
+     *     headers: { Authorization: "Bearer token" },
+     *     params: { retry: 1 } 
+     * });
      */
-    get<T = any>(path: string): T | undefined;
+    set(body: object | string, options?: RequestOptions): void;
 
-    /** Returns the raw string body. */
-    getBody(): object | string;
-
-    /** Overrides the raw request payload. */
-    setBody(data: object | string): void;
-
-    /** Sets or overrides an HTTP header. */
-    setHeader(key: string, val: string): void;
-
-    /** 
-     * Automatically stringifies objects to JSON and injects Content-Type Headers.
-     * @example 
-     * req.set({ user: "admin" }); 
-     * req.set("raw_string", { "Auth": "Bearer..." });
+    /**
+     * Extracts values from the request JSON payload using GJSON syntax,
+     * or parses the whole body when called without arguments.
+     * 
+     * @param selector GJSON selector (e.g. "data.user.id"). If omitted, parses full payload.
      */
-    set(body: object | string, headers?: Record<string, string>): void;
-
-    /** Replaces a path template variable (e.g., {id}) in the URL. */
-    setPath(key: string, value: string): void;
-
-    /** Appends a URL-encoded query parameter. */
-    setQuery(key: string, value: string): void;
+    json<T = any>(selector?: string): T | undefined;
 }

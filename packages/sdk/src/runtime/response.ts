@@ -8,19 +8,19 @@ export interface HttpResponse {
      */
     readonly status: number;
 
-    /** Read-only map of response headers. */
+    /** Read-only map of merged response headers. */
     readonly headers: Record<string, string>;
 
-    /** Infrastructure or network error message, if any. */
+    /** Infrastructure, timeout, or network error message, if any. */
     readonly error?: string;
 
     /** 
-     * Extracts values from a JSON response using GJSON path syntax.
+     * Extracts values from the JSON response using GJSON syntax,
+     * or parses the entire response body when called without arguments.
      * 
-     * @param path GJSON path (e.g., "data.user.id" or "items.#.name")
+     * @example
+     * const id = res.json<number>("data.user.id");
+     * const all = res.json();
      */
-    get<T = any>(path: string): T | undefined;
-
-    /** Returns the raw string body of the response. */
-    getBody(): object | string;
+    json<T = any>(selector?: string): T | undefined;
 }
