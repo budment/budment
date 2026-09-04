@@ -75,8 +75,8 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, sink runtime.Me
 		vm.Set("error", bridge.Error)
 		vm.Set("tag", bridge.Tag)
 
-		vm.Set("local", bridge.GetLocalNamespace())
-		vm.Set("global", bridge.GetGlobalNamespace())
+		vm.Set("local", bridge.LocalAPI)
+		vm.Set("global", bridge.GlobalAPI)
 		vm.Set("metrics", map[string]interface{}{
 			"trend":   bridge.Metrics.Trend,
 			"counter": bridge.Metrics.Counter,

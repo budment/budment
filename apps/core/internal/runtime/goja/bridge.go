@@ -1,40 +1,113 @@
 package goja
 
 import (
-	"github.com/vunas/blaster/internal/fastconv"
+	"math"
+
+	"github.com/dop251/goja"
 	"github.com/vunas/blaster/internal/runtime"
 )
 
 // Exposes metrics APIs
-type JSMetricsAPI struct {
-	bridge *JSBridge
+type JSMetricsAPI struct{ bridge *JSBridge }
+
+func getSafeFloat(val goja.Value) (float64, bool) {
+	if val == nil || goja.IsUndefined(val) || goja.IsNull(val) {
+		return 0, false
+	}
+	f := val.ToFloat()
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return 0, false
+	}
+	return f, true
 }
 
-func (m *JSMetricsAPI) Trend(name string, val any) {
-	if !m.bridge.IsRuntime {
+func (m *JSMetricsAPI) Trend(name string, val goja.Value) {
+	if !m.bridge.IsRuntime || m.bridge.Sink == nil {
 		return
 	}
-	if m.bridge.Sink != nil {
-		m.bridge.Sink.RecordCustom(m.bridge.VuId, "trend", name, fastconv.ToFloat64(val))
+	if f, ok := getSafeFloat(val); ok {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "trend", name, f)
 	}
 }
 
-func (m *JSMetricsAPI) Counter(name string, val any) {
-	if !m.bridge.IsRuntime {
+func (m *JSMetricsAPI) Counter(name string, val goja.Value) {
+	if !m.bridge.IsRuntime || m.bridge.Sink == nil {
 		return
 	}
-	if m.bridge.Sink != nil {
-		m.bridge.Sink.RecordCustom(m.bridge.VuId, "counter", name, fastconv.ToFloat64(val))
+	if f, ok := getSafeFloat(val); ok {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "counter", name, f)
 	}
 }
 
-func (m *JSMetricsAPI) Gauge(name string, val any) {
-	if !m.bridge.IsRuntime {
+func (m *JSMetricsAPI) Gauge(name string, val goja.Value) {
+	if !m.bridge.IsRuntime || m.bridge.Sink == nil {
 		return
 	}
-	if m.bridge.Sink != nil {
-		m.bridge.Sink.RecordCustom(m.bridge.VuId, "gauge", name, fastconv.ToFloat64(val))
+	if f, ok := getSafeFloat(val); ok {
+		m.bridge.Sink.RecordCustom(m.bridge.VuId, "gauge", name, f)
 	}
+}
+
+type JSLocalAPI struct{ bridge *JSBridge }
+
+func (l *JSLocalAPI) Get(k string) any {
+	if !l.bridge.IsRuntime || l.bridge.Local == nil {
+		return nil
+	}
+	v, _ := l.bridge.Local.Get(k)
+	return v
+}
+
+func (l *JSLocalAPI) Set(k string, v any) {
+	if !l.bridge.IsRuntime || l.bridge.Local == nil {
+		return
+	}
+	l.bridge.Local.Set(k, v)
+}
+
+func (l *JSLocalAPI) Push(k string, v any) {
+	if !l.bridge.IsRuntime || l.bridge.Local == nil {
+		return
+	}
+	l.bridge.Local.Push(k, v)
+}
+
+func (l *JSLocalAPI) Pop(k string) any {
+	if !l.bridge.IsRuntime || l.bridge.Local == nil {
+		return nil
+	}
+	return l.bridge.Local.Pop(k)
+}
+
+type JSGlobalAPI struct{ bridge *JSBridge }
+
+func (g *JSGlobalAPI) Get(k string) any {
+	if !g.bridge.IsRuntime || g.bridge.Global == nil {
+		return nil
+	}
+	v, _ := g.bridge.Global.Get(k)
+	return v
+}
+
+func (g *JSGlobalAPI) Set(k string, v any) {
+	if !g.bridge.IsRuntime || g.bridge.Global == nil {
+		return
+	}
+	g.bridge.Global.Set(k, v)
+}
+
+func (g *JSGlobalAPI) Push(k string, v any) {
+	if !g.bridge.IsRuntime || g.bridge.Global == nil {
+		return
+	}
+	g.bridge.Global.Push(k, v)
+}
+
+func (g *JSGlobalAPI) Pop(k string) any {
+	if !g.bridge.IsRuntime || g.bridge.Global == nil {
+		return nil
+	}
+	return g.bridge.Global.Pop(k)
 }
 
 type JSBridge struct {
@@ -43,6 +116,8 @@ type JSBridge struct {
 	Global         runtime.SharedState
 	Sink           runtime.MetricsSink
 	Metrics        *JSMetricsAPI
+	LocalAPI       *JSLocalAPI
+	GlobalAPI      *JSGlobalAPI
 	IsRuntime      bool
 	VuId           int    `json:"vuId"`
 	Iteration      int    `json:"iteration"`
@@ -55,8 +130,15 @@ type JSBridge struct {
 }
 
 func NewJSBridge(global runtime.SharedState, sink runtime.MetricsSink) *JSBridge {
-	b := &JSBridge{Global: global, Local: nil, Sink: sink, IsRuntime: false}
+	b := &JSBridge{
+		Global:    global,
+		Local:     nil,
+		Sink:      sink,
+		IsRuntime: false,
+	}
 	b.Metrics = &JSMetricsAPI{bridge: b}
+	b.LocalAPI = &JSLocalAPI{bridge: b}
+	b.GlobalAPI = &JSGlobalAPI{bridge: b}
 	return b
 }
 
@@ -171,64 +253,4 @@ func (b *JSBridge) Distribute(key string, items []any, fallback any) {
 		return
 	}
 	b.Local.StoreDistribution(key, items, fallback)
-}
-
-func (b *JSBridge) GetLocalNamespace() map[string]any {
-	return map[string]any{
-		"get": func(k string) any {
-			if !b.IsRuntime || b.Local == nil {
-				return nil
-			}
-			v, _ := b.Local.Get(k)
-			return v
-		},
-		"set": func(k string, v any) {
-			if !b.IsRuntime || b.Local == nil {
-				return
-			}
-			b.Local.Set(k, v)
-		},
-		"push": func(k string, v any) {
-			if !b.IsRuntime || b.Local == nil {
-				return
-			}
-			b.Local.Push(k, v)
-		},
-		"pop": func(k string) any {
-			if !b.IsRuntime || b.Local == nil {
-				return nil
-			}
-			return b.Local.Pop(k)
-		},
-	}
-}
-
-func (b *JSBridge) GetGlobalNamespace() map[string]any {
-	return map[string]any{
-		"get": func(k string) any {
-			if !b.IsRuntime || b.Global == nil {
-				return nil
-			}
-			v, _ := b.Global.Get(k)
-			return v
-		},
-		"set": func(k string, v any) {
-			if !b.IsRuntime || b.Global == nil {
-				return
-			}
-			b.Global.Set(k, v)
-		},
-		"push": func(k string, v any) {
-			if !b.IsRuntime || b.Global == nil {
-				return
-			}
-			b.Global.Push(k, v)
-		},
-		"pop": func(k string) any {
-			if !b.IsRuntime || b.Global == nil {
-				return nil
-			}
-			return b.Global.Pop(k)
-		},
-	}
 }
