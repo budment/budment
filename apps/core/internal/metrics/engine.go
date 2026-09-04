@@ -63,7 +63,7 @@ func NewEngineMetrics() *EngineMetrics {
 	}
 }
 
-func (m *EngineMetrics) GetNode(nodeID string, nodeName string) *NodeMetrics {
+func (m *EngineMetrics) GetNode(nodeID string, method string, nodeName string) *NodeMetrics {
 	if nodeID == "" {
 		nodeID = "unknown"
 	}
@@ -71,6 +71,7 @@ func (m *EngineMetrics) GetNode(nodeID string, nodeName string) *NodeMetrics {
 	if !ok {
 		newNode := NewNodeMetrics()
 		newNode.Name = nodeName
+		newNode.Method = method
 		val, _ = m.nodes.LoadOrStore(nodeID, newNode)
 	}
 	return val.(*NodeMetrics)
@@ -90,7 +91,7 @@ func (m *EngineMetrics) RecordIteration(durationMs int64) {
 	m.IterationDuration.Record(durationMs)
 }
 
-func (m *EngineMetrics) RecordRequest(nodeID string, name string, success bool, latencyUs, ttfbUs, tcpUs, tlsUs int64, bytesSent, bytesRecv int64, statusCode int) {
+func (m *EngineMetrics) RecordRequest(nodeID string, method string, name string, success bool, latencyUs, ttfbUs, tcpUs, tlsUs int64, bytesSent, bytesRecv int64, statusCode int) {
 	atomic.AddInt64(&m.TotalRequests, 1)
 	atomic.AddInt64(&m.TotalDataSent, bytesSent)
 	atomic.AddInt64(&m.TotalDataRecv, bytesRecv)
@@ -101,7 +102,7 @@ func (m *EngineMetrics) RecordRequest(nodeID string, name string, success bool, 
 		atomic.AddInt64(&m.FailCount, 1)
 	}
 
-	node := m.GetNode(nodeID, name)
+	node := m.GetNode(nodeID, method, name)
 	node.Record(success, latencyUs, ttfbUs, tcpUs, tlsUs, statusCode)
 }
 

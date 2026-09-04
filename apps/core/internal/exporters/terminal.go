@@ -179,7 +179,7 @@ func (r *TerminalReporter) Export(
 	}
 	sort.Slice(nodeIDs, func(i, j int) bool {
 		extractNum := func(s string) int {
-			parts := strings.Split(s, "_n")
+			parts := strings.Split(s, "_")
 			if len(parts) == 2 {
 				var num int
 				fmt.Sscanf(parts[1], "%d", &num)
@@ -199,8 +199,14 @@ func (r *TerminalReporter) Export(
 	nodeTable := widgets.NewTable("Endpoint / Node", "Req", "Fail", "Min", "Avg", "p90", "p95", "p99", "Max", "TTFB")
 	for _, nodeID := range nodeIDs {
 		nodeMet := nodeMetrics[nodeID]
-		displayName := fmt.Sprintf("%s [%s]", nodeMet.Name, nodeID)
-		if nodeMet.Name == "" {
+		parsedPath := extractPath(nodeMet.Name)
+
+		var displayName string
+		if nodeMet.Method != "" && parsedPath != "" {
+			displayName = fmt.Sprintf("%-6s %s [%s]", nodeMet.Method, parsedPath, nodeID)
+		} else if parsedPath != "" {
+			displayName = fmt.Sprintf("%s [%s]", parsedPath, nodeID)
+		} else {
 			displayName = nodeID
 		}
 		reqs := atomic.LoadInt64(&nodeMet.TotalRequests)

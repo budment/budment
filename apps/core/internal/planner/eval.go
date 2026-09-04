@@ -37,7 +37,7 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		      return { steps: nodes.map(n => typeof n.build === 'function' ? n.build() : n) };
 		    };
 		    const scn = {
-		      name: "Default Scenario (K6 Style)",
+		      name: "Default Scenario",
 		      config: exp.options || exp.config || {}, 
 		      setup: exp.setup ? compilePipeline(exp.setup) : undefined, 
 		      execution: compilePipeline(exp.default) 
