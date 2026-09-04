@@ -38,5 +38,5 @@ func RenderSparkline(data []float64) string {
 		sb.WriteString(sparkChars[charIdx])
 	}
 
-	return theme.TextMagenta(sb.String())
+	return theme.TextCyan(sb.String())
 }

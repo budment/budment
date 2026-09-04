@@ -16,6 +16,8 @@ var numericHeaders = map[string]struct{}{
 	"p95": {}, "p99": {}, "max": {}, "ttfb": {},
 }
 
+const maxTerminalWidth = 120
+
 type Table struct {
 	Headers []string
 	Rows    [][]string
@@ -97,7 +99,12 @@ func (t *Table) Render() string {
 		}
 	}
 	sb.WriteByte('\n')
-	sb.WriteString(strings.Repeat("-", tableWidth))
+
+	separatorWidth := tableWidth
+	if separatorWidth > maxTerminalWidth {
+		separatorWidth = maxTerminalWidth
+	}
+	sb.WriteString(strings.Repeat("-", separatorWidth))
 	sb.WriteByte('\n')
 
 	for _, row := range t.Rows {
@@ -105,6 +112,11 @@ func (t *Table) Render() string {
 			var col string
 			if i < len(row) {
 				col = row[i]
+			}
+
+			if i == len(t.Headers)-1 {
+				sb.WriteString(col)
+				continue
 			}
 
 			if isNumericColumn(t.Headers[i]) {
@@ -125,6 +137,9 @@ func (t *Table) Render() string {
 
 func (t *Table) Width() int {
 	_, totalWidth := t.calculateColumnWidths()
+	if totalWidth > maxTerminalWidth {
+		return maxTerminalWidth
+	}
 	return totalWidth
 }
 

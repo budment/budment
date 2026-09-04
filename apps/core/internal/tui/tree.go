@@ -25,7 +25,7 @@ func getVisibleNodes(nodes []planner.ExecutableNode, detailed bool) []planner.Ex
 
 func PrintPhase(phaseName string, nodes []planner.ExecutableNode, detailed bool) {
 	fmt.Printf("\n%s\n", theme.TextMagenta("▶ "+strings.ToUpper(phaseName)+" PHASE"))
-	fmt.Println(theme.TextDim(strings.Repeat("═", 60)))
+	PrintDivider()
 
 	visible := getVisibleNodes(nodes, detailed)
 	if len(visible) == 0 {
@@ -80,11 +80,11 @@ func printTreeReal(nodes []planner.ExecutableNode, prefix string, detailed bool)
 		case *planner.MetricNode:
 			fmt.Printf("%s%s %s %s: %s = %s%s\n", theme.TextDim(prefix), theme.TextDim(connector), theme.TextMagenta("[METRIC]"), n.MetricType, n.Name, n.Value.Raw, nodeID)
 		case *planner.ReqMutateNode:
-			PayloadTag := ""
+			payloadTag := ""
 			if n.Payload.Raw != "" {
-				PayloadTag = " (+Payload)"
+				payloadTag = " (+Payload)"
 			}
-			fmt.Printf("%s%s %s Headers: %d%s%s\n", theme.TextDim(prefix), theme.TextDim(connector), theme.TextBlue("[REQ_MUTATE]"), len(n.Metadata), PayloadTag, nodeID)
+			fmt.Printf("%s%s %s Headers: %d%s%s\n", theme.TextDim(prefix), theme.TextDim(connector), theme.TextBlue("[REQ_MUTATE]"), len(n.Metadata), payloadTag, nodeID)
 		case *planner.ResAssertNode:
 			extractTag := ""
 			if len(n.Extract) > 0 {
