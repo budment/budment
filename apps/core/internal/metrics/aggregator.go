@@ -18,12 +18,13 @@ type MetricEvent struct {
 }
 
 type Aggregator struct {
-	eventChan chan MetricEvent
-	Metrics   *EngineMetrics
+	eventChan     chan MetricEvent
+	Metrics       *EngineMetrics
+	DroppedEvents int64 // Measures events dropped under overload.
 }
 
 func NewAggregator(bufferSize int) *Aggregator {
-	if bufferSize == 0 {
+	if bufferSize <= 0 {
 		bufferSize = 100_000
 	}
 	return &Aggregator{
@@ -36,6 +37,7 @@ func (a *Aggregator) PushEvent(e MetricEvent) {
 	select {
 	case a.eventChan <- e:
 	default:
+		atomic.AddInt64(&a.DroppedEvents, 1)
 	}
 }
 
@@ -79,8 +81,8 @@ func (a *Aggregator) Run(ctx context.Context, done chan struct{}) {
 
 			reqsThisSecond := currentTotal - lastTotalRequests
 			lastTotalRequests = currentTotal
-			a.Metrics.AppendHistory(float64(reqsThisSecond), currentVUs)
-			a.Metrics.RecordTimeSeriesPoint(float64(reqsThisSecond), currentVUs)
+
+			a.Metrics.RecordTick(float64(reqsThisSecond), currentVUs)
 
 		case event := <-a.eventChan:
 			a.processEvent(event)

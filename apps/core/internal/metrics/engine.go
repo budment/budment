@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const maxDistinctErrors = 200
+
 type TimeSeriesPoint struct {
 	Timestamp int64   `json:"timestamp"`
 	RPS       float64 `json:"rps"`
@@ -27,10 +29,11 @@ type EngineMetrics struct {
 	_               [7]uint64
 	ActiveVUs       int64
 	_               [7]uint64
+	LogicFailCount  int64
+	_               [7]uint64
 
-	LogicFailCount    int64
-	_                 [7]uint64
-	IterationDuration *AtomicHistogram    // Per-iteration duration metrics
+	IterationDuration *AtomicHistogram // Per-iteration duration metrics
+	RequestDuration   *AtomicHistogram
 	Custom            *CustomMetricsStore // User-defined JS metrics
 
 	nodes    sync.Map
@@ -54,6 +57,7 @@ func NewEngineMetrics() *EngineMetrics {
 	size := 60
 	return &EngineMetrics{
 		IterationDuration: NewAtomicHistogram(),
+		RequestDuration:   NewAtomicHistogram(),
 		Custom:            NewCustomMetricsStore(),
 		ErrorCounts:       make(map[string]int),
 		TimeSeries:        make([]TimeSeriesPoint, 0, 1000),
@@ -102,6 +106,7 @@ func (m *EngineMetrics) RecordRequest(nodeID string, method string, name string,
 		atomic.AddInt64(&m.FailCount, 1)
 	}
 
+	m.RequestDuration.Record(latencyUs / 1000)
 	node := m.GetNode(nodeID, method, name)
 	node.Record(success, latencyUs, ttfbUs, tcpUs, tlsUs, statusCode)
 }
@@ -116,10 +121,17 @@ func (m *EngineMetrics) RecordError(errMsg string) {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if len(m.ErrorCounts) >= maxDistinctErrors {
+		if _, exists := m.ErrorCounts[errMsg]; !exists {
+			m.ErrorCounts["[Other errors]"]++
+			return
+		}
+	}
 	m.ErrorCounts[errMsg]++
 }
 
-func (m *EngineMetrics) AppendHistory(rps float64, vus int64) {
+func (m *EngineMetrics) RecordTick(rps float64, vus int64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.RPSHistory[m.historyHead] = rps
@@ -128,6 +140,12 @@ func (m *EngineMetrics) AppendHistory(rps float64, vus int64) {
 	if m.historyCount < m.historySize {
 		m.historyCount++
 	}
+
+	m.TimeSeries = append(m.TimeSeries, TimeSeriesPoint{
+		Timestamp: time.Now().Unix(),
+		RPS:       rps,
+		VUs:       vus,
+	})
 }
 
 func (m *EngineMetrics) GetHistory() (rps []float64, vus []int64) {
@@ -158,7 +176,7 @@ func (m *EngineMetrics) Snapshot() (reqs, iters, success, netFail, logicFail, vu
 func (m *EngineMetrics) GetTopErrors() map[string]int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	errCopy := make(map[string]int)
+	errCopy := make(map[string]int, len(m.ErrorCounts))
 	for k, v := range m.ErrorCounts {
 		errCopy[k] = v
 	}
@@ -219,16 +237,4 @@ func (m *EngineMetrics) GetAllScripts() map[string]*ScriptMetrics {
 	res := make(map[string]*ScriptMetrics)
 	m.scripts.Range(func(k, v any) bool { res[k.(string)] = v.(*ScriptMetrics); return true })
 	return res
-}
-
-func (m *EngineMetrics) RecordTimeSeriesPoint(rps float64, vus int64) {
-	point := TimeSeriesPoint{
-		Timestamp: time.Now().Unix(),
-		RPS:       rps,
-		VUs:       vus,
-	}
-
-	m.mu.Lock()
-	m.TimeSeries = append(m.TimeSeries, point)
-	m.mu.Unlock()
 }

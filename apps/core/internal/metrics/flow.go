@@ -19,6 +19,10 @@ func (m *BranchMetrics) Record(isTrue bool) {
 	}
 }
 
+func (m *BranchMetrics) Snapshot() (trueCount, falseCount int64) {
+	return atomic.LoadInt64(&m.TrueCount), atomic.LoadInt64(&m.FalseCount)
+}
+
 type LoopMetrics struct {
 	TotalEntered    int64
 	_               [7]uint64
@@ -28,6 +32,10 @@ type LoopMetrics struct {
 func (m *LoopMetrics) Record(iterations int32) {
 	atomic.AddInt64(&m.TotalEntered, 1)
 	atomic.AddInt64(&m.TotalIterations, int64(iterations))
+}
+
+func (m *LoopMetrics) Snapshot() (entered, totalIters int64) {
+	return atomic.LoadInt64(&m.TotalEntered), atomic.LoadInt64(&m.TotalIterations)
 }
 
 type PollMetrics struct {
@@ -47,6 +55,10 @@ func (m *PollMetrics) Record(success bool) {
 	}
 }
 
+func (m *PollMetrics) Snapshot() (entered, success, exhausted int64) {
+	return atomic.LoadInt64(&m.TotalEntered), atomic.LoadInt64(&m.SuccessCount), atomic.LoadInt64(&m.Exhausted)
+}
+
 type MatchMetrics struct {
 	Cases sync.Map // Key: case name; value: *int64
 }
@@ -55,6 +67,12 @@ func (m *MatchMetrics) Record(caseName string) {
 	if caseName == "" {
 		caseName = "default"
 	}
+
+	if val, ok := m.Cases.Load(caseName); ok {
+		atomic.AddInt64(val.(*int64), 1)
+		return
+	}
+
 	val, _ := m.Cases.LoadOrStore(caseName, new(int64))
 	atomic.AddInt64(val.(*int64), 1)
 }
@@ -82,4 +100,8 @@ func (m *ScriptMetrics) Record(latencyUs int64, isFail bool) {
 	if isFail {
 		atomic.AddInt64(&m.FailCount, 1)
 	}
+}
+
+func (m *ScriptMetrics) Snapshot() (calls, totalLatencyUs, failCount int64) {
+	return atomic.LoadInt64(&m.TotalCalls), atomic.LoadInt64(&m.TotalLatencyUs), atomic.LoadInt64(&m.FailCount)
 }
