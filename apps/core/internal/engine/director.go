@@ -28,28 +28,35 @@ func NewDirector(scenarios []*Scenario, baseCfg config.EngineConfig, agg *metric
 }
 
 func (d *Director) Run() error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	defer func() { cancelWorkers() }()
 
 	if d.BaseConfig.MaxDuration != "" {
 		if dur, err := time.ParseDuration(d.BaseConfig.MaxDuration); err == nil {
-			ctx, cancel = context.WithTimeout(ctx, dur)
+			workerCtx, cancelWorkers = context.WithTimeout(workerCtx, dur)
+		} else {
+			fmt.Printf("[Director] Failed to parse MaxDuration: %v\n", err)
 		}
 	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
 	defer signal.Stop(sigCh)
 
 	go func() {
 		select {
 		case <-sigCh:
-			cancel()
-		case <-ctx.Done():
+			cancelWorkers()
+		case <-workerCtx.Done():
 			return
 		}
 	}()
+
+	aggCtx, cancelAgg := context.WithCancel(context.Background())
+	defer cancelAgg()
+
+	aggDone := make(chan struct{})
+	go d.Aggregator.Run(aggCtx, aggDone)
 
 	groups := make(map[int][]*Scenario)
 	var orders []int
@@ -63,10 +70,6 @@ func (d *Director) Run() error {
 	}
 
 	sort.Ints(orders)
-
-	aggDone := make(chan struct{})
-	go d.Aggregator.Run(ctx, aggDone)
-
 	assertMgr := metrics.NewAssertionManager(d.BaseConfig.Thresholds)
 
 	for _, order := range orders {
@@ -82,13 +85,13 @@ func (d *Director) Run() error {
 					if delay, err := time.ParseDuration(scenario.Config.StartAt); err == nil {
 						select {
 						case <-time.After(delay):
-						case <-ctx.Done():
+						case <-workerCtx.Done():
 							return
 						}
 					}
 				}
 
-				scenario.Run(ctx)
+				scenario.Run(workerCtx)
 			}(s)
 		}
 
@@ -100,17 +103,20 @@ func (d *Director) Run() error {
 
 		select {
 		case <-groupDone:
-		case <-ctx.Done():
+		case <-workerCtx.Done():
+			<-groupDone
 			goto FINISH
 		}
 	}
 
 FINISH:
-	cancel()
-	<-aggDone // Wait for the aggregator to process the final event
+	cancelWorkers()
+	cancelAgg()
+	<-aggDone
+
 	for _, rep := range d.Reporters {
 		if err := rep.Export(d.Aggregator.Metrics, assertMgr); err != nil {
-			fmt.Printf("⚠️ Exporter Warning: %v\n", err)
+			fmt.Printf("Exporter Warning: %v\n", err)
 		}
 	}
 	return nil

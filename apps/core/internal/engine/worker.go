@@ -5,45 +5,43 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"github.com/goccy/go-json"
+	"github.com/vunas/blaster/internal/fastconv"
 	"github.com/vunas/blaster/internal/metrics"
 	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/runner/http"
+	"github.com/vunas/blaster/internal/runner"
 	"github.com/vunas/blaster/internal/runtime"
 )
 
 type HookExecutor interface {
-	ExecuteHook(hookID string, req *http.Request, res *http.Response) error
+	ExecuteHook(hookID string, req runner.ProtocolRequest, res runner.ProtocolResponse) error
 	EvaluateBoolean(hookID string) (bool, error)
 	EvaluateString(hookID string) (string, error)
 	IsAborted() bool
 	GetSleepTime() int
 	GetBarrierInfo() (name string, quorum int)
-	GetRetryInfo() (retry bool, delay int, max int, scope string)
-	GetFlags() (skip bool, abort bool)
 }
 
 type ExecutorPool interface {
-	GetExecutor(scope runtime.Scope, local runtime.SharedState, workerID int, iteration int, scenario string) HookExecutor
+	GetExecutor(scope runtime.VUContext, local runtime.SharedState, workerID int, iteration int, scenario string) HookExecutor
 	PutExecutor(executor HookExecutor)
 }
 
 type Worker struct {
 	ID             int
+	Slot           int
 	ScenarioName   string
 	Scope          *WorkerScope
-	EndpointScope  *EndpointScope
 	Graph          *planner.Graph
 	Pool           ExecutorPool
 	Aggregator     *metrics.Aggregator
 	BarrierManager *BarrierManager
-	HTTPClient     *http.Client
+	RunnerManager  *runner.Manager
 	LocalState     *LocalState
+	GlobalState    *GlobalState
 	Sink           runtime.MetricsSink
 	Iterations     int
 	SharedIters    *int64
@@ -51,70 +49,24 @@ type Worker struct {
 	currentIter    int
 }
 
-func NewWorker(id int, graph *planner.Graph, pool ExecutorPool, agg *metrics.Aggregator, sm *BarrierManager, client *http.Client, iterations int, scenarioName string, ls *LocalState, sink runtime.MetricsSink, sharedIters *int64, activeTarget *int32) *Worker {
+func NewWorker(id int, slot int, graph *planner.Graph, pool ExecutorPool, agg *metrics.Aggregator, sm *BarrierManager, runnerFactory func() *runner.Manager, iterations int, scenarioName string, ls *LocalState, gs *GlobalState, sink runtime.MetricsSink, sharedIters *int64, activeTarget *int32) *Worker {
 	return &Worker{
 		ID:             id,
+		Slot:           slot,
 		ScenarioName:   scenarioName,
-		Scope:          NewWorkerScope(),
-		EndpointScope:  NewEndpointScope(),
+		Scope:          NewWorkerScope(ls, gs),
 		Graph:          graph,
 		Pool:           pool,
 		Aggregator:     agg,
 		BarrierManager: sm,
-		HTTPClient:     client,
+		RunnerManager:  runnerFactory(),
 		LocalState:     ls,
+		GlobalState:    gs,
 		Sink:           sink,
 		Iterations:     iterations,
 		SharedIters:    sharedIters,
 		ActiveTarget:   activeTarget,
 	}
-}
-
-func fastToString(val any) string {
-	if val == nil {
-		return ""
-	}
-	switch v := val.(type) {
-	case string:
-		return v
-	case []byte:
-		return string(v)
-	case int:
-		return strconv.Itoa(v)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	case bool:
-		if v {
-			return "true"
-		}
-		return "false"
-	default:
-		return fmt.Sprint(v)
-	}
-}
-
-var requestPool = sync.Pool{
-	New: func() any {
-		return &http.Request{
-			Headers: make(map[string]string, 10),
-			Body:    make([]byte, 0, 4096),
-		}
-	},
-}
-
-func acquireRequest(method, url string) *http.Request {
-	req := requestPool.Get().(*http.Request)
-	req.Method = method
-	req.URL = url
-	req.Body = req.Body[:0]
-	return req
-}
-
-func releaseRequest(req *http.Request) {
-	clear(req.Headers)
-	requestPool.Put(req)
 }
 
 func (w *Worker) withExecutor(hookID string, fn func(inst HookExecutor) error) error {
@@ -129,14 +81,13 @@ func (w *Worker) withExecutor(hookID string, fn func(inst HookExecutor) error) e
 func (w *Worker) Run(ctx context.Context, done func()) {
 	w.Aggregator.Metrics.AddActiveVU(1)
 	defer w.Aggregator.Metrics.AddActiveVU(-1)
-
 	defer done()
 	w.currentIter = 0
 
 	for {
 		if w.ActiveTarget != nil {
 			currentTarget := atomic.LoadInt32(w.ActiveTarget)
-			if int32(w.ID) > currentTarget {
+			if int32(w.Slot) > currentTarget {
 				return
 			}
 		}
@@ -154,6 +105,11 @@ func (w *Worker) Run(ctx context.Context, done func()) {
 		default:
 		}
 
+		w.Scope.Set("__VU_ID__", w.ID)
+		w.Scope.Set("__VU_SLOT__", w.Slot)
+		w.Scope.Set("__ITER__", w.currentIter)
+		w.Scope.Set("__SCENARIO__", w.ScenarioName)
+
 		if w.LocalState != nil {
 			keys := w.LocalState.GetAllDistributionKeys()
 			for _, k := range keys {
@@ -170,164 +126,63 @@ func (w *Worker) Run(ctx context.Context, done func()) {
 		}
 
 		iterDuration := time.Since(iterStart).Milliseconds()
-
 		w.Aggregator.Metrics.RecordIteration(iterDuration)
 		w.currentIter++
 		w.Scope.Reset()
-		w.EndpointScope.Reset()
 	}
 }
 
 func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNode) bool {
 	for _, node := range nodes {
 		switch n := node.(type) {
-		case *planner.HttpNode:
-			attempts := 0
-			maxAttempts := 1
-
-			for attempts < maxAttempts {
-				attempts++
-				targetURL := n.URL
-
-				jsReq := acquireRequest(n.Method, targetURL)
-
-				for _, inj := range n.Injects {
-					var val any
-
-					if inj.IsFromDistribute {
-						val = w.LocalState.DistributeNext(inj.StackID)
-						w.EndpointScope.Push(inj.StackID, val, 1)
-					}
-
-					val = w.EndpointScope.Consume(inj.StackID)
-					if val == nil {
-						continue
-					}
-
-					strVal := fastToString(val)
-
-					if after, ok := strings.CutPrefix(inj.Target, "header."); ok {
-						jsReq.Headers[after] = strVal
-					} else if strings.Contains(jsReq.URL, "{"+inj.Target+"}") {
-						jsReq.URL = strings.ReplaceAll(jsReq.URL, "{"+inj.Target+"}", strVal)
-					} else {
-						newBody, err := sjson.SetBytes(jsReq.Body, inj.Target, val)
-						if err == nil {
-							jsReq.Body = newBody
-						}
-					}
-				}
-
-				retryReq, abort := w.runHook(ctx, n.BeforeHookID, jsReq, nil, &maxAttempts)
-				if abort {
-					releaseRequest(jsReq)
-					return true
-				}
-				if retryReq {
-					releaseRequest(jsReq)
-					continue
-				}
-
-				start := time.Now()
-				resp := w.HTTPClient.Do(ctx, jsReq.Method, jsReq.URL, jsReq.Headers, jsReq.Body)
-
-				func() {
-					defer resp.Release()
-					latency := time.Since(start).Microseconds()
-					isSuccess := resp.Status >= 200 && resp.Status < 400 && resp.Error == ""
-
-					path := n.URL
-					if idx := strings.Index(path, "://"); idx != -1 {
-						if slashIdx := strings.Index(path[idx+3:], "/"); slashIdx != -1 {
-							path = path[idx+3+slashIdx:]
-						} else {
-							path = "/"
-						}
-					}
-					nodeName := n.Method + "   " + path
-
-					w.Aggregator.Metrics.RecordRequest(n.ID, nodeName, isSuccess, latency,
-						resp.Timings.TTFB, resp.Timings.TCPConn, resp.Timings.TLSHandshake,
-						int64(len(jsReq.Body)), int64(len(resp.Body)), resp.Status)
-					if !isSuccess || resp.Error != "" {
-						errMsg := fmt.Sprintf("Status: %d, Err: %s", resp.Status, resp.Error)
-						w.Aggregator.PushEvent(metrics.MetricEvent{WorkerID: w.ID, NodeID: n.ID, ErrorMsg: errMsg})
-
-						if w.Sink != nil {
-							w.Sink.Log(w.ID, n.ID, "SYS_ERR", errMsg)
-						}
-					}
-
-					jsRes := http.NewResponse(resp.Status, resp.Headers, resp.Body, resp.Error)
-
-					for _, ext := range n.Extracts {
-						if res := gjson.GetBytes(resp.Body, ext.Path); res.Exists() {
-							if ext.IsDistribute {
-								if arr, ok := res.Value().([]any); ok {
-									w.LocalState.StoreDistribution(ext.StackID, arr, nil)
-								} else {
-									w.LocalState.StoreDistribution(ext.StackID, []any{res.Value()}, nil)
-								}
-							} else {
-								w.EndpointScope.Push(ext.StackID, res.Value(), ext.TotalRef)
-							}
-						}
-					}
-
-					retryReq, abort = w.runHook(ctx, n.AfterHookID, jsReq, jsRes, &maxAttempts)
-				}()
-
-				releaseRequest(jsReq)
-
-				if abort {
-					return true
-				}
-				if !retryReq {
-					break
-				}
+		case *planner.ActionNode:
+			if abort := w.executeActionProtocol(ctx, n); abort {
+				return true
 			}
 
 		case *planner.BranchNode:
 			isTrue := w.evaluateCondition(n.ConditionHookID)
 			w.Aggregator.Metrics.RecordBranch(n.ID, isTrue)
+			target := n.FalsePath
 			if isTrue {
-				if abort := w.executeNodes(ctx, n.TruePath); abort {
-					return true
-				}
-			} else {
-				if abort := w.executeNodes(ctx, n.FalsePath); abort {
-					return true
-				}
+				target = n.TruePath
+			}
+			if abort := w.executeNodes(ctx, target); abort {
+				return true
 			}
 
 		case *planner.LoopNode:
 			w.Aggregator.Metrics.RecordLoop(n.ID, n.Count)
 			for i := int32(0); i < n.Count; i++ {
+				if ctx.Err() != nil {
+					return true
+				}
+
 				w.Scope.Set("loop_index", i)
 				if abort := w.executeNodes(ctx, n.Logic); abort {
 					return true
 				}
 			}
 
-		case *planner.ScriptNode:
-			start := time.Now()
-			_, abort := w.runHook(ctx, n.HookID, nil, nil, nil)
-			latency := time.Since(start).Microseconds()
-
-			w.Aggregator.Metrics.RecordScript(n.ID, latency, abort)
-
-			if abort {
+		case *planner.PollNode:
+			if abort := w.executePoll(ctx, n); abort {
 				return true
 			}
 
 		case *planner.MatchNode:
-			inst := w.Pool.GetExecutor(w.Scope, w.LocalState, w.ID, w.currentIter, w.ScenarioName)
-			caseVal, _ := inst.EvaluateString(n.ConditionHookID)
-			w.Pool.PutExecutor(inst)
+			var caseVal string
+			var isAborted bool
 
-			if inst.IsAborted() {
+			w.withExecutor(n.ConditionHookID, func(inst HookExecutor) error {
+				caseVal, _ = inst.EvaluateString(n.ConditionHookID)
+				isAborted = inst.IsAborted()
+				return nil
+			})
+
+			if isAborted {
 				return true
 			}
+
 			w.Aggregator.Metrics.RecordMatch(n.ID, caseVal)
 			if targetPath, exists := n.Cases[caseVal]; exists {
 				if abort := w.executeNodes(ctx, targetPath); abort {
@@ -339,48 +194,8 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 				}
 			}
 
-		case *planner.PollNode:
-			abort := func() bool {
-				if n.Interval <= 0 {
-					n.Interval = 1 * time.Second
-				}
-				pollTimer := time.NewTicker(n.Interval)
-				defer pollTimer.Stop()
-
-				attempts := int32(0)
-				success := false
-
-				for attempts < n.MaxAttempts && !success {
-					select {
-					case <-ctx.Done():
-						return true
-					case <-pollTimer.C:
-						attempts++
-						if abort := w.executeNodes(ctx, n.Logic); abort {
-							return true
-						}
-
-						var conditionResult bool
-						var isAborted bool
-						w.withExecutor(n.ConditionHookID, func(inst HookExecutor) error {
-							conditionResult, _ = inst.EvaluateBoolean(n.ConditionHookID)
-							isAborted = inst.IsAborted()
-							return nil
-						})
-
-						if isAborted {
-							return true
-						}
-						if conditionResult {
-							success = true
-						}
-					}
-				}
-				w.Aggregator.Metrics.RecordPoll(n.ID, success)
-				return false
-			}()
-
-			if abort {
+		default:
+			if abort := w.executeAuxiliaryNode(ctx, node, nil, nil, 0); abort {
 				return true
 			}
 		}
@@ -388,14 +203,169 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 	return false
 }
 
-func (w *Worker) runHook(ctx context.Context, hookID string, req *http.Request, res *http.Response, maxAttempts *int) (bool, bool) {
-	if hookID == "" {
-		return false, false
+func (w *Worker) executeActionProtocol(ctx context.Context, n *planner.ActionNode) bool {
+	runnerIns := w.RunnerManager.Get(n.Protocol)
+	if runnerIns == nil {
+		w.Sink.Log(w.ID, n.ID, "SYS_ERR", "Unsupported protocol: "+n.Protocol)
+		return true
 	}
 
-	var isAborted, retry, skip bool
-	var delay, max int
-	var scope, barrierName string
+	target := n.Target.Render(w.Scope)
+	req := runnerIns.AcquireRequest(n.Method, target)
+	defer runnerIns.ReleaseRequest(req)
+
+	for _, bNode := range n.BeforePipeline {
+		if abort := w.executeAuxiliaryNode(ctx, bNode, req, nil, 0); abort {
+			return true
+		}
+	}
+
+	resp, execRes := runnerIns.Execute(ctx, req)
+	if resp != nil {
+		defer resp.Release()
+	}
+
+	w.Aggregator.Metrics.RecordRequest(n.ID, n.Method, target, execRes.IsSuccess, execRes.LatencyUs,
+		execRes.TTFBUs, execRes.TCPConnUs, execRes.TLSHandUs,
+		execRes.BytesOut, execRes.BytesIn, execRes.Code)
+
+	if !execRes.IsSuccess || execRes.ErrorMessage != "" {
+		errMsg := fmt.Sprintf("Status: %d, Err: %s", execRes.Code, execRes.ErrorMessage)
+		w.Aggregator.PushEvent(metrics.MetricEvent{WorkerID: w.ID, NodeID: n.ID, ErrorMsg: errMsg})
+		if w.Sink != nil {
+			w.Sink.Log(w.ID, n.ID, "SYS_ERR", errMsg)
+		}
+	}
+
+	if resp != nil {
+		for _, aNode := range n.AfterPipeline {
+			if abort := w.executeAuxiliaryNode(ctx, aNode, req, resp, execRes.Code); abort {
+				return true
+			}
+		}
+	}
+
+	return w.Scope.IsAbortFlag()
+}
+
+func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.ExecutableNode, req runner.ProtocolRequest, res runner.ProtocolResponse, returnCode int) bool {
+	switch n := node.(type) {
+	case *planner.ScriptNode:
+		return w.runHook(ctx, n.HookID, req, res)
+
+	case *planner.SleepNode:
+		timer := time.NewTimer(n.Duration)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			timer.Stop()
+			return true
+		}
+
+	case *planner.LogNode:
+		msg := n.Message.Render(w.Scope)
+		w.Sink.Log(w.ID, n.ID, "INFO", msg)
+
+	case *planner.BarrierNode:
+		if w.BarrierManager != nil {
+			w.BarrierManager.ArriveAndWait(ctx, n.Name, n.Quorum, 0)
+		}
+
+	case *planner.ReqMutateNode:
+		if req != nil {
+			opts := make(map[string]any, 1)
+			if len(n.Metadata) > 0 {
+				headers := make(map[string]any, len(n.Metadata))
+				for k, expr := range n.Metadata {
+					headers[k] = expr.Render(w.Scope)
+				}
+				opts["headers"] = headers
+			}
+
+			body := n.Payload.Render(w.Scope)
+			req.Set(body, opts)
+		}
+
+	case *planner.ResAssertNode:
+		isFailed := false
+
+		if n.ExpectCode > 0 && returnCode != n.ExpectCode {
+			isFailed = true
+		}
+
+		if res != nil {
+			if n.ExpectBodyContains != "" && !res.Contains(n.ExpectBodyContains) {
+				isFailed = true
+			}
+
+			if !isFailed {
+				for path, scopeKey := range n.Extract {
+					if val := res.JSON(path); val != nil {
+						w.Scope.Set(scopeKey, val)
+					}
+				}
+			}
+		}
+
+		if isFailed {
+			w.Aggregator.PushEvent(metrics.MetricEvent{
+				WorkerID:    w.ID,
+				NodeID:      n.ID,
+				ErrorMsg:    "Assertion Failed",
+				IsLogicFail: true,
+			})
+		}
+
+	case *planner.SetNode:
+		valStr := n.ValueJSON.Render(w.Scope)
+		var finalVal any = valStr
+
+		trimmed := strings.TrimSpace(valStr)
+		if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
+			var parsed any
+			if err := json.Unmarshal(fastconv.StringToBytes(trimmed), &parsed); err == nil {
+				finalVal = parsed
+			}
+		}
+
+		if n.Scope == "global" && w.GlobalState != nil {
+			w.GlobalState.Set(n.Key, finalVal)
+		} else if n.Scope == "local" && w.LocalState != nil {
+			w.LocalState.Set(n.Key, finalVal)
+		} else {
+			w.Scope.Set(n.Key, finalVal)
+		}
+
+	case *planner.DistributeNode:
+		valStr := n.ItemsJSON.Render(w.Scope)
+		var items []any
+		if err := json.Unmarshal(fastconv.StringToBytes(valStr), &items); err != nil {
+			items = []any{valStr}
+		}
+		if w.LocalState != nil {
+			w.LocalState.StoreDistribution(n.Key, items, nil)
+		}
+
+	case *planner.MetricNode:
+		valStr := n.Value.Render(w.Scope)
+		valFloat, err := strconv.ParseFloat(valStr, 64)
+		if err != nil {
+			valFloat = 0
+		}
+		if w.Sink != nil {
+			w.Sink.RecordCustom(w.ID, n.MetricType, n.Name, valFloat)
+		}
+	}
+	return false
+}
+
+func (w *Worker) runHook(ctx context.Context, hookID string, req runner.ProtocolRequest, res runner.ProtocolResponse) bool {
+	if hookID == "" {
+		return false
+	}
+
+	var isAborted bool
+	var barrierName string
 	var quorum, sleepMs int
 
 	w.withExecutor(hookID, func(inst HookExecutor) error {
@@ -412,54 +382,83 @@ func (w *Worker) runHook(ctx context.Context, hookID string, req *http.Request, 
 
 		sleepMs = inst.GetSleepTime()
 		barrierName, quorum = inst.GetBarrierInfo()
-		retry, delay, max, scope = inst.GetRetryInfo()
-		skip, isAborted = inst.GetFlags()
-		if inst.IsAborted() {
-			isAborted = true
-		}
+		isAborted = inst.IsAborted()
 		return nil
 	})
 
 	if isAborted {
-		return false, true
+		return true
 	}
 
 	if sleepMs > 0 {
+		timer := time.NewTimer(time.Duration(sleepMs) * time.Millisecond)
 		select {
-		case <-time.After(time.Duration(sleepMs) * time.Millisecond):
+		case <-timer.C:
 		case <-ctx.Done():
-			return false, true
+			timer.Stop()
+			return true
 		}
 	}
 
 	if barrierName != "" && w.BarrierManager != nil {
-		w.BarrierManager.ArriveAndWait(ctx, barrierName, quorum, 0, 0)
+		w.BarrierManager.ArriveAndWait(ctx, barrierName, quorum, 0)
 	}
 
-	if retry {
-		select {
-		case <-time.After(time.Duration(delay) * time.Millisecond):
-		case <-ctx.Done():
-			return false, true
-		}
-		if scope == "node" && maxAttempts != nil {
-			*maxAttempts = max
-			return true, false
-		}
-		return false, false
-	}
-
-	if skip {
-		return false, false
-	}
-
-	return false, false
+	return false
 }
 
 func (w *Worker) evaluateCondition(hookID string) bool {
-	inst := w.Pool.GetExecutor(w.Scope, w.LocalState, w.ID, w.currentIter, w.ScenarioName)
-	defer w.Pool.PutExecutor(inst)
-
-	result, _ := inst.EvaluateBoolean(hookID)
+	var result bool
+	w.withExecutor(hookID, func(inst HookExecutor) error {
+		result, _ = inst.EvaluateBoolean(hookID)
+		return nil
+	})
 	return result
+}
+
+func (w *Worker) executePoll(ctx context.Context, n *planner.PollNode) bool {
+	if n.Interval <= 0 {
+		n.Interval = 1 * time.Second
+	}
+
+	attempts := int32(0)
+	pollTimer := time.NewTicker(n.Interval)
+	defer pollTimer.Stop()
+
+	for attempts < n.MaxAttempts {
+		attempts++
+
+		if abort := w.executeNodes(ctx, n.Logic); abort {
+			return true
+		}
+
+		var conditionResult bool
+		var isAborted bool
+		w.withExecutor(n.ConditionHookID, func(inst HookExecutor) error {
+			conditionResult, _ = inst.EvaluateBoolean(n.ConditionHookID)
+			isAborted = inst.IsAborted()
+			return nil
+		})
+
+		if isAborted {
+			return true
+		}
+		if conditionResult {
+			w.Aggregator.Metrics.RecordPoll(n.ID, true)
+			return false
+		}
+
+		if attempts >= n.MaxAttempts {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return true
+		case <-pollTimer.C:
+		}
+	}
+
+	w.Aggregator.Metrics.RecordPoll(n.ID, false)
+	return false
 }

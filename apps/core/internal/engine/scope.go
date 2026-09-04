@@ -1,8 +1,12 @@
 package engine
 
 import (
+	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/vunas/blaster/internal/fastconv"
+	"github.com/vunas/blaster/internal/template"
 )
 
 type QueueStore struct {
@@ -127,62 +131,85 @@ func (l *LocalState) GetAllDistributionKeys() []string {
 }
 
 type WorkerScope struct {
-	localMap map[string]any
+	localMap      map[string]any
+	templateCache map[string]*template.FastTemplate
+	Local         *LocalState
+	Global        *GlobalState
+	abortFlag     bool
 }
 
-func NewWorkerScope() *WorkerScope {
-	return &WorkerScope{localMap: make(map[string]any, 16)}
+func NewWorkerScope(ls *LocalState, gs *GlobalState) *WorkerScope {
+	return &WorkerScope{
+		localMap:      make(map[string]any, 16),
+		templateCache: make(map[string]*template.FastTemplate, 8),
+		Local:         ls,
+		Global:        gs,
+	}
 }
-func (s *WorkerScope) Set(key string, val any) {
-	s.localMap[key] = val
-}
-func (s *WorkerScope) Get(key string) (any, bool) {
-	val, ok := s.localMap[key]
-	return val, ok
-}
-func (s *WorkerScope) Delete(key string) {
-	delete(s.localMap, key)
-}
+
+func (s *WorkerScope) Set(key string, val any)    { s.localMap[key] = val }
+func (s *WorkerScope) Get(key string) (any, bool) { val, ok := s.localMap[key]; return val, ok }
+func (s *WorkerScope) Delete(key string)          { delete(s.localMap, key) }
 func (s *WorkerScope) Reset() {
 	clear(s.localMap)
+	s.SetFlags(false)
 }
 
-type StackItem struct {
-	Value    any
-	RefCount int
-}
-type EndpointScope struct {
-	stacks map[string][]*StackItem
+func (s *WorkerScope) Interpolate(raw any) string {
+	if raw == nil {
+		return ""
+	}
+
+	str, ok := raw.(string)
+	if !ok {
+		str = fastconv.String(raw)
+	}
+
+	tmpl, exists := s.templateCache[str]
+	if !exists {
+		tmpl = template.Compile(str)
+		s.templateCache[str] = tmpl
+	}
+
+	return tmpl.Render(s)
 }
 
-func NewEndpointScope() *EndpointScope {
-	return &EndpointScope{
-		stacks: make(map[string][]*StackItem, 16),
-	}
+func (s *WorkerScope) SetFlags(abort bool) {
+	s.abortFlag = abort
 }
-func (e *EndpointScope) Push(stackID string, val any, totalRef int) {
-	if totalRef <= 0 {
-		return
-	}
-	e.stacks[stackID] = append(e.stacks[stackID], &StackItem{Value: val, RefCount: totalRef})
-}
-func (e *EndpointScope) Consume(stackID string) any {
-	stack := e.stacks[stackID]
-	if len(stack) == 0 {
-		return nil
-	}
-	topIndex := len(stack) - 1
-	topItem := stack[topIndex]
-	topItem.RefCount--
-	val := topItem.Value
-	if topItem.RefCount <= 0 {
-		e.stacks[stackID] = stack[:topIndex]
-		if len(e.stacks[stackID]) == 0 {
-			delete(e.stacks, stackID)
+func (s *WorkerScope) IsAbortFlag() bool { return s.abortFlag }
+
+func (s *WorkerScope) Resolve(name string) (any, bool) {
+	if after, match := strings.CutPrefix(name, "@local:"); match {
+		if s.Local != nil {
+			return s.Local.Get(after)
 		}
+		return nil, false
 	}
-	return val
-}
-func (e *EndpointScope) Reset() {
-	clear(e.stacks)
+
+	if after, match := strings.CutPrefix(name, "@global:"); match {
+		if s.Global != nil {
+			return s.Global.Get(after)
+		}
+		return nil, false
+	}
+
+	if after, match := strings.CutPrefix(name, "@pop:local:"); match {
+		if s.Local != nil {
+			val := s.Local.Pop(after)
+			return val, val != nil
+		}
+		return nil, false
+	}
+
+	if after, match := strings.CutPrefix(name, "@pop:global:"); match {
+		if s.Global != nil {
+			val := s.Global.Pop(after)
+			return val, val != nil
+		}
+		return nil, false
+	}
+
+	val, ok := s.localMap[name]
+	return val, ok
 }
