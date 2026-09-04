@@ -16,11 +16,11 @@ type ExecutionResult struct {
 
 type ProtocolRequest interface {
 	Set(body any, options map[string]any)
-	JSON(selector ...string) any
+	Json(selector ...string) any
 }
 
 type ProtocolResponse interface {
-	JSON(selector ...string) any
+	Json(selector ...string) any
 	Contains(substr string) bool
 	Release()
 }

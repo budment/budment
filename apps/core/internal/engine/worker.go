@@ -300,7 +300,7 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 
 			if !isFailed {
 				for path, scopeKey := range n.Extract {
-					if val := res.JSON(path); val != nil {
+					if val := res.Json(path); val != nil {
 						w.Scope.Set(scopeKey, val)
 					}
 				}

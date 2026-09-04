@@ -30,7 +30,7 @@ type Response struct {
 	buf     *bytes.Buffer
 }
 
-func (r *Response) JSON(selector ...string) any {
+func (r *Response) Json(selector ...string) any {
 	if len(r.Body) == 0 {
 		return nil
 	}

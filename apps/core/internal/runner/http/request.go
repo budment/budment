@@ -71,7 +71,7 @@ func (r *Request) Set(body any, options map[string]any) {
 }
 
 // Quickly extract a single node using GJSON or unmarshal the entire body.
-func (r *Request) JSON(selector ...string) any {
+func (r *Request) Json(selector ...string) any {
 	if len(r.Body) == 0 {
 		return nil
 	}
