@@ -127,6 +127,7 @@ var runCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		defer tui.ShowCursor()
 		scriptPath := args[0]
+		start := time.Now()
 		fs := filesystem.NewLocal()
 		loader := config.NewLoader(globalConfigFile, fs)
 		projectCfg, err := loader.Load()
@@ -148,22 +149,34 @@ var runCmd = &cobra.Command{
 		}
 
 		finalEngineCfg := config.MergeEngineConfig(projectCfg, planResult.ASTConfig, envOverrides, cliOverrides)
+		elapsed := time.Since(start)
 		testStartTime := time.Now()
 
 		isTUIActive := !quietMode && !jsonMode && !debugMode && !noTUIMode && IsTerminal() && !IsCIEnvironment()
-
+		if !quietMode && !jsonMode {
+			tui.PrintBanner()
+			tui.PrintPlanOverview(scriptPath, elapsed.Milliseconds(), finalEngineCfg)
+		}
 		if !isTUIActive && !quietMode && !jsonMode {
-			fmt.Printf("%s %s\n", theme.TextCyan("BLASTER ENGINE"), theme.TextDim("· EXECUTION INITIALIZED"))
-			fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
-			fmt.Printf("  Script   : %s\n", theme.TextBold(scriptPath))
-			fmt.Printf("  VUs      : %d\n", finalEngineCfg.VUs)
-			if finalEngineCfg.Duration != "" {
-				fmt.Printf("  Duration : %s\n", finalEngineCfg.Duration)
+
+			if debugMode || runDetailed {
+				fmt.Printf("\n%s\n", theme.TextCyan("EXECUTION PLAN · LIFECYCLE TREE"))
+				tui.PrintDivider()
+
+				for i, scn := range planResult.Scenarios {
+					name := scn.Name
+					if name == "" {
+						name = fmt.Sprintf("Scenario %d", i+1)
+					}
+
+					fmt.Printf("\n%s %s\n", theme.TextMagenta("◆"), theme.TextBold(name))
+					tui.PrintPhase("setup", scn.Graph.Setup, runDetailed)
+					tui.PrintPhase("execution", scn.Graph.Execution, runDetailed)
+				}
+				fmt.Println()
+				tui.PrintDivider()
 			}
-			if len(finalEngineCfg.Thresholds) > 0 {
-				fmt.Printf("  Rules    : %d SLA thresholds defined\n", len(finalEngineCfg.Thresholds))
-			}
-			fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+			fmt.Printf("\n%s %s\n\n", theme.TextGreen("◆"), theme.TextBold("Starting scenario execution..."))
 		}
 
 		var exportScenarios []exporters.ExportScenario
@@ -193,8 +206,6 @@ var runCmd = &cobra.Command{
 		var dashCancel context.CancelFunc
 
 		if isTUIActive {
-			tui.PrintBanner()
-
 			orderGroups := make(map[int][]*engine.Scenario)
 			var orders []int
 			for _, scn := range app.Director.Scenarios {
@@ -269,23 +280,6 @@ var runCmd = &cobra.Command{
 		for _, rep := range reporters {
 			if expErr := rep.Export(app.Aggregator.Metrics, assertMgr); expErr != nil && !quietMode {
 				fmt.Printf("Exporter Warning: %v\n", expErr)
-			}
-		}
-
-		if len(finalEngineCfg.Thresholds) > 0 {
-			if assertMgr.HasFailures() {
-				if !quietMode {
-					fmt.Printf("\n%s %s\n", theme.TextRed("✗"), theme.TextRed("Thresholds breached:"))
-					for _, f := range assertMgr.GetFailures() {
-						fmt.Printf("  %s %s\n", theme.TextRed("•"), f)
-					}
-					fmt.Println()
-				}
-				return fmt.Errorf("load test failed: SLA thresholds breached")
-			}
-
-			if !quietMode {
-				fmt.Printf("\n%s %s\n\n", theme.TextGreen("✓"), theme.TextGreen("All thresholds passed"))
 			}
 		}
 

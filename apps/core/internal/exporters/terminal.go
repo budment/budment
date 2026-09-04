@@ -165,11 +165,8 @@ func (r *TerminalReporter) Export(
 			return errList[i].count > errList[j].count
 		})
 
-		maxDisplay := 5
-		if len(errList) < maxDisplay {
-			maxDisplay = len(errList)
-		}
-		for i := 0; i < maxDisplay; i++ {
+		maxDisplay := min(len(errList), 5)
+		for i := range maxDisplay {
 			errTable.AddRow(theme.TextRed(fmt.Sprintf("%dx", errList[i].count)), errList[i].msg)
 		}
 		fmt.Print(errTable.Render())
@@ -211,19 +208,30 @@ func (r *TerminalReporter) Export(
 		fmt.Println(strings.Join(parts, "   "))
 	}
 
-	printSection("ENDPOINT TIMINGS · ms")
+	printSection("REQUEST TIMINGS · ms")
 	nodeMetrics := engine.GetAllNodes()
 	var nodeIDs []string
 	for nodeID := range nodeMetrics {
 		nodeIDs = append(nodeIDs, nodeID)
 	}
 	sort.Slice(nodeIDs, func(i, j int) bool {
-		reqI := atomic.LoadInt64(&nodeMetrics[nodeIDs[i]].TotalRequests)
-		reqJ := atomic.LoadInt64(&nodeMetrics[nodeIDs[j]].TotalRequests)
-		if reqI == reqJ {
-			return nodeIDs[i] < nodeIDs[j]
+		extractNum := func(s string) int {
+			parts := strings.Split(s, "_")
+			if len(parts) == 2 {
+				var num int
+				fmt.Sscanf(parts[1], "%d", &num)
+				return num
+			}
+			return 0
 		}
-		return reqI > reqJ
+
+		numI := extractNum(nodeIDs[i])
+		numJ := extractNum(nodeIDs[j])
+
+		if numI != numJ {
+			return numI < numJ
+		}
+		return nodeIDs[i] < nodeIDs[j]
 	})
 	nodeTable := widgets.NewTable("Endpoint / Node", "Req", "Fail", "Min", "Avg", "p90", "p95", "p99", "Max", "TTFB")
 	for _, nodeID := range nodeIDs {
@@ -388,24 +396,22 @@ func (r *TerminalReporter) Export(
 			for _, r := range results {
 				statusStr := theme.TextGreen("PASS")
 				actualStr := fmt.Sprintf("%.2f", r.Actual)
-				reasonStr := "-"
 
 				if !r.Passed {
 					hasFailures = true
 					statusStr = theme.TextRed("FAIL")
 					actualStr = theme.TextRed(actualStr)
-					reasonStr = theme.TextRed(r.Reason)
 				}
 
-				threshTable.AddRow(r.Metric, r.Criteria, actualStr, statusStr, reasonStr)
+				threshTable.AddRow(r.Metric, r.Criteria, actualStr, statusStr, r.Reason)
 			}
 			fmt.Print(threshTable.Render())
 
 			fmt.Println()
 			if hasFailures {
-				fmt.Printf("%s %s\n", theme.TextRed("✗ BUILD FAILED:"), "One or more SLA thresholds were breached.")
+				fmt.Printf("%s %s", theme.TextRed("✗ BUILD FAILED:"), "One or more SLA thresholds were breached.")
 			} else {
-				fmt.Printf("%s %s\n", theme.TextGreen("✓ BUILD PASSED:"), "All SLA criteria successfully satisfied.")
+				fmt.Printf("%s %s", theme.TextGreen("✓ BUILD PASSED:"), "All SLA criteria successfully satisfied.")
 			}
 		}
 		if len(results) == 0 {

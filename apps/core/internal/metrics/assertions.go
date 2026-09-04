@@ -58,26 +58,28 @@ func (a *AssertionManager) EvaluateThresholds(m *EngineMetrics) error {
 		return fmt.Errorf("%s", errStr)
 	}
 
-	totalFail := netFail + logicFail
-	failRate := (float64(totalFail) / float64(totalReqs)) * 100.0
+	failRate := float64(netFail+logicFail) / float64(totalReqs)
 
 	for rawMetric, rawCondition := range a.Thresholds {
 		metricName := strings.ToLower(strings.TrimSpace(rawMetric))
 		condStr := strings.TrimSpace(rawCondition)
 
-		isRateMetric := metricName == "fail_rate" || metricName == "error_rate" || metricName == "http_req_failed"
-		isDurationMetric := strings.Contains(metricName, "p") || strings.Contains(metricName, "latency") ||
-			strings.Contains(metricName, "duration") || metricName == "min" || metricName == "max"
-
-		op, targetVal, err := parseConditionWithContext(condStr, isRateMetric, isDurationMetric)
+		subMetric, op, targetVal, err := parseCondition(condStr)
 		if err != nil {
-			failMsg := fmt.Sprintf("invalid threshold format for '%s': %s", rawMetric, rawCondition)
+			failMsg := fmt.Sprintf("[%s] invalid threshold format '%s': %v", rawMetric, rawCondition, err)
 			a.failures = append(a.failures, failMsg)
 			continue
 		}
 
+		effectiveMetric := metricName
+		if subMetric != "" && subMetric != "rate" && subMetric != "value" {
+			effectiveMetric = subMetric
+		}
+
 		var actualVal float64
-		switch metricName {
+		var found bool = true
+
+		switch effectiveMetric {
 		case "fail_rate", "error_rate", "http_req_failed":
 			actualVal = failRate
 
@@ -100,11 +102,24 @@ func (a *AssertionManager) EvaluateThresholds(m *EngineMetrics) error {
 			actualVal = float64(totalReqs)
 
 		default:
-			if customVal, ok := m.Custom.Get(metricName); ok {
+			if customVal, ok := m.Custom.Get(effectiveMetric); ok {
 				actualVal = customVal
 			} else {
-				continue
+				found = false
 			}
+		}
+
+		if !found {
+			failMsg := fmt.Sprintf("[%s] metric not found or unsupported", rawMetric)
+			a.failures = append(a.failures, failMsg)
+			a.results = append(a.results, ThresholdResult{
+				Metric:   rawMetric,
+				Criteria: rawCondition,
+				Actual:   0,
+				Passed:   false,
+				Reason:   "metric not found",
+			})
+			continue
 		}
 
 		passed := evaluateOperator(actualVal, op, targetVal)
@@ -116,7 +131,11 @@ func (a *AssertionManager) EvaluateThresholds(m *EngineMetrics) error {
 		}
 
 		if !passed {
-			res.Reason = fmt.Sprintf("breached: actual %.2f does not satisfy %s", actualVal, rawCondition)
+			if metricName == "http_req_failed" || metricName == "fail_rate" {
+				res.Reason = fmt.Sprintf("breached: actual %.4f (%.2f%%) does not satisfy %s", actualVal, actualVal*100, rawCondition)
+			} else {
+				res.Reason = fmt.Sprintf("breached: actual %.2f does not satisfy %s", actualVal, rawCondition)
+			}
 			a.failures = append(a.failures, fmt.Sprintf("[%s] %s", rawMetric, res.Reason))
 		}
 		a.results = append(a.results, res)
@@ -128,47 +147,51 @@ func (a *AssertionManager) EvaluateThresholds(m *EngineMetrics) error {
 	return nil
 }
 
-func parseConditionWithContext(cond string, isRateMetric bool, isDurationMetric bool) (op string, val float64, err error) {
+func parseCondition(cond string) (subMetric string, op string, val float64, err error) {
 	cond = strings.TrimSpace(cond)
-	operators := []string{"<=", ">=", "!=", "==", "<", ">"}
-
+	operators := []string{"<=", ">=", "==", "!=", "<", ">"}
+	opIdx := -1
 	for _, o := range operators {
-		if strings.HasPrefix(cond, o) {
-			op = o
-			valStr := strings.TrimSpace(strings.TrimPrefix(cond, o))
-
-			if isRateMetric {
-				if strings.HasSuffix(valStr, "%") {
-					valStr = strings.TrimSuffix(valStr, "%")
-					val, err = strconv.ParseFloat(strings.TrimSpace(valStr), 64)
-					return op, val, err
-				}
-				val, err = strconv.ParseFloat(valStr, 64)
-				if err == nil && val <= 1.0 && val > 0 {
-					val = val * 100.0
-				}
-				return op, val, err
+		if idx := strings.Index(cond, o); idx != -1 {
+			if opIdx == -1 || idx < opIdx {
+				opIdx = idx
+				op = o
 			}
-
-			multiplier := 1.0
-			if isDurationMetric {
-				if strings.HasSuffix(valStr, "ms") {
-					valStr = strings.TrimSuffix(valStr, "ms")
-				} else if strings.HasSuffix(valStr, "s") {
-					valStr = strings.TrimSuffix(valStr, "s")
-					multiplier = 1000.0
-				} else if strings.HasSuffix(valStr, "m") {
-					valStr = strings.TrimSuffix(valStr, "m")
-					multiplier = 60000.0
-				}
-			}
-
-			val, err = strconv.ParseFloat(strings.TrimSpace(valStr), 64)
-			val = val * multiplier
-			return op, val, err
 		}
 	}
-	return "", 0, fmt.Errorf("unknown operator in '%s'", cond)
+
+	if opIdx == -1 {
+		return "", "", 0, fmt.Errorf("missing comparison operator (expected <, <=, >, >=, ==, !=)")
+	}
+
+	subMetric = strings.ToLower(strings.TrimSpace(cond[:opIdx]))
+	valStr := strings.TrimSpace(cond[opIdx+len(op):])
+
+	if strings.HasSuffix(valStr, "%") {
+		numStr := strings.TrimSpace(strings.TrimSuffix(valStr, "%"))
+		v, err := strconv.ParseFloat(numStr, 64)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("invalid percentage value '%s'", valStr)
+		}
+		return subMetric, op, v / 100.0, nil
+	}
+
+	multiplier := 1.0
+	if strings.HasSuffix(valStr, "ms") {
+		valStr = strings.TrimSuffix(valStr, "ms")
+	} else if strings.HasSuffix(valStr, "s") {
+		valStr = strings.TrimSuffix(valStr, "s")
+		multiplier = 1000.0
+	} else if strings.HasSuffix(valStr, "m") {
+		valStr = strings.TrimSuffix(valStr, "m")
+		multiplier = 60000.0
+	}
+
+	val, err = strconv.ParseFloat(strings.TrimSpace(valStr), 64)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid numeric value '%s'", valStr)
+	}
+	return subMetric, op, val * multiplier, nil
 }
 
 func evaluateOperator(actual float64, op string, target float64) bool {

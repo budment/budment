@@ -64,20 +64,17 @@ var planCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Printf("%s %s\n", theme.TextCyan("BLASTER PLANNER"), theme.TextDim("· STATIC PLAN"))
-		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
-		fmt.Printf("  Target          : %s\n", theme.TextBold(scriptPath))
-		fmt.Printf("  Compile Time    : %d ms\n", elapsed.Milliseconds())
-		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+		tui.PrintBanner()
+		tui.PrintPlanOverview(scriptPath, elapsed.Milliseconds(), finalCfg)
 
 		if debugMode {
 			fmt.Printf("\n%s\n", theme.TextCyan("EXECUTION PLAN · AST GRAPH"))
-			fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+			tui.PrintDivider()
 			fmt.Println(tui.HighlightJSON(string(planResult.RawASTJSON)))
-			fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+			tui.PrintDivider()
 		}
 		fmt.Printf("\n%s\n", theme.TextCyan("EXECUTION PLAN · LIFECYCLE TREE"))
-		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+		tui.PrintDivider()
 
 		isDetailed := planDetailed || debugMode
 		// Render the complete lifecycle tree for every scenario.
@@ -87,11 +84,12 @@ var planCmd = &cobra.Command{
 				name = fmt.Sprintf("Scenario %d", i+1)
 			}
 
-			fmt.Printf("\n%s %s\n", theme.TextMagenta("▶"), theme.TextBold(name))
+			fmt.Printf("\n%s %s\n", theme.TextMagenta("◆"), theme.TextBold(name))
 			tui.PrintPhase("setup", scn.Graph.Setup, isDetailed)
 			tui.PrintPhase("execution", scn.Graph.Execution, isDetailed)
 		}
-		fmt.Println("\n" + theme.TextDim("────────────────────────────────────────────────────────────"))
+		fmt.Println()
+		tui.PrintDivider()
 		fmt.Printf("%s Plan is valid. Run %s to execute.\n", theme.TextGreen("✓"), theme.TextBold(fmt.Sprintf("blaster run %s", scriptPath)))
 
 		return nil
