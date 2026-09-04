@@ -1,0 +1,263 @@
+package template
+
+import (
+	"encoding/hex"
+	"math/rand/v2"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+
+	"github.com/vunas/blaster/internal/fastconv"
+)
+
+type ScopeProvider interface {
+	Resolve(name string) (any, bool)
+}
+
+type Expression struct {
+	Raw      string
+	compiled *FastTemplate
+}
+
+func NewExpression(text string) Expression {
+	return Expression{
+		Raw:      text,
+		compiled: Compile(text),
+	}
+}
+
+func (e Expression) Render(ctx ScopeProvider) string {
+	if e.compiled == nil {
+		return e.Raw
+	}
+	return e.compiled.Render(ctx)
+}
+
+func (e Expression) IsStatic() bool {
+	return e.compiled == nil || (len(e.compiled.chunks) == 1 && e.compiled.chunks[0].Kind == ChunkStatic)
+}
+
+// Loaded only when the worker actively executes.
+var (
+	lazyFileCache sync.Map
+)
+
+func getFileContentLazy(path string) string {
+	if val, ok := lazyFileCache.Load(path); ok {
+		return val.(string)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		lazyFileCache.Store(path, "") // An empty cache ensures subsequent calls do not re-read from disk.
+		return ""
+	}
+	content := fastconv.BytesToString(data)
+	lazyFileCache.Store(path, content)
+	return content
+}
+
+type ChunkKind uint8
+
+const (
+	ChunkStatic ChunkKind = iota
+	ChunkVar
+	ChunkEnv
+	ChunkFile
+	ChunkRandomUUID
+	ChunkRandomString
+	ChunkRandomInt
+)
+
+type Chunk struct {
+	Kind     ChunkKind
+	Value    string
+	Raw      string
+	IntParam int
+	Fallback string
+	MaxParam int
+}
+
+type FastTemplate struct {
+	chunks []Chunk
+	length int
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func FastUUID() string {
+	var b [16]byte
+	u1 := rand.Uint64()
+	u2 := rand.Uint64()
+	for i := 0; i < 8; i++ {
+		b[i] = byte(u1 >> (i * 8))
+		b[i+8] = byte(u2 >> (i * 8))
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+
+	var buf [36]byte
+	hex.Encode(buf[0:8], b[0:4])
+	buf[8] = '-'
+	hex.Encode(buf[9:13], b[4:6])
+	buf[13] = '-'
+	hex.Encode(buf[14:18], b[6:8])
+	buf[18] = '-'
+	hex.Encode(buf[19:23], b[8:10])
+	buf[23] = '-'
+	hex.Encode(buf[24:36], b[10:])
+	return string(buf[:])
+}
+
+func FastRandomString(length int) string {
+	if length <= 0 {
+		return ""
+	}
+	b := make([]byte, length)
+	for i := 0; i < length; i++ {
+		b[i] = charset[rand.IntN(len(charset))]
+	}
+	return fastconv.BytesToString(b)
+}
+
+func Compile(text string) *FastTemplate {
+	if !strings.Contains(text, "{{") {
+		return &FastTemplate{
+			chunks: []Chunk{{Kind: ChunkStatic, Value: text}},
+			length: len(text),
+		}
+	}
+
+	var chunks []Chunk
+	estLen, rem := 0, text
+
+	for {
+		start := strings.Index(rem, "{{")
+		if start == -1 {
+			if len(rem) > 0 {
+				chunks = append(chunks, Chunk{Kind: ChunkStatic, Value: rem})
+				estLen += len(rem)
+			}
+			break
+		}
+		if start > 0 {
+			chunks = append(chunks, Chunk{Kind: ChunkStatic, Value: rem[:start]})
+			estLen += start
+		}
+		end := strings.Index(rem[start:], "}}")
+		if end == -1 {
+			chunks = append(chunks, Chunk{Kind: ChunkStatic, Value: rem[start:]})
+			estLen += len(rem[start:])
+			break
+		}
+
+		rawChunk := rem[start : start+end+2]
+		varName := strings.TrimSpace(rem[start+2 : start+end])
+
+		chunk := parseASTChunk(varName, rawChunk)
+		estLen += 16
+		chunks = append(chunks, chunk)
+		rem = rem[start+end+2:]
+	}
+
+	return &FastTemplate{chunks: chunks, length: estLen}
+}
+
+func parseASTChunk(varName, rawChunk string) Chunk {
+	if after, match := strings.CutPrefix(varName, "@env:"); match {
+		key, fallback, _ := strings.Cut(after, ":")
+		return Chunk{Kind: ChunkEnv, Value: key, Fallback: fallback, Raw: rawChunk}
+	}
+
+	if after, match := strings.CutPrefix(varName, "@open:"); match {
+		// Stores only the file path in the AST; file contents are not read at this stage.
+		return Chunk{Kind: ChunkFile, Value: after, Raw: rawChunk}
+	}
+
+	if after, match := strings.CutPrefix(varName, "@random:"); match {
+		parts := strings.Split(after, ":")
+		switch parts[0] {
+		case "uuid":
+			return Chunk{Kind: ChunkRandomUUID, Raw: rawChunk}
+		case "string":
+			length := 16
+			if len(parts) >= 2 {
+				if l, err := strconv.Atoi(parts[1]); err == nil && l > 0 {
+					length = l
+				} else {
+					return Chunk{Kind: ChunkStatic, Value: rawChunk}
+				}
+			}
+			return Chunk{Kind: ChunkRandomString, IntParam: length, Raw: rawChunk}
+		case "int":
+			if len(parts) >= 3 {
+				minVal, err1 := strconv.Atoi(parts[1])
+				maxVal, err2 := strconv.Atoi(parts[2])
+				if err1 == nil && err2 == nil {
+					if minVal > maxVal {
+						minVal, maxVal = maxVal, minVal
+					}
+					return Chunk{Kind: ChunkRandomInt, IntParam: minVal, MaxParam: maxVal, Raw: rawChunk}
+				}
+			}
+			return Chunk{Kind: ChunkStatic, Value: rawChunk}
+		}
+	}
+
+	return Chunk{Kind: ChunkVar, Value: varName, Raw: rawChunk}
+}
+
+func (ft *FastTemplate) Render(ctx ScopeProvider) string {
+	if len(ft.chunks) == 1 && ft.chunks[0].Kind == ChunkStatic {
+		return ft.chunks[0].Value
+	}
+
+	var sb strings.Builder
+	sb.Grow(ft.length + 32)
+
+	for i := range ft.chunks {
+		c := &ft.chunks[i]
+		switch c.Kind {
+		case ChunkStatic:
+			sb.WriteString(c.Value)
+
+		case ChunkEnv:
+			val := os.Getenv(c.Value)
+			if val == "" && c.Fallback != "" {
+				val = c.Fallback
+			}
+			sb.WriteString(val)
+
+		case ChunkFile:
+			sb.WriteString(getFileContentLazy(c.Value))
+
+		case ChunkRandomUUID:
+			sb.WriteString(FastUUID())
+
+		case ChunkRandomString:
+			sb.WriteString(FastRandomString(c.IntParam))
+
+		case ChunkRandomInt:
+			if c.IntParam >= c.MaxParam {
+				sb.WriteString(strconv.Itoa(c.IntParam))
+			} else {
+				delta := c.MaxParam - c.IntParam + 1
+				if delta <= 0 {
+					sb.WriteString(strconv.Itoa(c.IntParam))
+				} else {
+					sb.WriteString(strconv.Itoa(c.IntParam + rand.IntN(delta)))
+				}
+			}
+
+		case ChunkVar:
+			if ctx != nil {
+				if val, exists := ctx.Resolve(c.Value); exists {
+					sb.WriteString(fastconv.String(val))
+					continue
+				}
+			}
+			sb.WriteString(c.Raw)
+		}
+	}
+	return sb.String()
+}
