@@ -1,12 +1,11 @@
 package pipeline
 
 import (
-	"log/slog"
-
 	"github.com/vunas/blaster/internal/config"
 	"github.com/vunas/blaster/internal/engine"
 	"github.com/vunas/blaster/internal/exporters"
 	"github.com/vunas/blaster/internal/metrics"
+	"github.com/vunas/blaster/internal/runner"
 	"github.com/vunas/blaster/internal/runner/http"
 	"github.com/vunas/blaster/internal/runtime"
 	"github.com/vunas/blaster/internal/runtime/goja"
@@ -16,7 +15,7 @@ type gojaPoolAdapter struct {
 	pool *goja.Pool
 }
 
-func (a *gojaPoolAdapter) GetExecutor(scope runtime.Scope, local runtime.SharedState, workerID int, iteration int, scenario string) engine.HookExecutor {
+func (a *gojaPoolAdapter) GetExecutor(scope runtime.VUContext, local runtime.SharedState, workerID int, iteration int, scenario string) engine.HookExecutor {
 	return a.pool.GetVM(scope, local, workerID, iteration, scenario)
 }
 
@@ -31,21 +30,27 @@ type ExecutionApp struct {
 	Aggregator *metrics.Aggregator
 }
 
-func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, log *slog.Logger, agg *metrics.Aggregator, sink runtime.MetricsSink, reporters []exporters.Reporter) (*ExecutionApp, error) {
+func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, agg *metrics.Aggregator, sink runtime.MetricsSink, reporters []exporters.Reporter) (*ExecutionApp, error) {
 
 	globalState := engine.NewGlobalState()
-	localState := engine.NewLocalState()
 
 	registry := goja.NewHookRegistry(string(plan.JSBundle))
-	pool := goja.NewPool(registry, globalState, localState, sink)
+	pool := goja.NewPool(registry, globalState, sink)
 	executorPool := &gojaPoolAdapter{pool: pool}
 
 	barrierManager := engine.NewBarrierManager()
-	httpClient := http.NewClient(cfg.InsecureSkipTLS, cfg.HTTP)
+	sharedTransport := http.NewSharedTransport(cfg.InsecureSkipTLS)
+
+	managerFactory := func() *runner.Manager {
+		m := runner.NewManager()
+		m.Register("http", http.NewRunner(sharedTransport))
+		return m
+	}
 
 	var engineScenarios []*engine.Scenario
 
 	for _, compScn := range plan.Scenarios {
+		localState := engine.NewLocalState()
 		scenarioName := compScn.Name
 		if scenarioName == "" {
 			scenarioName = "default"
@@ -78,8 +83,9 @@ func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, log *slog.Logge
 			executorPool,
 			agg,
 			barrierManager,
-			httpClient,
+			managerFactory,
 			localState,
+			globalState,
 			sink,
 		)
 		engineScenarios = append(engineScenarios, scenario)

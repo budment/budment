@@ -7,8 +7,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/discovery/endpoint"
-	"github.com/vunas/blaster/internal/filesystem"
 	"github.com/vunas/blaster/internal/planner"
 	"github.com/vunas/blaster/internal/planner/bundler"
 )
@@ -21,14 +19,13 @@ type CompiledScenario struct {
 }
 
 type PlanResult struct {
-	Scenarios      []CompiledScenario
-	RawASTJSON     []byte
-	EndpointsCount int
-	JSBundle       []byte
-	ASTConfig      config.ASTConfig // Global config extracted from the first scenario
+	Scenarios  []CompiledScenario
+	RawASTJSON []byte
+	JSBundle   []byte
+	ASTConfig  config.ASTConfig // Global config extracted from the first scenario
 }
 
-func BuildPlan(scriptPath string, endpointDir string, enableAutoPlumb bool, fs filesystem.FS) (*PlanResult, error) {
+func BuildPlan(scriptPath string) (*PlanResult, error) {
 	// Bundle TS/JS script into a single JS payload
 	jsBundle, err := bundler.BundleInMemory(scriptPath)
 	if err != nil {
@@ -46,14 +43,6 @@ func BuildPlan(scriptPath string, endpointDir string, enableAutoPlumb bool, fs f
 
 	var compiledScenarios []CompiledScenario
 	var allRaw []json.RawMessage
-
-	endpointsCount := 0
-	var endpoints []*endpoint.Endpoint
-	if enableAutoPlumb {
-		reader := endpoint.NewReader(endpointDir, fs)
-		endpoints := reader.ReadAll()
-		endpointsCount = len(endpoints)
-	}
 
 	marshaller := protojson.MarshalOptions{Multiline: true, Indent: "  "}
 
@@ -75,13 +64,6 @@ func BuildPlan(scriptPath string, endpointDir string, enableAutoPlumb bool, fs f
 			return nil, fmt.Errorf("graph compilation failed for scenario %s: %w", astGraph.Name, err)
 		}
 
-		if enableAutoPlumb {
-			plumber := planner.NewAutoPlumber(endpoints)
-			if err := plumber.Plumb(executionGraph); err != nil {
-				return nil, fmt.Errorf("auto-plumbing failed for scenario %s: %w", astGraph.Name, err)
-			}
-		}
-
 		compiledScenarios = append(compiledScenarios, CompiledScenario{
 			Name:      astGraph.Name,
 			Graph:     executionGraph,
@@ -99,10 +81,9 @@ func BuildPlan(scriptPath string, endpointDir string, enableAutoPlumb bool, fs f
 	}
 
 	return &PlanResult{
-		Scenarios:      compiledScenarios,
-		RawASTJSON:     finalRawJSON,
-		EndpointsCount: endpointsCount,
-		JSBundle:       jsBundle,
-		ASTConfig:      mainASTConfig,
+		Scenarios:  compiledScenarios,
+		RawASTJSON: finalRawJSON,
+		JSBundle:   jsBundle,
+		ASTConfig:  mainASTConfig,
 	}, nil
 }
