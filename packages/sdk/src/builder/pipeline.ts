@@ -7,12 +7,17 @@ import { BuilderNode } from "./types";
 export class Pipeline {
     private nodes: Node[] = [];
 
-    /**
+     /**
      * Build and append step nodes to the pipeline sequence.
      */
-    add(...builders: BuilderNode[]): this {
+    add(...builders: (BuilderNode | any)[]): this {
         for (const builder of builders) {
-            this.nodes.push(builder.build());
+            if (builder && typeof builder.build === 'function') {
+                const node = builder.build();
+                if (node) {
+                    this.nodes.push(node);
+                }
+            }
         }
         return this;
     }

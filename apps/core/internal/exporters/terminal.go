@@ -55,7 +55,7 @@ func printSection(title string) {
 }
 
 func formatPercentile(value int64, samples int64) string {
-	if samples < 2 {
+	if samples < 1 {
 		return "-"
 	}
 	return fmt.Sprintf("%d", value)
@@ -76,11 +76,11 @@ func (r *TerminalReporter) Export(
 	}
 
 	fmt.Println()
-	title := theme.TextBold("BLASTER TEST RESULTS")
+	title := theme.TextBold("BLASTER TEST SUMMARY")
 	timestamp := r.StartTime.Format("2006-01-02 15:04:05")
 	fmt.Printf("%-40s%s\n", title, timestamp)
 
-	printSection("SYSTEM")
+	printSection("SYSTEM PERFORMANCE")
 	systemTable := widgets.NewTable("Metric", "Value")
 	systemTable.AddRow("Duration", duration.Round(time.Millisecond).String())
 	systemTable.AddRow("Throughput", fmt.Sprintf("%.2f req/s", rps))
@@ -92,6 +92,20 @@ func (r *TerminalReporter) Export(
 			theme.TextYellow(formatBandwidth(dataSent, durationSec)),
 		),
 	)
+
+	if totalReqs > 0 && engine.RequestDuration != nil {
+		reqP50 := formatPercentile(engine.RequestDuration.Percentile(50), totalReqs)
+		reqP90 := formatPercentile(engine.RequestDuration.Percentile(90), totalReqs)
+		reqP95 := formatPercentile(engine.RequestDuration.Percentile(95), totalReqs)
+		reqP99 := formatPercentile(engine.RequestDuration.Percentile(99), totalReqs)
+		reqMax := fmt.Sprintf("%d", engine.RequestDuration.Max())
+		systemTable.AddRow(
+			"Req Latency",
+			fmt.Sprintf("p50 %sms · p90 %sms · p95 %sms · p99 %sms · max %sms", reqP50, reqP90, reqP95, reqP99, reqMax),
+		)
+	}
+
+	// Iteration execution time.
 	iterP50, iterP90, iterP95, iterP99, iterMax := "-", "-", "-", "-", "-"
 	if iters > 0 {
 		iterP50 = formatPercentile(engine.IterationDuration.Percentile(50), iters)
@@ -114,9 +128,9 @@ func (r *TerminalReporter) Export(
 	)
 	fmt.Print(systemTable.Render())
 
-	printSection("TRAFFIC")
+	printSection("TRAFFIC BREAKDOWN")
 	totalExecutions := totalReqs + logicFail
-	trafficTable := widgets.NewTable("Metric", "Count", "Rate")
+	trafficTable := widgets.NewTable("Category", "Count", "Ratio")
 	trafficTable.AddRow("Total Executions", fmt.Sprint(totalExecutions), "100.0%")
 	successStr := fmt.Sprint(success)
 	if success > 0 {
@@ -127,13 +141,39 @@ func (r *TerminalReporter) Export(
 	if netFail > 0 {
 		networkFailStr = theme.TextYellow(networkFailStr)
 	}
-	trafficTable.AddRow("HTTP / Network Errors", networkFailStr, formatPercent(netFail, totalExecutions))
+	trafficTable.AddRow("Network / HTTP Fails", networkFailStr, formatPercent(netFail, totalExecutions))
 	logicFailStr := fmt.Sprint(logicFail)
 	if logicFail > 0 {
 		logicFailStr = theme.TextRed(logicFailStr)
 	}
-	trafficTable.AddRow("Assertion / Logic Fails", logicFailStr, formatPercent(logicFail, totalExecutions))
+	trafficTable.AddRow("Logic / Assertion Fails", logicFailStr, formatPercent(logicFail, totalExecutions))
 	fmt.Print(trafficTable.Render())
+
+	topErrors := engine.GetTopErrors()
+	if len(topErrors) > 0 {
+		printSection("TOP SYSTEM & LOGIC ERRORS")
+		errTable := widgets.NewTable("Count", "Error Message")
+		type errItem struct {
+			msg   string
+			count int
+		}
+		var errList []errItem
+		for msg, count := range topErrors {
+			errList = append(errList, errItem{msg: msg, count: count})
+		}
+		sort.Slice(errList, func(i, j int) bool {
+			return errList[i].count > errList[j].count
+		})
+
+		maxDisplay := 5
+		if len(errList) < maxDisplay {
+			maxDisplay = len(errList)
+		}
+		for i := 0; i < maxDisplay; i++ {
+			errTable.AddRow(theme.TextRed(fmt.Sprintf("%dx", errList[i].count)), errList[i].msg)
+		}
+		fmt.Print(errTable.Render())
+	}
 
 	statusCounts := make(map[int]int64)
 	for _, node := range engine.GetAllNodes() {
@@ -171,30 +211,19 @@ func (r *TerminalReporter) Export(
 		fmt.Println(strings.Join(parts, "   "))
 	}
 
-	printSection("REQUEST TIMINGS · ms")
+	printSection("ENDPOINT TIMINGS · ms")
 	nodeMetrics := engine.GetAllNodes()
 	var nodeIDs []string
 	for nodeID := range nodeMetrics {
 		nodeIDs = append(nodeIDs, nodeID)
 	}
 	sort.Slice(nodeIDs, func(i, j int) bool {
-		extractNum := func(s string) int {
-			parts := strings.Split(s, "_")
-			if len(parts) == 2 {
-				var num int
-				fmt.Sscanf(parts[1], "%d", &num)
-				return num
-			}
-			return 0
+		reqI := atomic.LoadInt64(&nodeMetrics[nodeIDs[i]].TotalRequests)
+		reqJ := atomic.LoadInt64(&nodeMetrics[nodeIDs[j]].TotalRequests)
+		if reqI == reqJ {
+			return nodeIDs[i] < nodeIDs[j]
 		}
-
-		numI := extractNum(nodeIDs[i])
-		numJ := extractNum(nodeIDs[j])
-
-		if numI != numJ {
-			return numI < numJ
-		}
-		return nodeIDs[i] < nodeIDs[j]
+		return reqI > reqJ
 	})
 	nodeTable := widgets.NewTable("Endpoint / Node", "Req", "Fail", "Min", "Avg", "p90", "p95", "p99", "Max", "TTFB")
 	for _, nodeID := range nodeIDs {
@@ -220,12 +249,8 @@ func (r *TerminalReporter) Export(
 		if fails > 0 {
 			failStr = theme.TextRed(failStr)
 		}
-		min := "-"
-		max := "-"
-		if reqs > 0 {
-			min = fmt.Sprint(nodeMet.ReqDuration.Min())
-			max = fmt.Sprint(nodeMet.ReqDuration.Max())
-		}
+		min := fmt.Sprint(nodeMet.ReqDuration.Min())
+		max := fmt.Sprint(nodeMet.ReqDuration.Max())
 		p90 := formatPercentile(nodeMet.ReqDuration.Percentile(90), reqs)
 		p95 := formatPercentile(nodeMet.ReqDuration.Percentile(95), reqs)
 		p99 := formatPercentile(nodeMet.ReqDuration.Percentile(99), reqs)
@@ -238,13 +263,37 @@ func (r *TerminalReporter) Export(
 	loops := engine.GetAllLoops()
 	polls := engine.GetAllPolls()
 	matches := engine.GetAllMatches()
-	hasFlow := len(branches) > 0 || len(loops) > 0 || len(polls) > 0 || len(matches) > 0
+	scripts := engine.GetAllScripts()
+
+	hasFlow := len(branches) > 0 || len(loops) > 0 || len(polls) > 0 || len(matches) > 0 || len(scripts) > 0
 	if hasFlow {
 		printSection("CONTROL FLOW ANALYTICS")
-		flowTable := widgets.NewTable("ID", "Type", "Execution")
+		flowTable := widgets.NewTable("Node ID", "Type", "Execution Summary")
+
+		// Scripts
+		var scriptIDs []string
+		for id := range scripts {
+			scriptIDs = append(scriptIDs, id)
+		}
+		sort.Strings(scriptIDs)
+		for _, id := range scriptIDs {
+			s := scripts[id]
+			calls := atomic.LoadInt64(&s.TotalCalls)
+			fails := atomic.LoadInt64(&s.FailCount)
+			totalLat := atomic.LoadInt64(&s.TotalLatencyUs)
+			avgMs := 0.0
+			if calls > 0 {
+				avgMs = (float64(totalLat) / float64(calls)) / 1000.0
+			}
+			failText := fmt.Sprint(fails)
+			if fails > 0 {
+				failText = theme.TextRed(failText)
+			}
+			flowTable.AddRow(id, theme.TextGreen("SCRIPT"), fmt.Sprintf("calls %d · fails %s · avg %.1f ms", calls, failText, avgMs))
+		}
 
 		// Branches
-		branchIDs := make([]string, 0, len(branches))
+		var branchIDs []string
 		for id := range branches {
 			branchIDs = append(branchIDs, id)
 		}
@@ -253,12 +302,11 @@ func (r *TerminalReporter) Export(
 			b := branches[id]
 			trueCount := atomic.LoadInt64(&b.TrueCount)
 			falseCount := atomic.LoadInt64(&b.FalseCount)
-			execution := fmt.Sprintf("true %s · false %s", theme.TextGreen(fmt.Sprint(trueCount)), theme.TextRed(fmt.Sprint(falseCount)))
-			flowTable.AddRow(id, theme.TextYellow("BRANCH"), execution)
+			flowTable.AddRow(id, theme.TextYellow("BRANCH"), fmt.Sprintf("true %s · false %s", theme.TextGreen(fmt.Sprint(trueCount)), theme.TextRed(fmt.Sprint(falseCount))))
 		}
 
 		// Loops
-		loopIDs := make([]string, 0, len(loops))
+		var loopIDs []string
 		for id := range loops {
 			loopIDs = append(loopIDs, id)
 		}
@@ -267,12 +315,11 @@ func (r *TerminalReporter) Export(
 			l := loops[id]
 			entered := atomic.LoadInt64(&l.TotalEntered)
 			iterations := atomic.LoadInt64(&l.TotalIterations)
-			execution := fmt.Sprintf("entered %d · iterations %d", entered, iterations)
-			flowTable.AddRow(id, theme.TextBlue("LOOP"), execution)
+			flowTable.AddRow(id, theme.TextBlue("LOOP"), fmt.Sprintf("entered %d · iterations %d", entered, iterations))
 		}
 
 		// Polls
-		pollIDs := make([]string, 0, len(polls))
+		var pollIDs []string
 		for id := range polls {
 			pollIDs = append(pollIDs, id)
 		}
@@ -282,12 +329,11 @@ func (r *TerminalReporter) Export(
 			entered := atomic.LoadInt64(&p.TotalEntered)
 			successCount := atomic.LoadInt64(&p.SuccessCount)
 			exhausted := atomic.LoadInt64(&p.Exhausted)
-			execution := fmt.Sprintf("entered %d · success %s · exhausted %s", entered, theme.TextGreen(fmt.Sprint(successCount)), theme.TextRed(fmt.Sprint(exhausted)))
-			flowTable.AddRow(id, theme.TextCyan("POLL"), execution)
+			flowTable.AddRow(id, theme.TextCyan("POLL"), fmt.Sprintf("entered %d · success %s · exhausted %s", entered, theme.TextGreen(fmt.Sprint(successCount)), theme.TextRed(fmt.Sprint(exhausted))))
 		}
 
 		// Matches
-		matchIDs := make([]string, 0, len(matches))
+		var matchIDs []string
 		for id := range matches {
 			matchIDs = append(matchIDs, id)
 		}
@@ -295,20 +341,11 @@ func (r *TerminalReporter) Export(
 		for _, id := range matchIDs {
 			m := matches[id]
 			cases := m.GetAll()
-			caseNames := make([]string, 0, len(cases))
-			for name := range cases {
-				caseNames = append(caseNames, name)
-			}
-			sort.Strings(caseNames)
 			var parts []string
-			for _, name := range caseNames {
-				parts = append(parts, fmt.Sprintf("%s %d", name, cases[name]))
+			for k, v := range cases {
+				parts = append(parts, fmt.Sprintf("%s: %d", k, v))
 			}
-			execution := strings.Join(parts, " · ")
-			if execution == "" {
-				execution = "-"
-			}
-			flowTable.AddRow(id, theme.TextMagenta("MATCH"), execution)
+			flowTable.AddRow(id, theme.TextMagenta("MATCH"), strings.Join(parts, " · "))
 		}
 
 		fmt.Print(flowTable.Render())
@@ -316,8 +353,8 @@ func (r *TerminalReporter) Export(
 
 	customMap := engine.Custom.GetAll()
 	if len(customMap) > 0 {
-		printSection("CUSTOM METRICS")
-		customTable := widgets.NewTable("Metric", "Type", "Count", "Last", "Min", "Max")
+		printSection("CUSTOM BUSINESS METRICS")
+		customTable := widgets.NewTable("Metric", "Type", "Count", "Value (Last / Min / Max / Sum)")
 		var keys []string
 		for key := range customMap {
 			keys = append(keys, key)
@@ -325,28 +362,55 @@ func (r *TerminalReporter) Export(
 		sort.Strings(keys)
 		for _, key := range keys {
 			c := customMap[key]
-			last, min, max := "-", "-", "-"
-
+			valSummary := "-"
 			switch c.Type {
 			case metrics.TypeTrend:
-				last = fmt.Sprintf("%.2f", c.Last)
-				min = fmt.Sprintf("%.2f", c.Min)
-				max = fmt.Sprintf("%.2f", c.Max)
+				valSummary = fmt.Sprintf("Last: %.2f · Min: %.2f · Max: %.2f", c.Last, c.Min, c.Max)
 			case metrics.TypeCounter:
-				last = fmt.Sprintf("%.2f", c.Sum)
+				valSummary = fmt.Sprintf("Sum: %.2f", c.Sum)
 			case metrics.TypeGauge:
-				last = fmt.Sprintf("%.2f", c.Last)
+				valSummary = fmt.Sprintf("Current: %.2f", c.Last)
 			}
-			customTable.AddRow(key, string(c.Type), fmt.Sprint(c.Count), last, min, max)
+			customTable.AddRow(key, string(c.Type), fmt.Sprint(c.Count), valSummary)
 		}
 		fmt.Print(customTable.Render())
 	}
 
-	fmt.Println()
-	if err := assert.EvaluateThresholds(engine); err != nil {
-		fmt.Printf("%s %s\n", theme.TextRed("✗ Thresholds failed"), err)
-	} else {
-		fmt.Println(theme.TextGreen("✓ All thresholds passed"))
+	if assert != nil {
+		_ = assert.EvaluateThresholds(engine)
+		results := assert.GetResults()
+
+		if len(results) > 0 {
+			printSection("SLA THRESHOLDS SCORECARD")
+			threshTable := widgets.NewTable("SLA Metric", "Requirement", "Actual", "Status", "Details")
+			hasFailures := false
+
+			for _, r := range results {
+				statusStr := theme.TextGreen("PASS")
+				actualStr := fmt.Sprintf("%.2f", r.Actual)
+				reasonStr := "-"
+
+				if !r.Passed {
+					hasFailures = true
+					statusStr = theme.TextRed("FAIL")
+					actualStr = theme.TextRed(actualStr)
+					reasonStr = theme.TextRed(r.Reason)
+				}
+
+				threshTable.AddRow(r.Metric, r.Criteria, actualStr, statusStr, reasonStr)
+			}
+			fmt.Print(threshTable.Render())
+
+			fmt.Println()
+			if hasFailures {
+				fmt.Printf("%s %s\n", theme.TextRed("✗ BUILD FAILED:"), "One or more SLA thresholds were breached.")
+			} else {
+				fmt.Printf("%s %s\n", theme.TextGreen("✓ BUILD PASSED:"), "All SLA criteria successfully satisfied.")
+			}
+		}
+		if len(results) == 0 {
+			fmt.Printf("\n%s %s", theme.TextDim("• SLA THRESHOLDS:"), theme.TextDim("No thresholds configured in test script."))
+		}
 	}
 	fmt.Println()
 
