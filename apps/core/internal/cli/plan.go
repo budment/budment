@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/vunas/blaster/internal/tui/theme"
 )
 
-var endpointDirPlan string
+var planDetailed bool
 
 var planCmd = &cobra.Command{
 	Use:   "plan [script.ts]",
@@ -22,24 +23,20 @@ var planCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		scriptPath := args[0]
-
-		fmt.Printf("%s %s\n", theme.TextCyan("BLASTER PLANNER"), theme.TextDim("· STATIC PLAN"))
-		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
-		fmt.Printf("  Target    %s\n", theme.TextBold(scriptPath))
-		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
-
 		start := time.Now()
-
-		fmt.Printf("\n%s %s\n", theme.TextCyan("▶"), "Building execution graph and resolving Auto-Plumbing...")
 
 		fs := filesystem.NewLocal()
 		loader := config.NewLoader(globalConfigFile, fs)
-		projectCfg, err := loader.Load()
+		projectCfg, _ := loader.Load()
+		planResult, err := pipeline.BuildPlan(scriptPath)
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			if !quietMode {
+				fmt.Printf("\n%s %s\n", theme.TextRed("✗"), theme.TextRed("Plan generation failed"))
+				fmt.Printf("  %s\n", err)
+			}
+			return err
 		}
 
-		envOverrides := config.ParseEnv()
 		cliOverrides := config.CLIConfig{}
 		if cmd.Flags().Changed("vus") {
 			cliOverrides.VUs = &cliVUs
@@ -47,20 +44,32 @@ var planCmd = &cobra.Command{
 		if cmd.Flags().Changed("duration") {
 			cliOverrides.Duration = &cliDuration
 		}
-
-		finalEngineCfg := config.MergeEngineConfig(projectCfg, config.ASTConfig{}, envOverrides, cliOverrides)
-		planResult, err := pipeline.BuildPlan(scriptPath, endpointDirPlan, finalEngineCfg.AutoPlumb, fs)
-		if err != nil {
-			fmt.Printf("\n%s %s\n", theme.TextRed("✗"), theme.TextRed("Plan generation failed"))
-			fmt.Printf("  %s\n", err)
-			return err
-		}
-
+		envOverrides := config.ParseEnv()
+		finalCfg := config.MergeEngineConfig(projectCfg, planResult.ASTConfig, envOverrides, cliOverrides)
 		elapsed := time.Since(start)
 
-		fmt.Printf("\n%s Plan generated successfully\n", theme.TextGreen("✓"))
-		fmt.Printf("  Endpoints  %d\n", planResult.EndpointsCount)
-		fmt.Printf("  Duration   %d ms\n", elapsed.Milliseconds())
+		if quietMode {
+			return nil
+		}
+
+		if jsonMode {
+			output := map[string]any{
+				"target":          scriptPath,
+				"compile_time_ms": elapsed.Milliseconds(),
+				"resolved_config": finalCfg,
+				"scenarios":       planResult.Scenarios,
+			}
+			rawJSON, _ := json.MarshalIndent(output, "", "  ")
+			fmt.Println(string(rawJSON))
+			return nil
+		}
+
+		fmt.Printf("%s %s\n", theme.TextCyan("BLASTER PLANNER"), theme.TextDim("· STATIC PLAN"))
+		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+		fmt.Printf("  Target          : %s\n", theme.TextBold(scriptPath))
+		fmt.Printf("  Compile Time    : %d ms\n", elapsed.Milliseconds())
+		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
+
 		if debugMode {
 			fmt.Printf("\n%s\n", theme.TextCyan("EXECUTION PLAN · AST GRAPH"))
 			fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
@@ -70,6 +79,7 @@ var planCmd = &cobra.Command{
 		fmt.Printf("\n%s\n", theme.TextCyan("EXECUTION PLAN · LIFECYCLE TREE"))
 		fmt.Println(theme.TextDim("────────────────────────────────────────────────────────────"))
 
+		isDetailed := planDetailed || debugMode
 		// Render the complete lifecycle tree for every scenario.
 		for i, scn := range planResult.Scenarios {
 			name := scn.Name
@@ -78,8 +88,8 @@ var planCmd = &cobra.Command{
 			}
 
 			fmt.Printf("\n%s %s\n", theme.TextMagenta("▶"), theme.TextBold(name))
-			tui.PrintPhase("setup", scn.Graph.Setup)
-			tui.PrintPhase("execution", scn.Graph.Execution)
+			tui.PrintPhase("setup", scn.Graph.Setup, isDetailed)
+			tui.PrintPhase("execution", scn.Graph.Execution, isDetailed)
 		}
 		fmt.Println("\n" + theme.TextDim("────────────────────────────────────────────────────────────"))
 		fmt.Printf("%s Plan is valid. Run %s to execute.\n", theme.TextGreen("✓"), theme.TextBold(fmt.Sprintf("blaster run %s", scriptPath)))
@@ -90,7 +100,7 @@ var planCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(planCmd)
-	planCmd.Flags().StringVarP(&endpointDirPlan, "endpoint", "e", "endpoint", "Path to endpoint definitions directory")
-	planCmd.Flags().IntVarP(&cliVUs, "vus", "v", 1, "Number of concurrent Virtual Users")
-	planCmd.Flags().StringVarP(&cliDuration, "duration", "d", "0s", "Test duration (e.g., 30s, 5m)")
+	planCmd.Flags().IntVarP(&cliVUs, "vus", "v", 1, "Override concurrent Virtual Users")
+	planCmd.Flags().StringVarP(&cliDuration, "duration", "d", "0s", "Override test duration (e.g., 30s, 5m)")
+	planCmd.Flags().BoolVar(&planDetailed, "detail", false, "Print detailed execution tree with node IDs")
 }
