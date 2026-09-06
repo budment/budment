@@ -43,7 +43,7 @@ var (
 	lazyFileCache sync.Map
 )
 
-func getFileContentLazy(path string) string {
+func GetFileContent(path string) string {
 	if val, ok := lazyFileCache.Load(path); ok {
 		return val.(string)
 	}
@@ -67,6 +67,7 @@ const (
 	ChunkRandomUUID
 	ChunkRandomString
 	ChunkRandomInt
+	ChunkRandomPick
 )
 
 type Chunk struct {
@@ -76,6 +77,7 @@ type Chunk struct {
 	IntParam int
 	Fallback string
 	MaxParam int
+	Options  []string
 }
 
 type FastTemplate struct {
@@ -118,6 +120,32 @@ func FastRandomString(length int) string {
 		b[i] = charset[rand.IntN(len(charset))]
 	}
 	return fastconv.BytesToString(b)
+}
+
+func FastRandomInt(min, max int) int {
+	if min > max {
+		min, max = max, min
+	}
+	delta := max - min + 1
+	if delta <= 0 {
+		return min
+	}
+	return min + rand.IntN(delta)
+}
+
+func FastRandomPick(arr []any) any {
+	if len(arr) == 0 {
+		return nil
+	}
+	return arr[rand.IntN(len(arr))]
+}
+
+func GetEnv(key string, fallback ...string) string {
+	val := os.Getenv(key)
+	if val == "" && len(fallback) > 0 {
+		return fallback[0]
+	}
+	return val
 }
 
 func Compile(text string) *FastTemplate {
@@ -201,6 +229,14 @@ func parseASTChunk(varName, rawChunk string) Chunk {
 				}
 			}
 			return Chunk{Kind: ChunkStatic, Value: rawChunk}
+		case "pick":
+			if len(parts) >= 2 {
+				options := strings.Split(parts[1], ",")
+				if len(options) > 0 {
+					return Chunk{Kind: ChunkRandomPick, Options: options, Raw: rawChunk}
+				}
+			}
+			return Chunk{Kind: ChunkStatic, Value: rawChunk}
 		}
 	}
 
@@ -222,14 +258,10 @@ func (ft *FastTemplate) Render(ctx ScopeProvider) string {
 			sb.WriteString(c.Value)
 
 		case ChunkEnv:
-			val := os.Getenv(c.Value)
-			if val == "" && c.Fallback != "" {
-				val = c.Fallback
-			}
-			sb.WriteString(val)
+			sb.WriteString(GetEnv(c.Value, c.Fallback))
 
 		case ChunkFile:
-			sb.WriteString(getFileContentLazy(c.Value))
+			sb.WriteString(GetFileContent(c.Value))
 
 		case ChunkRandomUUID:
 			sb.WriteString(FastUUID())
@@ -238,15 +270,11 @@ func (ft *FastTemplate) Render(ctx ScopeProvider) string {
 			sb.WriteString(FastRandomString(c.IntParam))
 
 		case ChunkRandomInt:
-			if c.IntParam >= c.MaxParam {
-				sb.WriteString(strconv.Itoa(c.IntParam))
-			} else {
-				delta := c.MaxParam - c.IntParam + 1
-				if delta <= 0 {
-					sb.WriteString(strconv.Itoa(c.IntParam))
-				} else {
-					sb.WriteString(strconv.Itoa(c.IntParam + rand.IntN(delta)))
-				}
+			sb.WriteString(strconv.Itoa(FastRandomInt(c.IntParam, c.MaxParam)))
+
+		case ChunkRandomPick:
+			if len(c.Options) > 0 {
+				sb.WriteString(c.Options[rand.IntN(len(c.Options))])
 			}
 
 		case ChunkVar:

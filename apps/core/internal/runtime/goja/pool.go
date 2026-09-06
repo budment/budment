@@ -54,11 +54,14 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, sink runtime.Me
 		})
 
 		vm.Set("random", map[string]interface{}{
-			"uuid": template.FastUUID,
-			"string": func(length int) string {
-				return template.FastRandomString(length)
-			},
+			"uuid":    template.FastUUID,
+			"string":  template.FastRandomString,
+			"integer": template.FastRandomInt,
+			"pick":    template.FastRandomPick,
 		})
+
+		vm.Set("env", template.GetEnv)
+		vm.Set("open", template.GetFileContent)
 
 		vm.Set("get", bridge.Get)
 		vm.Set("set", bridge.Set)

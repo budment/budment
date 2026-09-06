@@ -208,8 +208,14 @@ func (c *GraphCompiler) compilePipeline(pipeline *pb.Pipeline, depth int) ([]Exe
 			})
 
 		case *pb.Node_Branch:
-			truePath, _ := c.compilePipeline(n.Branch.TruePath, depth+1)
-			falsePath, _ := c.compilePipeline(n.Branch.FalsePath, depth+1)
+			truePath, err := c.compilePipeline(n.Branch.TruePath, depth+1)
+			if err != nil {
+				return nil, err
+			}
+			falsePath, err := c.compilePipeline(n.Branch.FalsePath, depth+1)
+			if err != nil {
+				return nil, err
+			}
 			nodes = append(nodes, &BranchNode{ID: step.Id, ConditionHookID: n.Branch.ConditionHookId, TruePath: truePath, FalsePath: falsePath})
 
 		case *pb.Node_Loop:
@@ -217,15 +223,25 @@ func (c *GraphCompiler) compilePipeline(pipeline *pb.Pipeline, depth int) ([]Exe
 			if loopCount, ok := n.Loop.Config.(*pb.LoopNode_Count); ok {
 				count = loopCount.Count
 			}
-			logicPath, _ := c.compilePipeline(n.Loop.Logic, depth+1)
+			logicPath, err := c.compilePipeline(n.Loop.Logic, depth+1)
+			if err != nil {
+				return nil, err
+			}
 			nodes = append(nodes, &LoopNode{ID: step.Id, Count: count, Logic: logicPath})
 
 		case *pb.Node_Match:
-			cases := make(map[string][]ExecutableNode)
+			cases := make(map[string][]ExecutableNode, len(n.Match.Cases))
 			for k, v := range n.Match.Cases {
-				cases[k], _ = c.compilePipeline(v, depth+1)
+				var err error
+				cases[k], err = c.compilePipeline(v, depth+1)
+				if err != nil {
+					return nil, err
+				}
 			}
-			defaultPath, _ := c.compilePipeline(n.Match.DefaultPath, depth+1)
+			defaultPath, err := c.compilePipeline(n.Match.DefaultPath, depth+1)
+			if err != nil {
+				return nil, err
+			}
 			nodes = append(nodes, &MatchNode{ID: step.Id, ConditionHookID: n.Match.ConditionHookId, Cases: cases, DefaultPath: defaultPath})
 
 		case *pb.Node_Poll:
@@ -243,7 +259,10 @@ func (c *GraphCompiler) compilePipeline(pipeline *pb.Pipeline, depth int) ([]Exe
 					maxAttempts = n.Poll.Policy.MaxAttempts
 				}
 			}
-			logicPath, _ := c.compilePipeline(n.Poll.Logic, depth+1)
+			logicPath, err := c.compilePipeline(n.Poll.Logic, depth+1)
+			if err != nil {
+				return nil, err
+			}
 			nodes = append(nodes, &PollNode{ID: step.Id, ConditionHookID: n.Poll.ConditionHookId, Logic: logicPath, Interval: intervalDur, Timeout: timeoutDur, MaxAttempts: maxAttempts})
 
 		case *pb.Node_Script:
