@@ -273,47 +273,23 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 
 	case *planner.ReqMutateNode:
 		if req != nil {
-			opts := make(map[string]any, 1)
-			if len(n.Metadata) > 0 {
-				headers := make(map[string]any, len(n.Metadata))
-				for k, expr := range n.Metadata {
-					headers[k] = expr.Render(w.Scope)
-				}
-				opts["headers"] = headers
-			}
-
-			body := n.Payload.Render(w.Scope)
-			req.Set(body, opts)
+			req.ApplyMutation(n.Metadata, n.Payload, w.Scope)
 		}
 
 	case *planner.ResAssertNode:
-		isFailed := false
-
-		if n.ExpectCode > 0 && returnCode != n.ExpectCode {
-			isFailed = true
-		}
-
 		if res != nil {
-			if n.ExpectBodyContains != "" && !res.Contains(n.ExpectBodyContains) {
-				isFailed = true
+			isFailed, extracted := res.Assert(n.ExpectCode, n.ExpectBodyContains, n.Extract, returnCode)
+			if isFailed {
+				w.Aggregator.PushEvent(metrics.MetricEvent{
+					WorkerID:    w.ID,
+					NodeID:      n.ID,
+					ErrorMsg:    "Assertion Failed",
+					IsLogicFail: true,
+				})
 			}
-
-			if !isFailed {
-				for path, scopeKey := range n.Extract {
-					if val := res.Json(path); val != nil {
-						w.Scope.Set(scopeKey, val)
-					}
-				}
+			for k, v := range extracted {
+				w.Scope.Set(k, v)
 			}
-		}
-
-		if isFailed {
-			w.Aggregator.PushEvent(metrics.MetricEvent{
-				WorkerID:    w.ID,
-				NodeID:      n.ID,
-				ErrorMsg:    "Assertion Failed",
-				IsLogicFail: true,
-			})
 		}
 
 	case *planner.SetNode:

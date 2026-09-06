@@ -60,6 +60,28 @@ func (r *Response) Release() {
 		r.buf.Reset()
 		bufferPool.Put(r.buf)
 		r.buf = nil
-		r.Body = nil
 	}
+	r.Body = nil
+}
+
+func (r *Response) Assert(expectCode int, expectContains string, extractRules map[string]string, returnCode int) (bool, map[string]any) {
+	if expectCode > 0 && returnCode != expectCode {
+		return true, nil
+	}
+
+	if expectContains != "" && !r.Contains(expectContains) {
+		return true, nil
+	}
+
+	var extracted map[string]any
+	if len(extractRules) > 0 {
+		extracted = make(map[string]any, len(extractRules))
+		for path, scopeKey := range extractRules {
+			if val := r.Json(path); val != nil {
+				extracted[scopeKey] = val
+			}
+		}
+	}
+
+	return false, extracted
 }

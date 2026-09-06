@@ -8,6 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/vunas/blaster/internal/fastconv"
+	"github.com/vunas/blaster/internal/template"
 )
 
 // Request is the "req" object passed to the .before(req) hook.
@@ -89,4 +90,18 @@ func (r *Request) Json(selector ...string) any {
 		return nil
 	}
 	return out
+}
+
+func (r *Request) ApplyMutation(meta map[string]template.Expression, payload template.Expression, scope template.ScopeProvider) {
+	if len(meta) > 0 {
+		if r.Headers == nil {
+			r.Headers = make(map[string]string, len(meta))
+		}
+		for k, expr := range meta {
+			r.Headers[k] = expr.Render(scope)
+		}
+	}
+	if payload.Raw != "" {
+		r.Body = fastconv.StringToBytes(payload.Render(scope))
+	}
 }

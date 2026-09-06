@@ -1,6 +1,10 @@
 package runner
 
-import "context"
+import (
+	"context"
+
+	"github.com/vunas/blaster/internal/template"
+)
 
 type ExecutionResult struct {
 	IsSuccess    bool
@@ -17,11 +21,13 @@ type ExecutionResult struct {
 type ProtocolRequest interface {
 	Set(body any, options map[string]any)
 	Json(selector ...string) any
+	ApplyMutation(meta map[string]template.Expression, payload template.Expression, scope template.ScopeProvider)
 }
 
 type ProtocolResponse interface {
 	Json(selector ...string) any
 	Contains(substr string) bool
+	Assert(expectCode int, expectContains string, extractRules map[string]string, returnCode int) (isFailed bool, extracted map[string]any)
 	Release()
 }
 
