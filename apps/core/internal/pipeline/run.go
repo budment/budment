@@ -65,7 +65,7 @@ func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, agg *metrics.Ag
 			scnCfg.Duration = *compScn.ASTConfig.Duration
 		}
 		if compScn.ASTConfig.Iterations != nil {
-			scnCfg.Iterations = *compScn.ASTConfig.Iterations
+			scnCfg.Iterations = compScn.ASTConfig.Iterations
 		}
 		if len(compScn.ASTConfig.Stages) > 0 {
 			scnCfg.Stages = compScn.ASTConfig.Stages

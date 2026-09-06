@@ -24,7 +24,7 @@ type EngineConfig struct {
 	VUs             int               `yaml:"vus"`
 	Duration        string            `yaml:"duration"`
 	MaxDuration     string            `yaml:"max_duration"`
-	Iterations      int               `yaml:"iterations"`
+	Iterations      *int              `yaml:"iterations"`
 	StartAt         string            `yaml:"start_at"`
 	Order           int               `yaml:"order"`
 	Stages          []Stage           `yaml:"stages"`
@@ -73,7 +73,7 @@ type CLIConfig struct {
 func DefaultEngineConfig() EngineConfig {
 	return EngineConfig{
 		VUs:        1,
-		Iterations: 1,
+		Iterations: nil,
 		Order:      0,
 		HTTP: HTTPConfig{
 			Timeout:         "30s",

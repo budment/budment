@@ -249,7 +249,9 @@ var runCmd = &cobra.Command{
 					if scnDur > groupMaxDur {
 						groupMaxDur = scnDur
 					}
-					totalIters += scn.Config.Iterations
+					if scn.Config.Iterations != nil {
+						totalIters += *scn.Config.Iterations
+					}
 				}
 
 				if groupVUs > maxPeakVUs {

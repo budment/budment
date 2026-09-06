@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/vunas/blaster/internal/config"
@@ -45,9 +46,10 @@ func (s *Scenario) Run(parentCtx context.Context) {
 	var ctx context.Context
 	var cancel context.CancelFunc
 
-	actualIters := s.Config.Iterations
+	isUsingStages := len(s.Config.Stages) > 0
+	hasDuration := s.Config.Duration != "" && s.Config.Duration != "0s"
 
-	if s.Config.Duration != "" && s.Config.Duration != "0s" {
+	if hasDuration {
 		dur, err := time.ParseDuration(s.Config.Duration)
 		if err != nil {
 			if s.Sink != nil {
@@ -60,6 +62,20 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		ctx, cancel = context.WithCancel(parentCtx)
 	}
 	defer cancel()
+
+	var actualIters int
+	if s.Config.Iterations != nil {
+		actualIters = *s.Config.Iterations
+	} else {
+		if !isUsingStages && !hasDuration {
+			actualIters = s.Config.VUs
+			if actualIters <= 0 {
+				actualIters = 1
+			}
+		} else {
+			actualIters = 0
+		}
+	}
 
 	var sharedIters int64
 
@@ -80,30 +96,50 @@ func (s *Scenario) Run(parentCtx context.Context) {
 			}
 			return
 		}
-	}
-
-	var scheduler Scheduler
-	isUsingStages := len(s.Config.Stages) > 0
-
-	if isUsingStages {
-		scheduler = NewRampingScheduler(s.Config.Stages)
-	} else {
-		scheduler = &ConstantVUScheduler{VUs: s.Config.VUs}
+		atomic.StoreInt64(&sharedIters, 0)
 	}
 
 	var wg sync.WaitGroup
 	spawnFunc := func(slot int, id int) {
 		wg.Add(1)
 		go func(workerSlot int, workerID int) {
-			w := NewWorker(workerSlot, workerID, s.Graph, s.Pool, s.Aggregator, s.BarrierManager, s.RunnerFactory, actualIters, s.Name, s.LocalState, s.GlobalState, s.Sink, &sharedIters, &activeTarget)
-			w.Run(ctx, wg.Done)
+			defer wg.Done()
+			w := NewWorker(workerID, workerSlot, s.Graph, s.Pool, s.Aggregator, s.BarrierManager, s.RunnerFactory, actualIters, s.Name, s.LocalState, s.GlobalState, s.Sink, &sharedIters, &activeTarget)
+			w.Run(ctx, func() {})
 		}(slot, id)
 	}
-	scheduler.Start(ctx, spawnFunc, &activeTarget)
 
-	if isUsingStages {
-		cancel()
+	if !isUsingStages {
+		scheduler := &ConstantVUScheduler{VUs: s.Config.VUs}
+		scheduler.Start(ctx, spawnFunc, &activeTarget)
+		wg.Wait()
+		return
 	}
 
+	scheduler := NewRampingScheduler(s.Config.Stages)
+
+	if actualIters > 0 {
+		go func() {
+			ticker := time.NewTicker(50 * time.Millisecond)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					claimed := atomic.LoadInt64(&sharedIters)
+					active := atomic.LoadInt64(&s.Aggregator.Metrics.ActiveVUs)
+					if claimed >= int64(actualIters) && active == 0 {
+						cancel()
+						return
+					}
+				}
+			}
+		}()
+	}
+
+	scheduler.Start(ctx, spawnFunc, &activeTarget)
+	cancel()
 	wg.Wait()
 }

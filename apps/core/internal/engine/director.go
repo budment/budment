@@ -70,8 +70,6 @@ func (d *Director) Run() error {
 	}
 
 	sort.Ints(orders)
-	assertMgr := metrics.NewAssertionManager(d.BaseConfig.Thresholds)
-
 	for _, order := range orders {
 		scenariosInGroup := groups[order]
 		var groupWg sync.WaitGroup
@@ -113,11 +111,5 @@ FINISH:
 	cancelWorkers()
 	cancelAgg()
 	<-aggDone
-
-	for _, rep := range d.Reporters {
-		if err := rep.Export(d.Aggregator.Metrics, assertMgr); err != nil {
-			fmt.Printf("Exporter Warning: %v\n", err)
-		}
-	}
 	return nil
 }

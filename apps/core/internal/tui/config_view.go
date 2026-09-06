@@ -46,7 +46,7 @@ func PrintPlanOverview(scriptPath string, compileTimeMs int64, cfg config.Engine
 	if cfg.MaxDuration != "" && cfg.MaxDuration != "0s" {
 		table.AddRow("Max Duration (Limit)", cfg.MaxDuration)
 	}
-	if cfg.Iterations > 0 {
+	if cfg.Iterations != nil {
 		table.AddRow("Total Iterations", fmt.Sprintf("%d iters", cfg.Iterations))
 	}
 

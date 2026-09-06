@@ -2,3 +2,6 @@ packages:
   - "apps/*"
   - "packages/*"
   - "tools/*"
+allowBuilds:
+  '@bufbuild/buf': true
+  esbuild: true

@@ -31,7 +31,7 @@ func applyConfigVariable(dst *EngineConfig, src ConfigVariable) {
 		dst.MaxDuration = *src.MaxDuration
 	}
 	if src.Iterations != nil {
-		dst.Iterations = *src.Iterations
+		dst.Iterations = src.Iterations
 	}
 	if src.StartAt != nil {
 		dst.StartAt = *src.StartAt

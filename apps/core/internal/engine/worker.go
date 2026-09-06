@@ -153,6 +153,7 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 
 		case *planner.LoopNode:
 			w.Aggregator.Metrics.RecordLoop(n.ID, n.Count)
+			prevIndex, hasPrev := w.Scope.Get("loop_index")
 			for i := int32(0); i < n.Count; i++ {
 				if ctx.Err() != nil {
 					return true
@@ -164,6 +165,11 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 				}
 			}
 
+			if hasPrev {
+				w.Scope.Set("loop_index", prevIndex)
+			} else {
+				w.Scope.Delete("loop_index")
+			}
 		case *planner.PollNode:
 			if abort := w.executePoll(ctx, n); abort {
 				return true
