@@ -28,32 +28,69 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		return nil, fmt.Errorf("failed to evaluate JS bundle: %w", err)
 	}
 
+	// Dynamic bridge: Supports both 'export default [...]', named exports ('export const scn1 = [...]'),
+	// and explicit fluent builder calls ('scenario().build()').
 	bridgeScript := `
-		if (typeof globalThis.__BLASTER_EXPORTS__ !== 'undefined') {
-		  const exp = globalThis.__BLASTER_EXPORTS__;
-		  if (exp.default && Array.isArray(exp.default)) {
-		    const compilePipeline = (nodes) => {
-		      if (!nodes) return undefined;
-		      return { steps: nodes.map(n => typeof n.build === 'function' ? n.build() : n) };
-		    };
-		    const scn = {
-		      name: "Default Scenario",
-		      config: exp.options || exp.config || {}, 
-		      setup: exp.setup ? compilePipeline(exp.setup) : undefined, 
-		      execution: compilePipeline(exp.default) 
-		    };
-		    globalThis.__BLASTER_SCENARIOS__ = globalThis.__BLASTER_SCENARIOS__ || [];
-		    globalThis.__BLASTER_SCENARIOS__.push(scn);
+		(() => {
+		  let exp = undefined;
+		  if (typeof __BLASTER_EXPORTS__ !== 'undefined' && __BLASTER_EXPORTS__ && Object.keys(__BLASTER_EXPORTS__).length > 0) {
+		    exp = __BLASTER_EXPORTS__;
+		  } else if (typeof globalThis !== 'undefined' && globalThis.__BLASTER_EXPORTS__) {
+		    exp = globalThis.__BLASTER_EXPORTS__;
 		  }
-		}`
-	_, _ = vm.RunString(bridgeScript)
 
-	astArrayValue, err := vm.RunString("__BLASTER_SCENARIOS__")
+		  if (!exp) return;
+
+		  globalThis.__BLASTER_SCENARIOS__ = globalThis.__BLASTER_SCENARIOS__ || [];
+		  
+		  const compilePipeline = (nodes) => {
+		    if (!nodes) return undefined;
+		    return { steps: nodes.map(n => typeof n.build === 'function' ? n.build() : n) };
+		  };
+		  
+		  const globalConfig = exp.options || exp.config || {};
+
+		  // Case 1: Single default export -> export default [ ... ]
+		  if (exp.default && Array.isArray(exp.default)) {
+		    globalThis.__BLASTER_SCENARIOS__.push({
+		      name: "Default Scenario",
+		      config: globalConfig,
+		      setup: exp.setup ? compilePipeline(exp.setup) : undefined,
+		      execution: compilePipeline(exp.default)
+		    });
+		  } else {
+		    // Case 2: Multi-scenario named exports -> export const scenario_a = [ ... ]
+		    for (const key of Object.keys(exp)) {
+		      if (key === 'options' || key === 'config' || key === 'setup') continue;
+		      const val = exp[key];
+		      if (Array.isArray(val)) {
+		        globalThis.__BLASTER_SCENARIOS__.push({
+		          name: key,
+		          config: globalConfig,
+		          setup: exp.setup ? compilePipeline(exp.setup) : undefined,
+		          execution: compilePipeline(val)
+		        });
+		      } else if (val && typeof val === 'object' && val.execution) {
+		        globalThis.__BLASTER_SCENARIOS__.push({
+		          name: key,
+		          config: val.config || globalConfig,
+		          setup: val.setup ? compilePipeline(val.setup) : undefined,
+		          execution: compilePipeline(val.execution)
+		        });
+		      }
+		    }
+		  }
+		})();`
+	if _, err := vm.RunString(bridgeScript); err != nil {
+		return nil, fmt.Errorf("bridge script failed: %w", err)
+	}
+
+	astArrayValue, err := vm.RunString("globalThis.__BLASTER_SCENARIOS__ || (typeof __BLASTER_SCENARIOS__ !== 'undefined' ? __BLASTER_SCENARIOS__ : undefined)")
 	if err != nil || astArrayValue == nil || goja.IsUndefined(astArrayValue) {
 		return nil, fmt.Errorf("no scenarios found. Ensure you use 'export default [...]' or 'scenario().build()'")
 	}
 
-	jsonScript := `JSON.stringify(__BLASTER_SCENARIOS__);`
+	jsonScript := `JSON.stringify(globalThis.__BLASTER_SCENARIOS__ || (typeof __BLASTER_SCENARIOS__ !== 'undefined' ? __BLASTER_SCENARIOS__ : []));`
 	jsonVal, err := vm.RunString(jsonScript)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stringify JS AST: %w", err)
@@ -62,6 +99,10 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	var rawMessages []json.RawMessage
 	if err := json.Unmarshal([]byte(jsonVal.String()), &rawMessages); err != nil {
 		return nil, fmt.Errorf("failed to parse scenarios array: %w", err)
+	}
+
+	if len(rawMessages) == 0 {
+		return nil, fmt.Errorf("no scenarios found. Ensure you use 'export default [...]' or 'scenario().build()'")
 	}
 
 	// Deserialize the JSON into the Protobuf Scenario.
@@ -151,7 +192,15 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 	vm.Set("global", namespaceFunc("global"))
 
 	vm.Set("env", func(key, fallback string) string { return fmt.Sprintf("{{@env:%s:%s}}", key, fallback) })
-	vm.Set("open", func(path string) string { return fmt.Sprintf("{{@open:%s}}", path) })
+
+	vm.Set("open", func(path string, mode ...string) string {
+		m := "r"
+		if len(mode) > 0 && mode[0] == "b" {
+			m = "b"
+		}
+		return fmt.Sprintf("{{@open:%s:%s}}", path, m)
+	})
+
 	vm.Set("get", func(key string) string { return fmt.Sprintf("{{%s}}", key) })
 	vm.Set("info", map[string]any{"vuId": "{{__VU_ID__}}", "iteration": "{{__ITER__}}", "scenario": "{{__SCENARIO__}}"})
 

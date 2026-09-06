@@ -61,7 +61,15 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, sink runtime.Me
 		})
 
 		vm.Set("env", template.GetEnv)
-		vm.Set("open", template.GetFileContent)
+		vm.Set("open", func(call goja.FunctionCall) goja.Value {
+			path := call.Argument(0).String()
+			mode := call.Argument(1).String()
+			if mode == "b" {
+				raw := template.GetFileBytes(path)
+				return vm.ToValue(vm.NewArrayBuffer(raw))
+			}
+			return vm.ToValue(template.GetFileContent(path))
+		})
 
 		vm.Set("get", bridge.Get)
 		vm.Set("set", bridge.Set)

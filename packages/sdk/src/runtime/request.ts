@@ -32,7 +32,7 @@ export interface HttpRequest {
      *     params: { retry: 1 } 
      * });
      */
-    set(body: object | string, options?: RequestOptions): void;
+    set(body: object | string | ArrayBuffer | Uint8Array, options?: RequestOptions): void;
 
     /**
      * Extracts values from the request JSON payload using GJSON syntax,

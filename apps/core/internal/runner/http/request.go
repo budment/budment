@@ -26,6 +26,38 @@ func (r *Request) Set(body any, options map[string]any) {
 			r.Body = v
 		case string:
 			r.Body = fastconv.StringToBytes(v)
+
+		case interface{ Bytes() []byte }:
+			r.Body = v.Bytes()
+
+		case interface{ Export() any }:
+			exported := v.Export()
+			if b, ok := exported.([]byte); ok {
+				r.Body = b
+				goto ProcessOptions
+			}
+			if bb, ok := exported.(interface{ Bytes() []byte }); ok {
+				r.Body = bb.Bytes()
+				goto ProcessOptions
+			}
+			if bytesVal, err := json.Marshal(exported); err == nil {
+				r.Body = bytesVal
+			}
+
+		case []any:
+			buf := make([]byte, len(v))
+			for i, b := range v {
+				switch num := b.(type) {
+				case int64:
+					buf[i] = byte(num)
+				case int:
+					buf[i] = byte(num)
+				case float64:
+					buf[i] = byte(num)
+				}
+			}
+			r.Body = buf
+
 		default:
 			if bytesVal, err := json.Marshal(v); err == nil {
 				r.Body = bytesVal
@@ -33,6 +65,7 @@ func (r *Request) Set(body any, options map[string]any) {
 		}
 	}
 
+ProcessOptions:
 	if options == nil {
 		return
 	}

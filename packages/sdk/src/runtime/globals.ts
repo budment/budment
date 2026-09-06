@@ -50,7 +50,7 @@ export const push: (queue: string, val: any) => void = _g.push || dummyFn;
 export const pop: <T = any>(queue: string) => T | undefined = _g.pop || dummyFn;
 
 /** Reads a file from disk as a string (supports both 'open' and 'load'). */
-export const open: (filepath: string) => string = _g.open || _g.load || dummyFn;
+export const open: (filepath: string, mode?: 'r' | 'b' | string) => any = _g.open || _g.load || dummyFn
 
 /** Retrieves an environment variable set in Go runtime. */
 export const env: (key: string, fallback?: string) => string = _g.env || ((_, f) => f || '');

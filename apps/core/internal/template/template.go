@@ -43,18 +43,27 @@ var (
 	lazyFileCache sync.Map
 )
 
-func GetFileContent(path string) string {
+// GetFileBytes reads and caches raw bytes, supporting binary files (PDF, images, zip).
+func GetFileBytes(path string) []byte {
 	if val, ok := lazyFileCache.Load(path); ok {
-		return val.(string)
+		return val.([]byte)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		lazyFileCache.Store(path, "") // An empty cache ensures subsequent calls do not re-read from disk.
+		lazyFileCache.Store(path, []byte{})
+		return []byte{}
+	}
+	lazyFileCache.Store(path, data)
+	return data
+}
+
+// GetFileContent reads text files from the cache.
+func GetFileContent(path string) string {
+	bytes := GetFileBytes(path)
+	if len(bytes) == 0 {
 		return ""
 	}
-	content := fastconv.BytesToString(data)
-	lazyFileCache.Store(path, content)
-	return content
+	return fastconv.BytesToString(bytes)
 }
 
 type ChunkKind uint8
@@ -78,6 +87,7 @@ type Chunk struct {
 	Fallback string
 	MaxParam int
 	Options  []string
+	IsBinary bool
 }
 
 type FastTemplate struct {
@@ -199,7 +209,8 @@ func parseASTChunk(varName, rawChunk string) Chunk {
 
 	if after, match := strings.CutPrefix(varName, "@open:"); match {
 		// Stores only the file path in the AST; file contents are not read at this stage.
-		return Chunk{Kind: ChunkFile, Value: after, Raw: rawChunk}
+		filePath, mode, _ := strings.Cut(after, ":")
+		return Chunk{Kind: ChunkFile, Value: filePath, IsBinary: mode == "b", Raw: rawChunk}
 	}
 
 	if after, match := strings.CutPrefix(varName, "@random:"); match {
