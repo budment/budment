@@ -1,0 +1,43 @@
+name: Core Engine CI
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'apps/core/**'
+      - '.github/workflows/core-engine.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'apps/core/**'
+      - '.github/workflows/core-engine.yml'
+
+jobs:
+  test-core:
+    name: Test Core Engine
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+          cache-dependency-path: apps/core/go.sum
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run GolangCI-Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64
+          working-directory: apps/core
+          args: --config=.golangci.yml
+
+      - name: Run Core Tests
+        run: go test -v -race ./...

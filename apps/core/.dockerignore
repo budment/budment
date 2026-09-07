@@ -1,0 +1,6 @@
+.git
+bin/
+*.exe
+*.test
+.golangci.yml
+Dockerfile

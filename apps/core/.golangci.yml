@@ -1,0 +1,24 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck      # Checks for unchecked errors
+    - gosimple      # Suggests code simplifications
+    - govet         # Official Go analysis tool
+    - ineffassign   # Detects ineffectual assignments
+    - staticcheck   # Advanced static analysis checks
+    - unused        # Checks for unused constants, variables, and functions
+    - revive        # Fast, configurable, extensible linter for Go
+    - gosec         # Inspects source code for security problems
+    - gofmt         # Checks whether code is formatted according to gofmt
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-files:
+    - ".*\\.pb\\.go$"        
+    - ".*_mock\\.go$"        
