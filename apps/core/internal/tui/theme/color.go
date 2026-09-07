@@ -1,3 +1,4 @@
+// Package theme defines terminal color escape sequences for the TUI.
 package theme
 
 const (

@@ -130,7 +130,7 @@ func (s *stubSink) Log(workerID int, nodeID, level, msg string) {
 func (s *stubSink) RecordEvent(workerID int, nodeID, eventType, reason string) {}
 func (s *stubSink) RecordCustom(workerID int, mType, name string, val float64) {}
 
-func setupTestWorker(graph *planner.Graph, iters int, sharedIters *int64, target *int32) (*Worker, *stubRunner, *metrics.Aggregator) {
+func setupTestWorker(graph *planner.Graph, iters int, sharedIters *int64, target *int64) (*Worker, *stubRunner, *metrics.Aggregator) {
 	agg := metrics.NewAggregator(1024)
 	runnerInst := &stubRunner{}
 	rf := func() *runner.Manager {

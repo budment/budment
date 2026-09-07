@@ -9,13 +9,13 @@ import (
 )
 
 type Scheduler interface {
-	Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int32)
+	Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64)
 }
 
 type ConstantVUScheduler struct{ VUs int }
 
-func (s *ConstantVUScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int32) {
-	atomic.StoreInt32(activeTarget, int32(s.VUs))
+func (s *ConstantVUScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
+	atomic.StoreInt64(activeTarget, int64(s.VUs))
 	for slot := 1; slot <= s.VUs; slot++ {
 		spawnWorker(slot, slot)
 	}
@@ -29,7 +29,7 @@ func NewRampingScheduler(stages []config.Stage) *RampingScheduler {
 	return &RampingScheduler{Stages: stages}
 }
 
-func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int32) {
+func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
 	currentVUs := 0
 	totalSpawnedCount := 0
 
@@ -65,7 +65,7 @@ func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int,
 					if targetForNow > targetVUs {
 						targetForNow = targetVUs
 					}
-					atomic.StoreInt32(activeTarget, int32(targetForNow))
+					atomic.StoreInt64(activeTarget, int64(targetForNow))
 
 					for spawnedSlots < targetForNow {
 						spawnedSlots++
@@ -75,7 +75,7 @@ func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int,
 				}
 			}
 			ticker.Stop()
-			atomic.StoreInt32(activeTarget, int32(targetVUs))
+			atomic.StoreInt64(activeTarget, int64(targetVUs))
 			for spawnedSlots < targetVUs {
 				spawnedSlots++
 				totalSpawnedCount++
@@ -98,14 +98,14 @@ func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int,
 					if targetForNow < targetVUs {
 						targetForNow = targetVUs
 					}
-					atomic.StoreInt32(activeTarget, int32(targetForNow))
+					atomic.StoreInt64(activeTarget, int64(targetForNow))
 				}
 			}
 			ticker.Stop()
-			atomic.StoreInt32(activeTarget, int32(targetVUs))
+			atomic.StoreInt64(activeTarget, int64(targetVUs))
 
 		} else {
-			atomic.StoreInt32(activeTarget, int32(targetVUs))
+			atomic.StoreInt64(activeTarget, int64(targetVUs))
 			ticker.Stop()
 
 			timer := time.NewTimer(duration)

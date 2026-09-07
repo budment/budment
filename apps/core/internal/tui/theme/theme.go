@@ -5,10 +5,8 @@ import (
 	"strings"
 )
 
-var (
-	// Indicates whether the current terminal supports ANSI color output.
-	ColorEnabled = true
-)
+// Indicates whether the current terminal supports ANSI color output.
+var ColorEnabled = true
 
 func init() {
 	DetectEnvironment()

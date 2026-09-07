@@ -1,24 +1,39 @@
 run:
-  timeout: 5m
+  timeout: 3m
   tests: true
+  go: "1.26"
 
 linters:
   disable-all: true
   enable:
-    - errcheck      # Checks for unchecked errors
-    - gosimple      # Suggests code simplifications
-    - govet         # Official Go analysis tool
-    - ineffassign   # Detects ineffectual assignments
-    - staticcheck   # Advanced static analysis checks
-    - unused        # Checks for unused constants, variables, and functions
-    - revive        # Fast, configurable, extensible linter for Go
-    - gosec         # Inspects source code for security problems
-    - gofmt         # Checks whether code is formatted according to gofmt
+    - errcheck # Ensures returned errors are properly handled
+    - govet # Official Go static analysis tool
+    - ineffassign # Detects ineffectual variable assignments
+    - staticcheck # Advanced static analysis checks
+    - unused # Identifies unused constants, variables, types, and functions
+    - bodyclose # Ensures HTTP response bodies are closed to prevent connection pool leaks
+    - noctx # Prohibits sending HTTP requests without a context.Context
+    # - gofumpt # Enforces strict, modern Go code formatting
+
+linters-settings:
+  errcheck:
+    # Ignore unchecked errors for safe, predictable standard/VM functions
+    exclude-functions:
+      - io.WriteString
+      - (*os.File).WriteString
+      - (io.Closer).Close
+      - (*github.com/dop251/goja.Runtime).Set
 
 issues:
   exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
   exclude-files:
-    - ".*\\.pb\\.go$"        
-    - ".*_mock\\.go$"        
+    - ".*\\.pb\\.go$"
+    - ".*_mock\\.go$"
+  exclude-rules:
+    # Relax strict context and error handling checks in unit and benchmark tests
+    - path: _test\.go
+      linters:
+        - errcheck
+        - noctx

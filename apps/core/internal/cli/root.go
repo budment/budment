@@ -24,6 +24,7 @@ var (
 func IsTerminal() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
 }
+
 func IsCIEnvironment() bool {
 	return os.Getenv("CI") != "" || os.Getenv("CONTINUOUS_INTEGRATION") != "" || os.Getenv("BUILD_NUMBER") != ""
 }

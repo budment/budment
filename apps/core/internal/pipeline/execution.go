@@ -31,7 +31,6 @@ type ExecutionApp struct {
 }
 
 func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, agg *metrics.Aggregator, sink runtime.MetricsSink, reporters []exporters.Reporter) (*ExecutionApp, error) {
-
 	globalState := engine.NewGlobalState()
 
 	registry := goja.NewHookRegistry(string(plan.JSBundle))

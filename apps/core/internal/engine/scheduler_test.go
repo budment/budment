@@ -14,7 +14,7 @@ func TestConstantVUScheduler_Spawn(t *testing.T) {
 	vus := 10
 	scheduler := &ConstantVUScheduler{VUs: vus}
 
-	var activeTarget int32
+	var activeTarget int64
 	var spawnedSlots []int
 	var mu sync.Mutex
 
@@ -26,7 +26,7 @@ func TestConstantVUScheduler_Spawn(t *testing.T) {
 
 	scheduler.Start(context.Background(), spawnFunc, &activeTarget)
 
-	if target := atomic.LoadInt32(&activeTarget); target != int32(vus) {
+	if target := atomic.LoadInt64(&activeTarget); target != int64(vus) {
 		t.Errorf("activeTarget mismatch: expected %d, got %d", vus, target)
 	}
 
@@ -50,7 +50,7 @@ func TestRampingScheduler_EarlyCancellation(t *testing.T) {
 	scheduler := NewRampingScheduler(stages)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	var activeTarget int32
+	var activeTarget int64
 	var spawnCount int64
 
 	spawnFunc := func(slot int, id int) {

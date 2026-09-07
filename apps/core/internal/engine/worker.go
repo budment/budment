@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+
 	"github.com/vunas/blaster/internal/fastconv"
 	"github.com/vunas/blaster/internal/metrics"
 	"github.com/vunas/blaster/internal/planner"
@@ -45,11 +46,11 @@ type Worker struct {
 	Sink           runtime.MetricsSink
 	Iterations     int
 	SharedIters    *int64
-	ActiveTarget   *int32
+	ActiveTarget   *int64
 	currentIter    int
 }
 
-func NewWorker(id int, slot int, graph *planner.Graph, pool ExecutorPool, agg *metrics.Aggregator, sm *BarrierManager, runnerFactory func() *runner.Manager, iterations int, scenarioName string, ls *LocalState, gs *GlobalState, sink runtime.MetricsSink, sharedIters *int64, activeTarget *int32) *Worker {
+func NewWorker(id int, slot int, graph *planner.Graph, pool ExecutorPool, agg *metrics.Aggregator, sm *BarrierManager, runnerFactory func() *runner.Manager, iterations int, scenarioName string, ls *LocalState, gs *GlobalState, sink runtime.MetricsSink, sharedIters *int64, activeTarget *int64) *Worker {
 	return &Worker{
 		ID:             id,
 		Slot:           slot,
@@ -69,13 +70,13 @@ func NewWorker(id int, slot int, graph *planner.Graph, pool ExecutorPool, agg *m
 	}
 }
 
-func (w *Worker) withExecutor(hookID string, fn func(inst HookExecutor) error) error {
+func (w *Worker) withExecutor(hookID string, fn func(inst HookExecutor)) {
 	if hookID == "" {
-		return nil
+		return
 	}
 	inst := w.Pool.GetExecutor(w.Scope, w.LocalState, w.ID, w.currentIter, w.ScenarioName)
 	defer w.Pool.PutExecutor(inst)
-	return fn(inst)
+	fn(inst)
 }
 
 func (w *Worker) Run(ctx context.Context, done func()) {
@@ -86,8 +87,8 @@ func (w *Worker) Run(ctx context.Context, done func()) {
 
 	for {
 		if w.ActiveTarget != nil {
-			currentTarget := atomic.LoadInt32(w.ActiveTarget)
-			if int32(w.Slot) > currentTarget {
+			currentTarget := atomic.LoadInt64(w.ActiveTarget)
+			if int64(w.Slot) > currentTarget {
 				return
 			}
 		}
@@ -179,10 +180,9 @@ func (w *Worker) executeNodes(ctx context.Context, nodes []planner.ExecutableNod
 			var caseVal string
 			var isAborted bool
 
-			w.withExecutor(n.ConditionHookID, func(inst HookExecutor) error {
+			w.withExecutor(n.ConditionHookID, func(inst HookExecutor) {
 				caseVal, _ = inst.EvaluateString(n.ConditionHookID)
 				isAborted = inst.IsAborted()
-				return nil
 			})
 
 			if isAborted {
@@ -350,7 +350,7 @@ func (w *Worker) runHook(ctx context.Context, hookID string, req runner.Protocol
 	var barrierName string
 	var quorum, sleepMs int
 
-	w.withExecutor(hookID, func(inst HookExecutor) error {
+	w.withExecutor(hookID, func(inst HookExecutor) {
 		err := inst.ExecuteHook(hookID, req, res)
 		if err != nil {
 			errMsg := fmt.Sprintf("%v", err)
@@ -359,13 +359,12 @@ func (w *Worker) runHook(ctx context.Context, hookID string, req runner.Protocol
 				w.Sink.Log(w.ID, hookID, "SYS_ERR", errMsg)
 			}
 			isAborted = true
-			return nil
+			return
 		}
 
 		sleepMs = inst.GetSleepTime()
 		barrierName, quorum = inst.GetBarrierInfo()
 		isAborted = inst.IsAborted()
-		return nil
 	})
 
 	if isAborted {
@@ -391,9 +390,8 @@ func (w *Worker) runHook(ctx context.Context, hookID string, req runner.Protocol
 
 func (w *Worker) evaluateCondition(hookID string) bool {
 	var result bool
-	w.withExecutor(hookID, func(inst HookExecutor) error {
+	w.withExecutor(hookID, func(inst HookExecutor) {
 		result, _ = inst.EvaluateBoolean(hookID)
-		return nil
 	})
 	return result
 }
@@ -416,10 +414,9 @@ func (w *Worker) executePoll(ctx context.Context, n *planner.PollNode) bool {
 
 		var conditionResult bool
 		var isAborted bool
-		w.withExecutor(n.ConditionHookID, func(inst HookExecutor) error {
+		w.withExecutor(n.ConditionHookID, func(inst HookExecutor) {
 			conditionResult, _ = inst.EvaluateBoolean(n.ConditionHookID)
 			isAborted = inst.IsAborted()
-			return nil
 		})
 
 		if isAborted {

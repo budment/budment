@@ -80,7 +80,7 @@ func (s *Scenario) Run(parentCtx context.Context) {
 	var sharedIters int64
 
 	// Shared flag signaling VUs to ramp down / terminate
-	var activeTarget int32
+	var activeTarget int64
 
 	if len(s.Graph.Setup) > 0 {
 		// Setup worker runs only once, so pass nil for activeTarget

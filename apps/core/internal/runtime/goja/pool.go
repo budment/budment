@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/dop251/goja"
+
 	"github.com/vunas/blaster/internal/runner"
 	"github.com/vunas/blaster/internal/runtime"
 	"github.com/vunas/blaster/internal/template"
@@ -201,7 +202,6 @@ func (inst *VMInstance) EvaluateBoolean(hookID string) (result bool, err error) 
 		goja.Undefined(),
 		inst.Runtime.ToValue(hookID),
 	)
-
 	if err != nil {
 		return false, err
 	}
@@ -224,7 +224,6 @@ func (inst *VMInstance) EvaluateString(hookID string) (result string, err error)
 		goja.Undefined(),
 		inst.Runtime.ToValue(hookID),
 	)
-
 	if err != nil {
 		return "", err
 	}

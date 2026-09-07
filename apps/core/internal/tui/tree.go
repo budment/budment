@@ -218,7 +218,6 @@ func printHTTPNode(prefix, connector, childPrefix string, n *planner.ActionNode,
 			printTreeReal(n.AfterPipeline, subPref, detailed)
 		}
 	}
-
 }
 
 func printBranchNode(prefix, connector, childPrefix string, n *planner.BranchNode, nodeID string, detailed bool) {

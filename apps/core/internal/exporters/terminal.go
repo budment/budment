@@ -219,7 +219,7 @@ func (r *TerminalReporter) Export(
 			parts := strings.Split(s, "_")
 			if len(parts) == 2 {
 				var num int
-				fmt.Sscanf(parts[1], "%d", &num)
+				_, _ = fmt.Sscanf(parts[1], "%d", &num)
 				return num
 			}
 			return 0
