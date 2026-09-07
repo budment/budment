@@ -95,7 +95,7 @@ export class HttpBuilder implements BuilderNode {
                     build: () => ({
                         id: HookRegistry.generateNodeId('res_assert'),
                         resAssert: {
-                            expectStatus: assertNode.expect?.status || 0,
+                            expectCode: assertNode.expect?.status || 0,
                             expectBodyContains: assertNode.expect?.bodyContains || "",
                             extract: assertNode.extract || {}
                         } as ResAssertNode
