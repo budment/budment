@@ -192,7 +192,7 @@ var runCmd = &cobra.Command{
 			reporters = append(reporters, exporters.NewTerminalReporter(testStartTime))
 		}
 		if finalEngineCfg.Exporters.HTML != "" {
-			// reporters = append(reporters, exporters.NewHTMLReporter(finalEngineCfg.Exporters.HTML, fs, testStartTime, exportScenarios))
+			reporters = append(reporters, exporters.NewHTMLReporter(finalEngineCfg.Exporters.HTML, fs, testStartTime, exportScenarios))
 		}
 
 		agg := metrics.NewAggregator(1000000)

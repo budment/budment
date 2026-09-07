@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blaster · Execution Telemetry Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              mono: ['"Geist Mono"', '"Fira Code"', "monospace"],
+              sans: ['"Geist"', "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+      :root {
+        --bg: #0b0c0e;
+        --surface: #121417;
+        --border: #22252a;
+        --text: #e2e8f0;
+        --text-dim: #94a3b8;
+        --chart-line: #22252a;
+      }
+      html:not(.dark) {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --border: #e2e8f0;
+        --text: #0f172a;
+        --text-dim: #64748b;
+        --chart-line: #f1f5f9;
+      }
+      body {
+        background-color: var(--bg);
+        color: var(--text);
+        transition:
+          background-color 0.2s,
+          color 0.2s;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition:
+          background-color 0.2s,
+          border-color 0.2s;
+      }
+      .glass-table th {
+        background: var(--surface);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid var(--border);
+      }
+      .glass-table tr {
+        border-bottom: 1px solid var(--border);
+      }
+      .tab-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-dim);
+        border-bottom: 2px solid transparent;
+        transition: all 0.15s;
+      }
+      .tab-btn.active {
+        color: #0284c7;
+        border-bottom-color: #0284c7;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.15s ease-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(2px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      /* Ẩn triệt để thanh cuộn cross-browser, vẫn scroll mượt */
+      .no-scrollbar {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+      }
+
+      /* AST Tree Syntax Styling */
+      /* Group 1: Action/Network */
+      .ast-tree .hl-http {
+        color: #0284c7;
+        font-weight: 600;
+      }
+      .ast-tree .hl-get {
+        color: #059669;
+        font-weight: 600;
+      }
+      .ast-tree .hl-post {
+        color: #d97706;
+        font-weight: 600;
+      }
+
+      /* Group 2: Control Flow */
+      .ast-tree .hl-flow {
+        color: #8b5cf6;
+        font-weight: 600;
+      } /* BRANCH, LOOP, POLL, MATCH */
+
+      /* Group 3: Script & State */
+      .ast-tree .hl-script {
+        color: #f59e0b;
+      } /* SCRIPT, SET, DISTRIBUTE */
+
+      /* Group 4: Barriers & Assertions */
+      .ast-tree .hl-barrier {
+        color: #f43f5e;
+        font-weight: 600;
+      } /* BARRIER, RES_ASSERT */
+
+      /* Syntax & Structure */
+      .ast-tree .hl-dim {
+        color: var(--text-dim);
+      }
+      .ast-tree .hl-scenario {
+        color: #0ea5e9;
+        font-weight: 700;
+      }
+      .ast-tree .hl-phase {
+        color: #a855f7;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen px-8 py-6 font-sans flex flex-col max-w-[1550px] mx-auto w-full"
+  >
+    <!-- Header -->
+    <header
+      class="flex justify-between items-center mb-6 border-b pb-4"
+      style="border-color: var(--border)"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="w-8 h-8 rounded bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 font-mono font-bold text-sm"
+        >
+          ◆
+        </div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold tracking-tight">BLASTER</h1>
+          <span class="text-xs font-mono" style="color: var(--text-dim)"
+            >/</span
+          >
+          <span
+            class="text-xs font-mono"
+            style="color: var(--text-dim)"
+            id="test-time"
+          ></span>
+        </div>
+      </div>
+
+      <!-- Actions: Theme Toggle & SLA Badge -->
+      <div class="flex items-center gap-3">
+        <button
+          onclick="toggleTheme()"
+          class="p-2 rounded border hover:opacity-80 transition-colors"
+          style="border-color: var(--border); background: var(--surface)"
+          title="Toggle Color Theme"
+        >
+          <svg
+            id="theme-sun"
+            class="w-4 h-4 hidden dark:block text-amber-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+            ></path>
+          </svg>
+          <svg
+            id="theme-moon"
+            class="w-4 h-4 block dark:hidden text-slate-700"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+            ></path>
+          </svg>
+        </button>
+        <div
+          id="status-badge"
+          class="px-2.5 py-1 rounded text-[11px] font-mono tracking-wide border font-medium"
+        ></div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex gap-8 border-b mb-6" style="border-color: var(--border)">
+      <button class="tab-btn active" onclick="switchTab(event, 'overview')">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+          ></path>
+        </svg>
+        Overview
+      </button>
+      <button class="tab-btn" onclick="switchTab(event, 'endpoints')">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+          ></path>
+        </svg>
+        Endpoints
+      </button>
+      <button class="tab-btn" onclick="switchTab(event, 'flow')">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+          ></path>
+        </svg>
+        Control Flow
+      </button>
+      <button class="tab-btn" onclick="switchTab(event, 'custom')">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          ></path>
+        </svg>
+        Business Metrics
+      </button>
+      <button class="tab-btn" onclick="switchTab(event, 'tree')">
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+          ></path>
+        </svg>
+        AST Lifecycle Tree
+      </button>
+    </nav>
+
+    <main class="flex-1">
+      <!-- TAB 1: OVERVIEW -->
+      <div id="tab-overview" class="tab-content active">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          <div class="card p-4">
+            <span
+              class="text-[11px] font-mono tracking-wider uppercase block mb-1"
+              style="color: var(--text-dim)"
+              >Total Executions</span
+            >
+            <div class="text-2xl font-mono font-semibold" id="val-reqs">0</div>
+          </div>
+          <div class="card p-4">
+            <span
+              class="text-[11px] font-mono tracking-wider uppercase block mb-1"
+              style="color: var(--text-dim)"
+              >Mean Throughput</span
+            >
+            <div
+              class="text-2xl font-mono font-semibold flex items-baseline gap-1"
+            >
+              <span id="val-rps">0</span>
+              <span class="text-xs font-sans" style="color: var(--text-dim)"
+                >req/s</span
+              >
+            </div>
+          </div>
+          <div class="card p-4">
+            <span
+              class="text-[11px] font-mono tracking-wider uppercase block mb-1"
+              style="color: var(--text-dim)"
+              >Failed Requests</span
+            >
+            <div
+              class="text-2xl font-mono font-semibold flex items-baseline gap-1.5"
+            >
+              <span id="val-fails">0</span>
+              <span
+                class="text-xs font-sans"
+                style="color: var(--text-dim)"
+                id="val-fail-rate"
+                >0.00%</span
+              >
+            </div>
+            <div
+              class="text-[10px] font-mono mt-1"
+              style="color: var(--text-dim)"
+              id="val-fail-rates"
+            >
+              Net: 0 · Logic: 0
+            </div>
+          </div>
+          <div class="card p-4">
+            <span
+              class="text-[11px] font-mono tracking-wider uppercase block mb-1"
+              style="color: var(--text-dim)"
+              >Iteration p95</span
+            >
+            <div
+              class="text-2xl font-mono font-semibold flex items-baseline gap-1"
+            >
+              <span id="val-iter">0</span>
+              <span class="text-xs font-sans" style="color: var(--text-dim)"
+                >ms</span
+              >
+            </div>
+          </div>
+          <div class="card p-4">
+            <span
+              class="text-[11px] font-mono tracking-wider uppercase block mb-1"
+              style="color: var(--text-dim)"
+              >Network Payload</span
+            >
+            <div class="flex flex-col gap-0.5 mt-1 font-mono text-xs">
+              <div class="flex justify-between" style="color: var(--text-dim)">
+                <span>↓ RECV</span>
+                <span
+                  class="font-medium"
+                  style="color: var(--text)"
+                  id="val-data-in"
+                  >0 B</span
+                >
+              </div>
+              <div class="flex justify-between" style="color: var(--text-dim)">
+                <span>↑ SENT</span>
+                <span
+                  class="font-medium"
+                  style="color: var(--text)"
+                  id="val-data-out"
+                  >0 B</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLA Thresholds Scorecard -->
+        <div id="thresholds-container" class="card p-4 mb-6 hidden">
+          <div
+            class="text-xs font-mono uppercase tracking-wider mb-3 font-semibold"
+            style="color: var(--text-dim)"
+          >
+            SLA Thresholds Verification
+          </div>
+          <div class="overflow-x-auto no-scrollbar">
+            <table
+              class="w-full text-left text-xs whitespace-nowrap glass-table font-mono"
+            >
+              <thead>
+                <tr style="color: var(--text-dim)">
+                  <th class="py-2.5 px-3 font-normal">METRIC</th>
+                  <th class="py-2.5 px-3 font-normal">CRITERIA</th>
+                  <th class="py-2.5 px-3 font-normal text-right">OBSERVED</th>
+                  <th class="py-2.5 px-3 font-normal text-center">STATUS</th>
+                  <th class="py-2.5 px-3 font-normal">NOTE</th>
+                </tr>
+              </thead>
+              <tbody id="thresholds-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Errors Alert -->
+        <div
+          id="errors-container"
+          class="card p-4 mb-6 hidden border-rose-500/30 bg-rose-500/3"
+        >
+          <div
+            class="text-xs font-mono text-rose-500 tracking-wider uppercase mb-2.5 flex items-center gap-2 font-semibold"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            Dominant System & HTTP Errors
+          </div>
+          <ul id="errors-list" class="space-y-1 text-xs font-mono"></ul>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div class="card p-4 lg:col-span-2 h-95 flex flex-col">
+            <span
+              class="text-xs font-mono uppercase tracking-wider block mb-2"
+              style="color: var(--text-dim)"
+              >Throughput & Concurrency</span
+            >
+            <div id="mainChart" class="flex-1 w-full"></div>
+          </div>
+          <div class="card p-4 h-95 flex flex-col">
+            <span
+              class="text-xs font-mono uppercase tracking-wider block mb-2"
+              style="color: var(--text-dim)"
+              >Status Code Distribution</span
+            >
+            <div id="pieChart" class="flex-1 w-full"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: ENDPOINTS -->
+      <div id="tab-endpoints" class="tab-content">
+        <div class="card flex flex-col h-[74vh] overflow-hidden">
+          <div class="p-3.5 border-b" style="border-color: var(--border)">
+            <span
+              class="text-xs font-mono uppercase tracking-wider"
+              style="color: var(--text-dim)"
+              >Per-Node Response Profile (ms)</span
+            >
+          </div>
+          <div class="flex-1 overflow-auto no-scrollbar">
+            <table
+              class="w-full text-left text-xs whitespace-nowrap glass-table font-mono"
+            >
+              <thead>
+                <tr style="color: var(--text-dim)">
+                  <th class="py-2.5 px-3.5 font-normal">ENDPOINT</th>
+                  <th class="py-2.5 px-3 font-normal text-right">REQS</th>
+                  <th class="py-2.5 px-3 font-normal text-right">FAILS</th>
+                  <th class="py-2.5 px-3 font-normal text-right">MIN</th>
+                  <th class="py-2.5 px-3 font-normal text-right">AVG</th>
+                  <th class="py-2.5 px-3 font-normal text-right">P90</th>
+                  <th class="py-2.5 px-3 font-normal text-right">P95</th>
+                  <th class="py-2.5 px-3 font-normal text-right text-sky-500">
+                    P99
+                  </th>
+                  <th class="py-2.5 px-3 font-normal text-right">MAX</th>
+                  <th class="py-2.5 px-3 font-normal text-right">TTFB (P90)</th>
+                </tr>
+              </thead>
+              <tbody id="nodes-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CONTROL FLOW -->
+      <div id="tab-flow" class="tab-content">
+        <div
+          id="flow-empty"
+          class="text-center py-20 font-mono text-xs hidden"
+          style="color: var(--text-dim)"
+        >
+          No control flow nodes executed.
+        </div>
+        <div
+          id="flow-content"
+          class="card flex flex-col h-[74vh] overflow-hidden"
+        >
+          <div class="p-3.5 border-b" style="border-color: var(--border)">
+            <span
+              class="text-xs font-mono uppercase tracking-wider"
+              style="color: var(--text-dim)"
+              >Branch, Loop & Quorum Telemetry</span
+            >
+          </div>
+          <div class="flex-1 overflow-auto no-scrollbar">
+            <table
+              class="w-full text-left text-xs whitespace-nowrap glass-table font-mono"
+            >
+              <thead>
+                <tr style="color: var(--text-dim)">
+                  <th class="py-2.5 px-3.5 font-normal">NODE ID</th>
+                  <th class="py-2.5 px-3 font-normal">KIND</th>
+                  <th class="py-2.5 px-3 font-normal">DETAILS</th>
+                </tr>
+              </thead>
+              <tbody id="flow-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: CUSTOM METRICS -->
+      <div id="tab-custom" class="tab-content">
+        <div
+          id="custom-empty"
+          class="text-center py-20 font-mono text-xs hidden"
+          style="color: var(--text-dim)"
+        >
+          No custom business metrics registered.
+        </div>
+        <div
+          id="custom-content"
+          class="card flex flex-col h-[74vh] overflow-hidden"
+        >
+          <div class="p-3.5 border-b" style="border-color: var(--border)">
+            <span
+              class="text-xs font-mono uppercase tracking-wider"
+              style="color: var(--text-dim)"
+              >Custom Metric Telemetry</span
+            >
+          </div>
+          <div class="flex-1 overflow-auto no-scrollbar">
+            <table
+              class="w-full text-left text-xs whitespace-nowrap glass-table font-mono"
+            >
+              <thead>
+                <tr style="color: var(--text-dim)">
+                  <th class="py-2.5 px-3.5 font-normal">NAME</th>
+                  <th class="py-2.5 px-3 font-normal">TYPE</th>
+                  <th class="py-2.5 px-3 font-normal text-right">SAMPLES</th>
+                  <th class="py-2.5 px-3 font-normal text-right">VALUE</th>
+                </tr>
+              </thead>
+              <tbody id="custom-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: AST TREE -->
+      <div id="tab-tree" class="tab-content">
+        <div class="card flex flex-col h-[74vh] overflow-hidden relative">
+          <div
+            class="p-3.5 border-b flex justify-between items-center"
+            style="border-color: var(--border)"
+          >
+            <span
+              class="text-xs font-mono uppercase tracking-wider"
+              style="color: var(--text-dim)"
+              >Lifecycle Execution Graph</span
+            >
+            <button
+              onclick="copyASTTree()"
+              id="btn-copy-ast"
+              class="flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-mono border transition-all hover:opacity-80"
+              style="
+                border-color: var(--border);
+                background: var(--surface);
+                color: var(--text-dim);
+              "
+            >
+              <svg
+                id="copy-icon"
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                ></path>
+              </svg>
+              <span id="copy-text">Copy Graph</span>
+            </button>
+          </div>
+          <div
+            class="flex-1 overflow-auto p-4 no-scrollbar"
+            style="background: var(--surface)"
+          >
+            <div
+              id="ast-tree-content"
+              class="ast-tree text-[12px] font-mono leading-relaxed whitespace-pre font-medium"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script id="report-data" type="application/json">
+      {{ . }}
+    </script>
+
+    <script>
+      function toggleTheme() {
+        const html = document.documentElement;
+        if (html.classList.contains("dark")) {
+          html.classList.remove("dark");
+          localStorage.setItem("blaster-theme", "light");
+        } else {
+          html.classList.add("dark");
+          localStorage.setItem("blaster-theme", "dark");
+        }
+        updateChartTheme();
+      }
+
+      if (localStorage.getItem("blaster-theme") === "light") {
+        document.documentElement.classList.remove("dark");
+      }
+
+      function escapeHTML(str) {
+        if (!str) return "";
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes || bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB", "TB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      }
+
+      function switchTab(e, tabId) {
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((btn) => btn.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((content) => content.classList.remove("active"));
+        if (e && e.currentTarget) e.currentTarget.classList.add("active");
+        const target = document.getElementById(`tab-${tabId}`);
+        if (target) target.classList.add("active");
+        if (tabId === "overview") {
+          mainChart.resize();
+          pieChart.resize();
+        }
+      }
+
+      const dataElem = document.getElementById("report-data");
+      let reportData = {};
+      try {
+        reportData = JSON.parse(dataElem ? dataElem.textContent.trim() : "{}");
+      } catch (e) {
+        console.error("JSON Error:", e);
+      }
+
+      const timeSeries = reportData.time_series || [];
+      const nodes = reportData.nodes || [];
+      const statusCodes = reportData.status_codes || {};
+      const customMetrics = reportData.custom_metrics || [];
+      const flows = reportData.flows || [];
+      const topErrors = reportData.top_errors || {};
+      const thresholds = reportData.thresholds || [];
+
+      function renderASTWithColors(rawText) {
+        if (!rawText) return "(No AST Recorded)";
+
+        let formatted = escapeHTML(rawText);
+
+        formatted = formatted.replace(
+          /^[▶◆]\s*(.+)$/gm,
+          '<span class="hl-scenario">◆ $1</span>',
+        );
+
+        formatted = formatted.replace(
+          /[\[▶]?\s*(SETUP|EXECUTION)\s+PHASE\s*\]?/gi,
+          '<span class="hl-phase">▶ $1 PHASE</span>',
+        );
+
+        formatted = formatted
+          .replace(/\[http\]/gi, '<span class="hl-http">[HTTP]</span>')
+          .replace(/\b(GET)\b/g, '<span class="hl-get">$1</span>')
+          .replace(/\b(POST|PUT|PATCH)\b/g, '<span class="hl-post">$1</span>')
+          .replace(/\b(DELETE)\b/g, '<span class="hl-barrier">$1</span>');
+
+        // Control Flow Nodes
+        formatted = formatted
+          .replace(
+            /\[(BRANCH|LOOP|POLL|MATCH)\]/gi,
+            (match, p1) => `<span class="hl-flow">[${p1.toUpperCase()}]</span>`,
+          )
+          .replace(
+            /\[(TRUE|FALSE)\]/gi,
+            (match, p1) => `<span class="hl-flow">[${p1.toUpperCase()}]</span>`,
+          )
+          .replace(
+            /Case:\s*([a-zA-Z0-9_-]+)/gi,
+            '<span class="hl-flow">Case: $1</span>',
+          )
+          .replace(/\bDefault\b/g, '<span class="hl-flow">Default</span>');
+
+        // Scripts, State, Mutate, Metrics & Logs
+        formatted = formatted
+          .replace(
+            /\[(SCRIPT|SET|DISTRIBUTE|METRIC|REQ_MUTATE|LOG|SLEEP)\]/gi,
+            (match, p1) =>
+              `<span class="hl-script">[${p1.toUpperCase()}]</span>`,
+          )
+          .replace(
+            /\b(before|after)\s*→/gi,
+            '<span class="hl-script">$1 →</span>',
+          );
+
+        // Barriers & Asserts
+        formatted = formatted
+          .replace(
+            /\[(BARRIER|RES_ASSERT)\]/gi,
+            (match, p1) =>
+              `<span class="hl-barrier">[${p1.toUpperCase()}]</span>`,
+          )
+          .replace(
+            /\b(barrier|res_assert)\b/gi,
+            '<span class="hl-barrier">$1</span>',
+          );
+
+        // Node ID (matches formats like [http_1], [log_6], [branch_17], [id: xxx])
+        formatted = formatted.replace(
+          /\[([a-zA-Z]+_\d+|id:[^\]]+)\]/g,
+          '<span class="hl-dim">[$1]</span>',
+        );
+
+        // Tree structure
+        formatted = formatted.replace(
+          /(├──|└──|│)/g,
+          '<span class="hl-dim">$1</span>',
+        );
+
+        return formatted;
+      }
+
+      function copyASTTree() {
+        const text = reportData.ast_tree || "";
+        if (!text) return;
+
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            const btnText = document.getElementById("copy-text");
+            const originalText = btnText.innerText;
+            btnText.innerText = "Copied!";
+            btnText.style.color = "#10b981";
+
+            setTimeout(() => {
+              btnText.innerText = originalText;
+              btnText.style.color = "";
+            }, 2000);
+          })
+          .catch((err) => {
+            console.error("Failed to copy:", err);
+          });
+      }
+
+      document.getElementById("ast-tree-content").innerHTML =
+        renderASTWithColors(reportData.ast_tree);
+      document.getElementById("test-time").innerText =
+        reportData.start_time || "Completed Execution";
+      document.getElementById("val-reqs").innerText =
+        new Intl.NumberFormat().format(reportData.total_requests || 0);
+      document.getElementById("val-rps").innerText = (
+        reportData.average_rps || 0
+      ).toFixed(2);
+
+      const totalFails =
+        (reportData.network_fails || 0) + (reportData.logic_fails || 0);
+      document.getElementById("val-fails").innerText =
+        new Intl.NumberFormat().format(totalFails);
+      const failRate =
+        reportData.total_requests > 0
+          ? (totalFails / reportData.total_requests) * 100
+          : 0;
+      document.getElementById("val-fail-rate").innerText =
+        `${failRate.toFixed(2)}%`;
+      document.getElementById("val-fail-rates").innerText =
+        `Net: ${reportData.network_fails || 0} · Logic: ${reportData.logic_fails || 0}`;
+
+      document.getElementById("val-iter").innerText =
+        new Intl.NumberFormat().format(reportData.iter_p95 || 0);
+      document.getElementById("val-data-in").innerText = formatBytes(
+        reportData.bytes_recv || 0,
+      );
+      document.getElementById("val-data-out").innerText = formatBytes(
+        reportData.bytes_sent || 0,
+      );
+
+      const badge = document.getElementById("status-badge");
+      if (reportData.threshold_passed) {
+        badge.className =
+          "px-2.5 py-1 rounded text-[11px] font-mono tracking-wide border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 font-semibold";
+        badge.innerText = "✓ SLA COMPLIANT";
+      } else {
+        badge.className =
+          "px-2.5 py-1 rounded text-[11px] font-mono tracking-wide border border-rose-500/30 bg-rose-500/10 text-rose-500 font-semibold";
+        badge.innerText = "✗ SLA BREACHED";
+      }
+
+      // Thresholds Table
+      if (thresholds.length > 0) {
+        document
+          .getElementById("thresholds-container")
+          .classList.remove("hidden");
+        const tbody = document.getElementById("thresholds-tbody");
+        thresholds.forEach((t) => {
+          const tr = document.createElement("tr");
+          const status = t.passed
+            ? '<span class="text-emerald-500 font-semibold">PASS</span>'
+            : '<span class="text-rose-500 font-bold">FAIL</span>';
+          tr.innerHTML = `
+        <td class="py-2.5 px-3 font-semibold">${escapeHTML(t.metric)}</td>
+        <td class="py-2.5 px-3" style="color: var(--text-dim)">${escapeHTML(t.criteria)}</td>
+        <td class="py-2.5 px-3 text-right font-medium ${t.passed ? "" : "text-rose-500 font-bold"}">${t.actual.toFixed(2)}</td>
+        <td class="py-2.5 px-3 text-center">${status}</td>
+        <td class="py-2.5 px-3 text-[11px]" style="color: var(--text-dim)">${escapeHTML(t.reason || "Requirement satisfied")}</td>
+      `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Top Errors
+      const sortedErrors = Object.entries(topErrors)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+      if (sortedErrors.length > 0) {
+        document.getElementById("errors-container").classList.remove("hidden");
+        const ul = document.getElementById("errors-list");
+        sortedErrors.forEach(([msg, count]) => {
+          const li = document.createElement("li");
+          li.className = "flex items-baseline gap-2 py-0.5";
+          li.innerHTML = `<span class="text-rose-500 font-bold px-1 rounded text-[10px] bg-rose-500/10 border border-rose-500/20">${count}x</span> <span style="color: var(--text)">${escapeHTML(msg)}</span>`;
+          ul.appendChild(li);
+        });
+      }
+
+      // Charts
+      const mainChart = echarts.init(document.getElementById("mainChart"));
+      const pieChart = echarts.init(document.getElementById("pieChart"));
+
+      function updateChartTheme() {
+        const isDark = document.documentElement.classList.contains("dark");
+        const textColor = isDark ? "#94a3b8" : "#64748b";
+        const labelTextColor = isDark ? "#cbd5e1" : "#334155";
+        const splitLineColor = isDark ? "#1e293b" : "#f1f5f9";
+        const bgTooltip = isDark ? "#0f172a" : "#ffffff";
+        const borderTooltip = isDark ? "#334155" : "#cbd5e1";
+
+        mainChart.setOption({
+          tooltip: {
+            trigger: "axis",
+            backgroundColor: bgTooltip,
+            borderColor: borderTooltip,
+            textStyle: {
+              color: isDark ? "#f8fafc" : "#0f172a",
+              fontFamily: "Geist Mono",
+              fontSize: 11,
+            },
+          },
+          legend: {
+            textStyle: { color: textColor, fontFamily: "Geist", fontSize: 11 },
+            bottom: 0,
+          },
+          grid: {
+            top: 20,
+            left: 10,
+            right: 20,
+            bottom: 35,
+            containLabel: true,
+          },
+          xAxis: [
+            {
+              type: "category",
+              boundaryGap: false,
+              data: timeSeries.map((d) => d.time),
+              axisLabel: {
+                color: textColor,
+                fontFamily: "Geist Mono",
+                fontSize: 10,
+              },
+            },
+          ],
+          yAxis: [
+            {
+              type: "value",
+              splitLine: {
+                lineStyle: { color: splitLineColor, type: "dashed" },
+              },
+              axisLabel: {
+                color: textColor,
+                fontFamily: "Geist Mono",
+                fontSize: 10,
+              },
+            },
+            {
+              type: "value",
+              alignTicks: true,
+              splitLine: { show: false },
+              axisLabel: {
+                color: textColor,
+                fontFamily: "Geist Mono",
+                fontSize: 10,
+              },
+            },
+          ],
+          series: [
+            {
+              name: "Throughput (RPS)",
+              type: "line",
+              smooth: 0.2,
+              showSymbol: false,
+              lineStyle: { width: 2, color: "#0284c7" },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "rgba(2, 132, 199, 0.2)" },
+                  { offset: 1, color: "rgba(2, 132, 199, 0)" },
+                ]),
+              },
+              data: timeSeries.map((d) => d.rps),
+            },
+            {
+              name: "Virtual Users",
+              type: "line",
+              yAxisIndex: 1,
+              step: "end",
+              showSymbol: false,
+              lineStyle: { width: 1.5, color: "#f59e0b", type: "dashed" },
+              data: timeSeries.map((d) => d.vus),
+            },
+          ],
+        });
+
+        const pieData = Object.keys(statusCodes).map((code) => {
+          let color = "#94a3b8";
+          if (code.startsWith("2")) color = "#10b981";
+          else if (code.startsWith("3")) color = "#0284c7";
+          else if (code.startsWith("4")) color = "#f59e0b";
+          else if (code.startsWith("5")) color = "#f43f5e";
+          return {
+            value: statusCodes[code],
+            name: `HTTP ${code}`,
+            itemStyle: { color },
+          };
+        });
+
+        pieChart.setOption({
+          tooltip: {
+            trigger: "item",
+            backgroundColor: bgTooltip,
+            borderColor: borderTooltip,
+            textStyle: {
+              color: isDark ? "#f8fafc" : "#0f172a",
+              fontFamily: "Geist Mono",
+              fontSize: 11,
+            },
+          },
+          series: [
+            {
+              name: "Status Codes",
+              type: "pie",
+              radius: ["42%", "68%"],
+              center: ["50%", "50%"],
+              avoidLabelOverlap: true,
+              itemStyle: {
+                borderColor: isDark ? "#121417" : "#ffffff",
+                borderWidth: 2,
+              },
+              label: {
+                show: true,
+                position: "outside",
+                color: textColor,
+                fontFamily: "Geist Mono",
+                fontSize: 11,
+                formatter: "{b}",
+              },
+              labelLine: {
+                show: pieData.length > 0,
+                length: 12,
+                length2: 10,
+                lineStyle: {
+                  color: isDark ? "#475569" : "#cbd5e1",
+                  width: 1,
+                },
+              },
+              data:
+                pieData.length > 0
+                  ? pieData
+                  : [
+                      {
+                        value: 1,
+                        name: "No Traffic",
+                        itemStyle: { color: splitLineColor },
+                      },
+                    ],
+            },
+          ],
+        });
+      }
+
+      if (timeSeries.length === 0)
+        timeSeries.push({
+          time: "00:00",
+          rps: reportData.average_rps || 0,
+          vus: 1,
+        });
+      updateChartTheme();
+
+      window.addEventListener("resize", () => {
+        mainChart.resize();
+        pieChart.resize();
+      });
+
+      // Endpoints Table
+      const tbody = document.getElementById("nodes-tbody");
+      nodes.forEach((node) => {
+        const tr = document.createElement("tr");
+        let display = escapeHTML(node.id);
+        const idx = display.indexOf("[");
+        if (idx !== -1) {
+          const path = display.substring(0, idx);
+          const id = display.substring(idx);
+          display = `<span class="font-medium">${path}</span><span style="color: var(--text-dim)" class="text-[10px] ml-1.5">${id}</span>`;
+        }
+
+        tr.innerHTML = `
+      <td class="py-2.5 px-3.5">${display}</td>
+      <td class="py-2.5 px-3 text-right">${node.reqs}</td>
+      <td class="py-2.5 px-3 text-right ${node.fails > 0 ? "text-rose-500 font-bold" : ""}" style="${node.fails === 0 ? "color: var(--text-dim)" : ""}">${node.fails}</td>
+      <td class="py-2.5 px-3 text-right" style="color: var(--text-dim)">${node.min}</td>
+      <td class="py-2.5 px-3 text-right">${node.avg.toFixed(1)}</td>
+      <td class="py-2.5 px-3 text-right">${node.p90}</td>
+      <td class="py-2.5 px-3 text-right">${node.p95}</td>
+      <td class="py-2.5 px-3 text-right text-sky-500 font-semibold">${node.p99}</td>
+      <td class="py-2.5 px-3 text-right" style="color: var(--text-dim)">${node.max}</td>
+      <td class="py-2.5 px-3 text-right" style="color: var(--text-dim)">${node.ttfb}</td>
+    `;
+        tbody.appendChild(tr);
+      });
+
+      // Flow Table
+      if (flows.length === 0) {
+        document.getElementById("flow-empty").classList.remove("hidden");
+        document.getElementById("flow-content").classList.add("hidden");
+      } else {
+        const flowTbody = document.getElementById("flow-tbody");
+        flows.forEach((f) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td class="py-2.5 px-3.5">${escapeHTML(f.id)}</td>
+        <td class="py-2.5 px-3 text-sky-500 font-semibold uppercase text-[11px]">${escapeHTML(f.type)}</td>
+        <td class="py-2.5 px-3" style="color: var(--text-dim)">${escapeHTML(f.details)}</td>
+      `;
+          flowTbody.appendChild(tr);
+        });
+      }
+
+      // Custom Metrics Table
+      if (customMetrics.length === 0) {
+        document.getElementById("custom-empty").classList.remove("hidden");
+        document.getElementById("custom-content").classList.add("hidden");
+      } else {
+        const customTbody = document.getElementById("custom-tbody");
+        customMetrics.forEach((m) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td class="py-2.5 px-3.5 font-medium">${escapeHTML(m.name)}</td>
+        <td class="py-2.5 px-3 uppercase text-[11px]" style="color: var(--text-dim)">${escapeHTML(m.type)}</td>
+        <td class="py-2.5 px-3 text-right">${m.count}</td>
+        <td class="py-2.5 px-3 text-right text-sky-500 font-semibold">${escapeHTML(m.value)}</td>
+      `;
+          customTbody.appendChild(tr);
+        });
+      }
+    </script>
+  </body>
+</html>
