@@ -37,6 +37,7 @@ jobs:
         with:
           version: v1.64
           working-directory: apps/core
+          install-mode: goinstall 
           args: --config=.golangci.yml
 
       - name: Run Core Tests
