@@ -56,7 +56,7 @@ func (h *PrettyHandler) Handle(ctx context.Context, r slog.Record) error {
 	sb.WriteString(timeStr)
 	sb.WriteString("] ")
 	sb.WriteString(color)
-	sb.WriteString(fmt.Sprintf("%-5s", level))
+	fmt.Fprintf(&sb, "%-5s", level)
 	sb.WriteString(Reset)
 	sb.WriteString(" | ")
 	sb.WriteString(r.Message)

@@ -107,6 +107,7 @@ func (s *stubHookExecutor) ExecuteHook(hookID string, req runner.ProtocolRequest
 	s.hookCalled = true
 	return nil
 }
+
 func (s *stubHookExecutor) EvaluateBoolean(hookID string) (bool, error)  { return s.evalBoolVal, nil }
 func (s *stubHookExecutor) EvaluateString(hookID string) (string, error) { return "case_a", nil }
 func (s *stubHookExecutor) IsAborted() bool                              { return false }

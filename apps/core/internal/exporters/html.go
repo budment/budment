@@ -315,7 +315,7 @@ func generateTextTree(scenarios []ExportScenario) string {
 		if name == "" {
 			name = fmt.Sprintf("Scenario %d", i+1)
 		}
-		sb.WriteString(fmt.Sprintf("▶ %s\n", name))
+		fmt.Fprintf(&sb, "▶ %s\n", name)
 
 		if len(scn.Graph.Setup) > 0 {
 			sb.WriteString("\n  [SETUP PHASE]\n")
@@ -364,38 +364,38 @@ func buildTextTree(nodes []planner.ExecutableNode, prefix string, sb *strings.Bu
 				fmt.Fprintf(sb, "%s└── after → %s\n", childPrefix, summarizeNodesText(n.AfterPipeline))
 			}
 		case *planner.BranchNode:
-			sb.WriteString(fmt.Sprintf("%s%s [BRANCH] %s\n", prefix, connector, nodeID))
-			sb.WriteString(fmt.Sprintf("%s├── [TRUE]\n", childPrefix))
+			fmt.Fprintf(sb, "%s%s [BRANCH] %s\n", prefix, connector, nodeID)
+			fmt.Fprintf(sb, "%s├── [TRUE]\n", childPrefix)
 			buildTextTree(n.TruePath, childPrefix+"│   ", sb)
 			if len(n.FalsePath) > 0 {
-				sb.WriteString(fmt.Sprintf("%s└── [FALSE]\n", childPrefix))
+				fmt.Fprintf(sb, "%s└── [FALSE]\n", childPrefix)
 				buildTextTree(n.FalsePath, childPrefix+"    ", sb)
 			} else {
-				sb.WriteString(fmt.Sprintf("%s└── [FALSE] (empty)\n", childPrefix))
+				fmt.Fprintf(sb, "%s└── [FALSE] (empty)\n", childPrefix)
 			}
 		case *planner.LoopNode:
-			sb.WriteString(fmt.Sprintf("%s%s [LOOP] %d iterations %s\n", prefix, connector, n.Count, nodeID))
+			fmt.Fprintf(sb, "%s%s [LOOP] %d iterations %s\n", prefix, connector, n.Count, nodeID)
 			buildTextTree(n.Logic, childPrefix, sb)
 		case *planner.MatchNode:
-			sb.WriteString(fmt.Sprintf("%s%s [MATCH] %s\n", prefix, connector, nodeID))
+			fmt.Fprintf(sb, "%s%s [MATCH] %s\n", prefix, connector, nodeID)
 			for caseName, path := range n.Cases {
 				if len(path) > 0 {
-					sb.WriteString(fmt.Sprintf("%s├── Case: %s\n", childPrefix, caseName))
+					fmt.Fprintf(sb, "%s├── Case: %s\n", childPrefix, caseName)
 					buildTextTree(path, childPrefix+"│   ", sb)
 				} else {
-					sb.WriteString(fmt.Sprintf("%s├── Case: %s (empty)\n", childPrefix, caseName))
+					fmt.Fprintf(sb, "%s├── Case: %s (empty)\n", childPrefix, caseName)
 				}
 			}
 			if len(n.DefaultPath) > 0 {
-				sb.WriteString(fmt.Sprintf("%s└── Default\n", childPrefix))
+				fmt.Fprintf(sb, "%s└── Default\n", childPrefix)
 				buildTextTree(n.DefaultPath, childPrefix+"    ", sb)
 			}
 		case *planner.PollNode:
-			sb.WriteString(fmt.Sprintf("%s%s [POLL] Max: %d %s\n", prefix, connector, n.MaxAttempts, nodeID))
-			sb.WriteString(fmt.Sprintf("%s└── [LOGIC]\n", childPrefix))
+			fmt.Fprintf(sb, "%s%s [POLL] Max: %d %s\n", prefix, connector, n.MaxAttempts, nodeID)
+			fmt.Fprintf(sb, "%s└── [LOGIC]\n", childPrefix)
 			buildTextTree(n.Logic, childPrefix+"    ", sb)
 		default:
-			sb.WriteString(fmt.Sprintf("%s%s [%s] %s\n", prefix, connector, node.Type(), nodeID))
+			fmt.Fprintf(sb, "%s%s [%s] %s\n", prefix, connector, node.Type(), nodeID)
 		}
 	}
 }

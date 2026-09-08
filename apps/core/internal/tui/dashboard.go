@@ -127,7 +127,7 @@ func (d *LiveDashboard) flushLogs() {
 
 func (d *LiveDashboard) clearFrame() {
 	if d.lastLineCount > 0 {
-		os.Stdout.WriteString(fmt.Sprintf("\033[%dA\033[J", d.lastLineCount))
+		_, _ = fmt.Fprintf(os.Stdout, "\033[%dA\033[J", d.lastLineCount)
 		d.lastLineCount = 0
 	}
 }
@@ -153,13 +153,12 @@ func (d *LiveDashboard) renderFrame(isFinal bool) {
 		status = theme.TextDim("FINISHED")
 		activeVUs = 0
 	}
-	sb.WriteString(fmt.Sprintf("%s %sBLASTER ENGINE%s%s%s\n\n",
+	fmt.Fprintf(&sb, "%s %sBLASTER ENGINE%s%s%s\n\n",
 		theme.TextCyan(spinners[d.spinnerIdx]),
 		theme.Bold,
 		theme.Reset,
 		strings.Repeat(" ", 38),
-		status,
-	))
+		status)
 
 	if failures > 0 {
 		if errMap := d.engine.GetTopErrors(); len(errMap) > 0 {
@@ -182,7 +181,7 @@ func (d *LiveDashboard) renderFrame(isFinal bool) {
 				if i >= 3 {
 					break
 				}
-				sb.WriteString(fmt.Sprintf("  %s  %s\n", theme.TextDim(truncateStr(item.msg, 65)), theme.TextRed(fmt.Sprintf("%3dx", item.count))))
+				fmt.Fprintf(&sb, "  %s  %s\n", theme.TextDim(truncateStr(item.msg, 65)), theme.TextRed(fmt.Sprintf("%3dx", item.count)))
 			}
 			sb.WriteString("\n")
 		}
@@ -214,7 +213,7 @@ func (d *LiveDashboard) renderFrame(isFinal bool) {
 
 	if rpsHistory, _ := d.engine.GetHistory(); len(rpsHistory) > 0 {
 		sb.WriteString("\n  Traffic\n")
-		sb.WriteString(fmt.Sprintf("  %-14s %s\n", fmt.Sprintf("%.1f req/s", rps), theme.TextCyan(widgets.RenderSparkline(rpsHistory))))
+		fmt.Fprintf(&sb, "  %-14s %s\n", fmt.Sprintf("%.1f req/s", rps), theme.TextCyan(widgets.RenderSparkline(rpsHistory)))
 	}
 
 	sb.WriteString("\n")
@@ -222,7 +221,7 @@ func (d *LiveDashboard) renderFrame(isFinal bool) {
 	hasIters := d.targetIters > 0
 
 	if !hasDuration && !hasIters {
-		sb.WriteString(fmt.Sprintf("  %sTime%s     : %s\n", theme.Dim, theme.Reset, formatDuration(elapsed)))
+		fmt.Fprintf(&sb, "  %sTime%s     : %s\n", theme.Dim, theme.Reset, formatDuration(elapsed))
 	} else {
 		const fixedBarWidth = 60
 

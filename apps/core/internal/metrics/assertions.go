@@ -77,7 +77,7 @@ func (a *AssertionManager) EvaluateThresholds(m *EngineMetrics) error {
 		}
 
 		var actualVal float64
-		var found bool = true
+		found := true
 
 		switch effectiveMetric {
 		case "fail_rate", "error_rate", "http_req_failed":

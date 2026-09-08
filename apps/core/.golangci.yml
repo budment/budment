@@ -1,42 +1,51 @@
+version: "2"
 run:
-  timeout: 3m
-  tests: true
   go: "1.26"
-
+  tests: true
 linters:
-  disable-all: true
+  default: none
   enable:
-    - errcheck # Ensures returned errors are properly handled
-    - govet # Official Go static analysis tool
-    - ineffassign # Detects ineffectual variable assignments
-    - staticcheck # Advanced static analysis checks
-    - unused # Identifies unused constants, variables, types, and functions
-    - bodyclose # Ensures HTTP response bodies are closed to prevent connection pool leaks
-    - noctx # Prohibits sending HTTP requests without a context.Context
-    - gofumpt # Enforces strict, modern Go code formatting
-    - makezero # Detects slice declarations with non-zero length followed by append
-    - durationcheck # Prevents incorrect or redundant time.Duration calculations
-    - errorlint # Enforces Go 1.13+ error handling idioms via errors.Is and errors.As
-
-linters-settings:
-  errcheck:
-    # Ignore unchecked errors for safe, predictable standard/VM functions
-    exclude-functions:
-      - io.WriteString
-      - (*os.File).WriteString
-      - (io.Closer).Close
-      - (*github.com/dop251/goja.Runtime).Set
-
+    - bodyclose
+    - durationcheck
+    - errcheck
+    - errorlint
+    - govet
+    - ineffassign
+    - makezero
+    - noctx
+    - staticcheck
+    - unused
+  settings:
+    errcheck:
+      exclude-functions:
+        - io.WriteString
+        - (*os.File).WriteString
+        - (io.Closer).Close
+        - (*github.com/dop251/goja.Runtime).Set
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+          - noctx
+        path: _test\.go
+    paths:
+      - .*\.pb\.go$
+      - .*_mock\.go$
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-files:
-    - ".*\\.pb\\.go$"
-    - ".*_mock\\.go$"
-  exclude-rules:
-    # Relax strict context and error handling checks in unit and benchmark tests
-    - path: _test\.go
-      linters:
-        - errcheck
-        - noctx
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - .*\.pb\.go$
+      - .*_mock\.go$
+      - third_party$
+      - builtin$
+      - examples$

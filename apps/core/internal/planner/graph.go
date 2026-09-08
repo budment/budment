@@ -245,8 +245,8 @@ func (c *GraphCompiler) compilePipeline(pipeline *pb.Pipeline, depth int) ([]Exe
 			nodes = append(nodes, &MatchNode{ID: step.Id, ConditionHookID: n.Match.ConditionHookId, Cases: cases, DefaultPath: defaultPath})
 
 		case *pb.Node_Poll:
-			var intervalDur time.Duration = 1 * time.Second
-			var timeoutDur time.Duration = 30 * time.Second
+			intervalDur := 1 * time.Second
+			timeoutDur := 30 * time.Second
 			var maxAttempts int32 = 60
 			if n.Poll.Policy != nil {
 				if n.Poll.Policy.Interval != "" {
