@@ -13,7 +13,10 @@ linters:
     - unused # Identifies unused constants, variables, types, and functions
     - bodyclose # Ensures HTTP response bodies are closed to prevent connection pool leaks
     - noctx # Prohibits sending HTTP requests without a context.Context
-    # - gofumpt # Enforces strict, modern Go code formatting
+    - gofumpt # Enforces strict, modern Go code formatting
+    - makezero # Detects slice declarations with non-zero length followed by append
+    - durationcheck # Prevents incorrect or redundant time.Duration calculations
+    - errorlint # Enforces Go 1.13+ error handling idioms via errors.Is and errors.As
 
 linters-settings:
   errcheck:

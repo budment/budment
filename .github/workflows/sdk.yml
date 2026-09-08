@@ -2,36 +2,38 @@ name: SDK CI
 
 on:
   push:
-    branches: [ main, master ]
-    paths:
-      - 'packages/sdk/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/sdk.yml'
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
-    paths:
-      - 'packages/sdk/**'
-      - 'pnpm-lock.yaml'
-      - '.github/workflows/sdk.yml'
+    branches: [main, master]
 
 jobs:
-  build-sdk:
+  filter:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.changes.outputs.sdk }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters:
+            sdk:
+              - "packages/sdk/**"
+              - "pnpm-lock.yaml"
+              - ".github/workflows/sdk.yml"
+
+  build:
     name: Build TypeScript SDK
+    needs: filter
+    if: ${{ needs.filter.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 25
-          cache: 'pnpm'
-
-      - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build SDK
-        run: pnpm --filter @blaster/sdk build
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @blaster/sdk build

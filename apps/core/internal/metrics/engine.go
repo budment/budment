@@ -212,16 +212,19 @@ func (m *EngineMetrics) GetAllBranches() map[string]*BranchMetrics {
 	m.branches.Range(func(k, v any) bool { res[k.(string)] = v.(*BranchMetrics); return true })
 	return res
 }
+
 func (m *EngineMetrics) GetAllLoops() map[string]*LoopMetrics {
 	res := make(map[string]*LoopMetrics)
 	m.loops.Range(func(k, v any) bool { res[k.(string)] = v.(*LoopMetrics); return true })
 	return res
 }
+
 func (m *EngineMetrics) GetAllPolls() map[string]*PollMetrics {
 	res := make(map[string]*PollMetrics)
 	m.polls.Range(func(k, v any) bool { res[k.(string)] = v.(*PollMetrics); return true })
 	return res
 }
+
 func (m *EngineMetrics) GetAllMatches() map[string]*MatchMetrics {
 	res := make(map[string]*MatchMetrics)
 	m.matches.Range(func(k, v any) bool { res[k.(string)] = v.(*MatchMetrics); return true })

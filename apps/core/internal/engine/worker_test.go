@@ -94,12 +94,14 @@ func (sr *stubRunner) GetLastReq() *stubRequest {
 	return sr.lastReq
 }
 
-type stubExecutorPool struct{}
-type stubHookExecutor struct {
-	HookExecutor
-	evalBoolVal bool
-	hookCalled  bool
-}
+type (
+	stubExecutorPool struct{}
+	stubHookExecutor struct {
+		HookExecutor
+		evalBoolVal bool
+		hookCalled  bool
+	}
+)
 
 func (s *stubHookExecutor) ExecuteHook(hookID string, req runner.ProtocolRequest, res runner.ProtocolResponse) error {
 	s.hookCalled = true

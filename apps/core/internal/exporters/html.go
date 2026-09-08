@@ -120,7 +120,7 @@ func (r *HTMLReporter) Export(engine *metrics.EngineMetrics, assert *metrics.Ass
 	}
 
 	var thresholdList []ThresholdUI
-	var thresholdPassed = true
+	thresholdPassed := true
 	if assert != nil {
 		_ = assert.EvaluateThresholds(engine)
 		thresholdPassed = !assert.HasFailures()

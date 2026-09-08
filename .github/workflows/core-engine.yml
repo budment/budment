@@ -3,18 +3,29 @@ name: Core Engine CI
 on:
   push:
     branches: [main, master]
-    paths:
-      - "apps/core/**"
-      - ".github/workflows/core-engine.yml"
   pull_request:
     branches: [main, master]
-    paths:
-      - "apps/core/**"
-      - ".github/workflows/core-engine.yml"
 
 jobs:
+  filter:
+    name: Check Changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.changes.outputs.core }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters:
+            core:
+              - "apps/core/**"
+              - ".github/workflows/core.yml"
+
   lint:
     name: Lint Core
+    needs: filter
+    if: ${{ needs.filter.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,7 +45,9 @@ jobs:
           args: --config=.golangci.yml
 
   test:
-    name: Test & Race Detection
+    name: Test Core
+    needs: filter
+    if: ${{ needs.filter.outputs.should_run == 'true' }}
     runs-on: ubuntu-latest
     defaults:
       run:

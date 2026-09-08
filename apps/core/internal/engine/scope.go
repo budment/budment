@@ -57,9 +57,11 @@ func NewGlobalState() *GlobalState {
 		},
 	}
 }
+
 func (g *GlobalState) Set(key string, val any) {
 	g.store.Store(key, val)
 }
+
 func (g *GlobalState) Get(key string) (any, bool) {
 	return g.store.Load(key)
 }
@@ -78,11 +80,14 @@ func NewLocalState() *LocalState {
 	return &LocalState{
 		QueueStore: QueueStore{
 			queues: make(map[string]chan any),
-		}}
+		},
+	}
 }
+
 func (l *LocalState) Set(key string, val any) {
 	l.store.Store(key, val)
 }
+
 func (l *LocalState) Get(key string) (any, bool) {
 	return l.store.Load(key)
 }
