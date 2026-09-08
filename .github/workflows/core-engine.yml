@@ -17,7 +17,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          filters:
+          filters: |
             core:
               - "apps/core/**"
               - ".github/workflows/core.yml"
