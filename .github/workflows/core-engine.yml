@@ -41,7 +41,6 @@ jobs:
         with:
           version: v1.64
           working-directory: apps/core
-          install-mode: goinstall
           args: --config=.golangci.yml
 
   test:
