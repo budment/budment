@@ -1,6 +1,8 @@
 package template
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"math/rand/v2"
 	"os"
@@ -38,32 +40,48 @@ func (e Expression) IsStatic() bool {
 	return e.compiled == nil || (len(e.compiled.chunks) == 1 && e.compiled.chunks[0].Kind == ChunkStatic)
 }
 
+type fileEntry struct {
+	raw    []byte
+	text   string
+	base64 string
+}
+
 // Loaded only when the worker actively executes.
-var (
-	lazyFileCache sync.Map
-)
+var lazyFileCache sync.Map
 
 // GetFileBytes reads and caches raw bytes, supporting binary files (PDF, images, zip).
 func GetFileBytes(path string) []byte {
+	return bytes.Clone(loadFileEntry(path).raw)
+}
+
+func loadFileEntry(path string) fileEntry {
 	if val, ok := lazyFileCache.Load(path); ok {
-		return val.([]byte)
+		return val.(fileEntry)
 	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
-		lazyFileCache.Store(path, []byte{})
-		return []byte{}
+		empty := fileEntry{}
+		lazyFileCache.Store(path, empty)
+		return empty
 	}
-	lazyFileCache.Store(path, data)
-	return data
+
+	entry := fileEntry{
+		raw:    data,
+		text:   fastconv.BytesToString(data),
+		base64: base64.StdEncoding.EncodeToString(data),
+	}
+	lazyFileCache.Store(path, entry)
+	return entry
 }
 
 // GetFileContent reads text files from the cache.
 func GetFileContent(path string) string {
-	bytes := GetFileBytes(path)
-	if len(bytes) == 0 {
-		return ""
-	}
-	return fastconv.BytesToString(bytes)
+	return loadFileEntry(path).text
+}
+
+func GetFileBase64(path string) string {
+	return loadFileEntry(path).base64
 }
 
 type ChunkKind uint8
@@ -136,18 +154,23 @@ func FastRandomInt(min, max int) int {
 	if min > max {
 		min, max = max, min
 	}
-	delta := max - min + 1
-	if delta <= 0 {
+	delta := uint64(max - min + 1)
+	if delta == 0 {
 		return min
 	}
-	return min + rand.IntN(delta)
+	return min + int(rand.Uint64N(delta))
+}
+
+func RandomPick[T any](arr []T) T {
+	var zero T
+	if len(arr) == 0 {
+		return zero
+	}
+	return arr[rand.IntN(len(arr))]
 }
 
 func FastRandomPick(arr []any) any {
-	if len(arr) == 0 {
-		return nil
-	}
-	return arr[rand.IntN(len(arr))]
+	return RandomPick(arr)
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -209,19 +232,27 @@ func parseASTChunk(varName, rawChunk string) Chunk {
 
 	if after, match := strings.CutPrefix(varName, "@open:"); match {
 		// Stores only the file path in the AST; file contents are not read at this stage.
-		filePath, mode, _ := strings.Cut(after, ":")
-		return Chunk{Kind: ChunkFile, Value: filePath, IsBinary: mode == "b", Raw: rawChunk}
+		filePath := after
+		isBinary := false
+		if lastColon := strings.LastIndexByte(after, ':'); lastColon != -1 {
+			mode := after[lastColon+1:]
+			if mode == "b" || mode == "t" {
+				filePath = after[:lastColon]
+				isBinary = (mode == "b")
+			}
+		}
+		return Chunk{Kind: ChunkFile, Value: filePath, IsBinary: isBinary, Raw: rawChunk}
 	}
 
 	if after, match := strings.CutPrefix(varName, "@random:"); match {
-		parts := strings.Split(after, ":")
-		switch parts[0] {
+		cmd, arg, _ := strings.Cut(after, ":")
+		switch cmd {
 		case "uuid":
 			return Chunk{Kind: ChunkRandomUUID, Raw: rawChunk}
 		case "string":
 			length := 16
-			if len(parts) >= 2 {
-				if l, err := strconv.Atoi(parts[1]); err == nil && l > 0 {
+			if arg != "" {
+				if l, err := strconv.Atoi(arg); err == nil && l > 0 {
 					length = l
 				} else {
 					return Chunk{Kind: ChunkStatic, Value: rawChunk}
@@ -229,20 +260,17 @@ func parseASTChunk(varName, rawChunk string) Chunk {
 			}
 			return Chunk{Kind: ChunkRandomString, IntParam: length, Raw: rawChunk}
 		case "int":
-			if len(parts) >= 3 {
-				minVal, err1 := strconv.Atoi(parts[1])
-				maxVal, err2 := strconv.Atoi(parts[2])
+			if minStr, maxStr, ok := strings.Cut(arg, ":"); ok {
+				minVal, err1 := strconv.Atoi(minStr)
+				maxVal, err2 := strconv.Atoi(maxStr)
 				if err1 == nil && err2 == nil {
-					if minVal > maxVal {
-						minVal, maxVal = maxVal, minVal
-					}
 					return Chunk{Kind: ChunkRandomInt, IntParam: minVal, MaxParam: maxVal, Raw: rawChunk}
 				}
 			}
 			return Chunk{Kind: ChunkStatic, Value: rawChunk}
 		case "pick":
-			if len(parts) >= 2 {
-				options := strings.Split(parts[1], ",")
+			if arg != "" {
+				options := strings.Split(arg, ",")
 				if len(options) > 0 {
 					return Chunk{Kind: ChunkRandomPick, Options: options, Raw: rawChunk}
 				}
@@ -272,7 +300,11 @@ func (ft *FastTemplate) Render(ctx ScopeProvider) string {
 			sb.WriteString(GetEnv(c.Value, c.Fallback))
 
 		case ChunkFile:
-			sb.WriteString(GetFileContent(c.Value))
+			if c.IsBinary {
+				sb.WriteString(GetFileBase64(c.Value))
+			} else {
+				sb.WriteString(GetFileContent(c.Value))
+			}
 
 		case ChunkRandomUUID:
 			sb.WriteString(FastUUID())
