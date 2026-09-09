@@ -90,7 +90,7 @@ func (c *cliMetricsSink) RecordEvent(workerID int, nodeID string, eventType stri
 		errMsg := fmt.Sprintf("[%s] %s", eventType, reason)
 
 		if c.agg != nil {
-			c.agg.PushEvent(metrics.MetricEvent{
+			c.agg.PushEvent(&metrics.MetricEvent{
 				WorkerID:    workerID,
 				NodeID:      nodeID,
 				ErrorMsg:    errMsg,
@@ -109,7 +109,7 @@ func (c *cliMetricsSink) Tag(workerID int, key string, value string) {
 
 func (c *cliMetricsSink) RecordCustom(workerID int, mType string, name string, val float64) {
 	if c.agg != nil {
-		c.agg.PushEvent(metrics.MetricEvent{
+		c.agg.PushEvent(&metrics.MetricEvent{
 			WorkerID:   workerID,
 			IsCustom:   true,
 			CustomType: metrics.CustomMetricType(mType),

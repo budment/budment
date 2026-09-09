@@ -46,9 +46,10 @@ func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, agg *metrics.Ag
 		return m
 	}
 
-	var engineScenarios []*engine.Scenario
+	engineScenarios := make([]*engine.Scenario, 0, len(plan.Scenarios))
 
-	for _, compScn := range plan.Scenarios {
+	for i := range plan.Scenarios {
+		compScn := plan.Scenarios[i]
 		localState := engine.NewLocalState()
 		scenarioName := compScn.Name
 		if scenarioName == "" {

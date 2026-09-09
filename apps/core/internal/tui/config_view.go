@@ -57,7 +57,7 @@ func PrintPlanOverview(scriptPath string, compileTimeMs int64, cfg config.Engine
 	}
 
 	if len(cfg.Thresholds) > 0 {
-		var ths []string
+		ths := make([]string, 0, len(cfg.Thresholds))
 		for k, v := range cfg.Thresholds {
 			ths = append(ths, fmt.Sprintf("%s (%s)", k, v))
 		}
@@ -65,7 +65,7 @@ func PrintPlanOverview(scriptPath string, compileTimeMs int64, cfg config.Engine
 	}
 
 	if len(cfg.Tags) > 0 {
-		var tags []string
+		tags := make([]string, 0, len(cfg.Tags))
 		for k, v := range cfg.Tags {
 			tags = append(tags, fmt.Sprintf("%s=%s", k, v))
 		}

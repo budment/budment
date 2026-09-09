@@ -237,7 +237,7 @@ func (w *Worker) executeActionProtocol(ctx context.Context, n *planner.ActionNod
 
 	if !execRes.IsSuccess || execRes.ErrorMessage != "" {
 		errMsg := fmt.Sprintf("Status: %d, Err: %s", execRes.Code, execRes.ErrorMessage)
-		w.Aggregator.PushEvent(metrics.MetricEvent{WorkerID: w.ID, NodeID: n.ID, ErrorMsg: errMsg})
+		w.Aggregator.PushEvent(&metrics.MetricEvent{WorkerID: w.ID, NodeID: n.ID, ErrorMsg: errMsg})
 		if w.Sink != nil {
 			w.Sink.Log(w.ID, n.ID, "SYS_ERR", errMsg)
 		}
@@ -286,7 +286,7 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 		if res != nil {
 			isFailed, extracted := res.Assert(n.ExpectCode, n.ExpectBodyContains, n.Extract, returnCode)
 			if isFailed {
-				w.Aggregator.PushEvent(metrics.MetricEvent{
+				w.Aggregator.PushEvent(&metrics.MetricEvent{
 					WorkerID:    w.ID,
 					NodeID:      n.ID,
 					ErrorMsg:    "Assertion Failed",
@@ -354,7 +354,7 @@ func (w *Worker) runHook(ctx context.Context, hookID string, req runner.Protocol
 		err := inst.ExecuteHook(hookID, req, res)
 		if err != nil {
 			errMsg := fmt.Sprintf("%v", err)
-			w.Aggregator.PushEvent(metrics.MetricEvent{WorkerID: w.ID, NodeID: hookID, ErrorMsg: errMsg, IsLogicFail: true})
+			w.Aggregator.PushEvent(&metrics.MetricEvent{WorkerID: w.ID, NodeID: hookID, ErrorMsg: errMsg, IsLogicFail: true})
 			if w.Sink != nil {
 				w.Sink.Log(w.ID, hookID, "SYS_ERR", errMsg)
 			}

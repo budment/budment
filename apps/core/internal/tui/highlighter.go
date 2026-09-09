@@ -21,7 +21,11 @@ func HighlightJSON(jsonStr string) string {
 
 	stringRegex := regexp.MustCompile(`:\s*"([^"]*)"`)
 	jsonStr = stringRegex.ReplaceAllStringFunc(jsonStr, func(match string) string {
-		val := match[strings.Index(match, `"`):]
+		idx := strings.Index(match, `"`)
+		if idx == -1 {
+			return match
+		}
+		val := match[idx:]
 		return `: ` + theme.TextGreen(val)
 	})
 

@@ -18,7 +18,7 @@ type MetricEvent struct {
 }
 
 type Aggregator struct {
-	eventChan     chan MetricEvent
+	eventChan     chan *MetricEvent
 	Metrics       *EngineMetrics
 	DroppedEvents int64 // Measures events dropped under overload.
 }
@@ -28,12 +28,15 @@ func NewAggregator(bufferSize int) *Aggregator {
 		bufferSize = 100_000
 	}
 	return &Aggregator{
-		eventChan: make(chan MetricEvent, bufferSize),
+		eventChan: make(chan *MetricEvent, bufferSize),
 		Metrics:   NewEngineMetrics(),
 	}
 }
 
-func (a *Aggregator) PushEvent(e MetricEvent) {
+func (a *Aggregator) PushEvent(e *MetricEvent) {
+	if e == nil {
+		return
+	}
 	select {
 	case a.eventChan <- e:
 	default:
@@ -41,7 +44,10 @@ func (a *Aggregator) PushEvent(e MetricEvent) {
 	}
 }
 
-func (a *Aggregator) processEvent(event MetricEvent) {
+func (a *Aggregator) processEvent(event *MetricEvent) {
+	if event == nil {
+		return
+	}
 	if event.IsCustom {
 		a.Metrics.Custom.Record(event.CustomType, event.CustomName, event.CustomVal)
 	} else {

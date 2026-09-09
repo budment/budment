@@ -1,7 +1,9 @@
 version: "2"
+
 run:
   go: "1.26"
   tests: true
+
 linters:
   default: none
   enable:
@@ -15,6 +17,12 @@ linters:
     - noctx
     - staticcheck
     - unused
+    - nilerr  
+    - prealloc 
+    - asasalint 
+    - unparam 
+    - gocritic 
+
   settings:
     errcheck:
       exclude-functions:
@@ -22,12 +30,25 @@ linters:
         - (*os.File).WriteString
         - (io.Closer).Close
         - (*github.com/dop251/goja.Runtime).Set
+        - (*mime/multipart.Writer).Close
+        - (mime/multipart.File).Close
+    gocritic:
+      enabled-tags:
+        - performance
+        - diagnostic
+      disabled-checks:
+        - ifElseChain
+      settings:
+        hugeParam:
+          sizeThreshold: 300
+
   exclusions:
     generated: lax
     rules:
       - linters:
           - errcheck
           - noctx
+          - unparam
         path: _test\.go
     paths:
       - .*\.pb\.go$
@@ -35,9 +56,11 @@ linters:
       - third_party$
       - builtin$
       - examples$
+
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+
 formatters:
   enable:
     - gofumpt

@@ -157,7 +157,7 @@ func (r *TerminalReporter) Export(
 			msg   string
 			count int
 		}
-		var errList []errItem
+		errList := make([]errItem, 0, len(topErrors))
 		for msg, count := range topErrors {
 			errList = append(errList, errItem{msg: msg, count: count})
 		}
@@ -174,7 +174,7 @@ func (r *TerminalReporter) Export(
 
 	statusCounts := make(map[int]int64)
 	for _, node := range engine.GetAllNodes() {
-		for code, count := range node.StatusCodes {
+		for code, count := range &node.StatusCodes {
 			if count > 0 {
 				statusCounts[code] += count
 			}
@@ -182,13 +182,13 @@ func (r *TerminalReporter) Export(
 	}
 	if len(statusCounts) > 0 {
 		printSection(fmt.Sprintf("STATUS CODES (%d Total)", totalReqs))
-		var codes []int
+		codes := make([]int, 0, len(statusCounts))
 		for code := range statusCounts {
 			codes = append(codes, code)
 		}
 		sort.Ints(codes)
 
-		var parts []string
+		parts := make([]string, 0, len(codes))
 		for _, code := range codes {
 			count := statusCounts[code]
 			codeStr := fmt.Sprint(code)
@@ -210,7 +210,7 @@ func (r *TerminalReporter) Export(
 
 	printSection("REQUEST TIMINGS · ms")
 	nodeMetrics := engine.GetAllNodes()
-	var nodeIDs []string
+	nodeIDs := make([]string, 0, len(nodeMetrics))
 	for nodeID := range nodeMetrics {
 		nodeIDs = append(nodeIDs, nodeID)
 	}
@@ -279,7 +279,7 @@ func (r *TerminalReporter) Export(
 		flowTable := widgets.NewTable("Node ID", "Type", "Execution Summary")
 
 		// Scripts
-		var scriptIDs []string
+		scriptIDs := make([]string, 0, len(scripts))
 		for id := range scripts {
 			scriptIDs = append(scriptIDs, id)
 		}
@@ -301,7 +301,7 @@ func (r *TerminalReporter) Export(
 		}
 
 		// Branches
-		var branchIDs []string
+		branchIDs := make([]string, 0, len(branches))
 		for id := range branches {
 			branchIDs = append(branchIDs, id)
 		}
@@ -314,7 +314,7 @@ func (r *TerminalReporter) Export(
 		}
 
 		// Loops
-		var loopIDs []string
+		loopIDs := make([]string, 0, len(loops))
 		for id := range loops {
 			loopIDs = append(loopIDs, id)
 		}
@@ -327,7 +327,7 @@ func (r *TerminalReporter) Export(
 		}
 
 		// Polls
-		var pollIDs []string
+		pollIDs := make([]string, 0, len(polls))
 		for id := range polls {
 			pollIDs = append(pollIDs, id)
 		}
@@ -341,7 +341,7 @@ func (r *TerminalReporter) Export(
 		}
 
 		// Matches
-		var matchIDs []string
+		matchIDs := make([]string, 0, len(matches))
 		for id := range matches {
 			matchIDs = append(matchIDs, id)
 		}
@@ -349,7 +349,7 @@ func (r *TerminalReporter) Export(
 		for _, id := range matchIDs {
 			m := matches[id]
 			cases := m.GetAll()
-			var parts []string
+			parts := make([]string, 0, len(cases))
 			for k, v := range cases {
 				parts = append(parts, fmt.Sprintf("%s: %d", k, v))
 			}
@@ -363,7 +363,7 @@ func (r *TerminalReporter) Export(
 	if len(customMap) > 0 {
 		printSection("CUSTOM BUSINESS METRICS")
 		customTable := widgets.NewTable("Metric", "Type", "Count", "Value (Last / Min / Max / Sum)")
-		var keys []string
+		keys := make([]string, 0, len(customMap))
 		for key := range customMap {
 			keys = append(keys, key)
 		}

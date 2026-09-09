@@ -16,7 +16,7 @@ func TestAggregator_DrainOnShutdown(t *testing.T) {
 
 	// Enqueue 100 events into the aggregator
 	for i := 0; i < 100; i++ {
-		agg.PushEvent(MetricEvent{
+		agg.PushEvent(&MetricEvent{
 			WorkerID:    1,
 			NodeID:      "node_test",
 			ErrorMsg:    "Network Timeout",
@@ -49,7 +49,7 @@ func TestAggregator_NonBlockingDrop_OnOverflow(t *testing.T) {
 
 	// Enqueue 5 consecutive events
 	for i := 0; i < 5; i++ {
-		agg.PushEvent(MetricEvent{
+		agg.PushEvent(&MetricEvent{
 			WorkerID: i,
 			ErrorMsg: "Fast flood",
 		})

@@ -209,7 +209,7 @@ func (r *HTMLReporter) Export(engine *metrics.EngineMetrics, assert *metrics.Ass
 			TLS:   nodeMet.TLSHand.Percentile(90.0),
 		})
 
-		for code, count := range nodeMet.StatusCodes {
+		for code, count := range &nodeMet.StatusCodes {
 			if count > 0 {
 				data.StatusCodes[fmt.Sprint(code)] += int(count)
 			}
