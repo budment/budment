@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/exporters"
 	"github.com/vunas/blaster/internal/metrics"
 )
 
@@ -20,11 +19,10 @@ type Director struct {
 	BaseConfig     config.EngineConfig
 	Aggregator     *metrics.Aggregator
 	BarrierManager *BarrierManager
-	Reporters      []exporters.Reporter
 }
 
-func NewDirector(scenarios []*Scenario, baseCfg config.EngineConfig, agg *metrics.Aggregator, sm *BarrierManager, reporters []exporters.Reporter) *Director {
-	return &Director{Scenarios: scenarios, BaseConfig: baseCfg, Aggregator: agg, BarrierManager: sm, Reporters: reporters}
+func NewDirector(scenarios []*Scenario, baseCfg config.EngineConfig, agg *metrics.Aggregator, sm *BarrierManager) *Director {
+	return &Director{Scenarios: scenarios, BaseConfig: baseCfg, Aggregator: agg, BarrierManager: sm}
 }
 
 func (d *Director) Run() error {

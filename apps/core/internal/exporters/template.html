@@ -162,22 +162,31 @@
       style="border-color: var(--border)"
     >
       <div class="flex items-center gap-3">
-        <div
-          class="w-8 h-8 rounded bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 font-mono font-bold text-sm"
-        >
-          ◆
-        </div>
-        <div class="flex items-center gap-2">
-          <h1 class="text-base font-bold tracking-tight">BLASTER</h1>
-          <span class="text-xs font-mono" style="color: var(--text-dim)"
-            >/</span
-          >
+        <div class="flex items-center gap-2.5">
           <span
-            class="text-xs font-mono"
-            style="color: var(--text-dim)"
-            id="test-time"
-          ></span>
+            class="font-mono font-bold text-xs tracking-wider text-white bg-blue-600 px-2.5 py-1 rounded-md shadow-xs"
+          >
+            BLASTER
+          </span>
+          <span
+            class="text-xs font-semibold text-slate-400 dark:text-slate-500"
+          >
+            / telemetry
+          </span>
+          <span
+            class="hidden sm:inline-block font-mono text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 px-1.5 py-0.5 rounded"
+          >
+            v0.4
+          </span>
         </div>
+        <span class="text-slate-300 dark:text-slate-700 font-mono text-xs"
+          >|</span
+        >
+        <span
+          class="text-xs font-mono text-slate-500 dark:text-slate-400"
+          id="test-time"
+          >Completed Execution</span
+        >
       </div>
 
       <!-- Actions: Theme Toggle & SLA Badge -->
@@ -446,7 +455,7 @@
 
         <!-- Charts -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-          <div class="card p-4 lg:col-span-2 h-95 flex flex-col">
+          <div class="card p-4 lg:col-span-2 h-96 flex flex-col">
             <span
               class="text-xs font-mono uppercase tracking-wider block mb-2"
               style="color: var(--text-dim)"
@@ -454,7 +463,7 @@
             >
             <div id="mainChart" class="flex-1 w-full"></div>
           </div>
-          <div class="card p-4 h-95 flex flex-col">
+          <div class="card p-4 h-96 flex flex-col">
             <span
               class="text-xs font-mono uppercase tracking-wider block mb-2"
               style="color: var(--text-dim)"

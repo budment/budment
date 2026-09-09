@@ -90,7 +90,7 @@ func PrepareExecution(plan *PlanResult, cfg config.EngineConfig, agg *metrics.Ag
 		engineScenarios = append(engineScenarios, scenario)
 	}
 
-	director := engine.NewDirector(engineScenarios, cfg, agg, barrierManager, reporters)
+	director := engine.NewDirector(engineScenarios, cfg, agg, barrierManager)
 
 	return &ExecutionApp{Director: director, Aggregator: agg}, nil
 }

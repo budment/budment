@@ -26,7 +26,7 @@ func TestDirector_ScenarioOrderAndGracefulShutdown(t *testing.T) {
 	scn1 := NewScenario("Scn1", config.EngineConfig{Order: 1, VUs: 1, Iterations: intPtr(2)}, graph, pool, agg, nil, runnerFac, nil, nil, nil)
 	scn2 := NewScenario("Scn2", config.EngineConfig{Order: 2, VUs: 1, Iterations: intPtr(3)}, graph, pool, agg, nil, runnerFac, nil, nil, nil)
 
-	director := NewDirector([]*Scenario{scn1, scn2}, config.EngineConfig{}, agg, nil, nil)
+	director := NewDirector([]*Scenario{scn1, scn2}, config.EngineConfig{}, agg, nil)
 
 	err := director.Run()
 	if err != nil {
@@ -56,7 +56,7 @@ func TestDirector_MaxDurationInterruption(t *testing.T) {
 
 	// Enforce global 30ms hard cutoff
 	baseCfg := config.EngineConfig{MaxDuration: "30ms"}
-	director := NewDirector([]*Scenario{scn1}, baseCfg, agg, nil, nil)
+	director := NewDirector([]*Scenario{scn1}, baseCfg, agg, nil)
 
 	start := time.Now()
 	err := director.Run()

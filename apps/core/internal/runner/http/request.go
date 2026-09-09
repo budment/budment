@@ -1,6 +1,9 @@
 package http
 
 import (
+	"bytes"
+	"mime/multipart"
+	"net/textproto"
 	"net/url"
 	"strings"
 
@@ -11,7 +14,7 @@ import (
 	"github.com/vunas/blaster/internal/template"
 )
 
-// Request is the "req" object passed to the .before(req) hook.
+// Request represents the mutable HTTP request passed to the .before(req) pipeline hook.
 type Request struct {
 	URL     string
 	Method  string
@@ -19,6 +22,7 @@ type Request struct {
 	Body    []byte
 }
 
+// Set mutates the outgoing payload and options (headers, path, query parameters).
 func (r *Request) Set(body any, options map[string]any) {
 	if body != nil {
 		switch v := body.(type) {
@@ -40,6 +44,10 @@ func (r *Request) Set(body any, options map[string]any) {
 				r.Body = bb.Bytes()
 				goto ProcessOptions
 			}
+			if fields, ok := exported.(map[string]any); ok && hasMultipartFile(fields) {
+				r.buildMultipart(fields)
+				goto ProcessOptions
+			}
 			if bytesVal, err := json.Marshal(exported); err == nil {
 				r.Body = bytesVal
 			}
@@ -57,6 +65,15 @@ func (r *Request) Set(body any, options map[string]any) {
 				}
 			}
 			r.Body = buf
+
+		case map[string]any:
+			if hasMultipartFile(v) {
+				r.buildMultipart(v)
+				goto ProcessOptions
+			}
+			if bytesVal, err := json.Marshal(v); err == nil {
+				r.Body = bytesVal
+			}
 
 		default:
 			if bytesVal, err := json.Marshal(v); err == nil {
@@ -104,7 +121,7 @@ ProcessOptions:
 	}
 }
 
-// Quickly extract a single node using GJSON or unmarshal the entire body.
+// Json extracts a single value via GJSON or unmarshals the full payload if no selector is provided.
 func (r *Request) Json(selector ...string) any {
 	if len(r.Body) == 0 {
 		return nil
@@ -125,6 +142,7 @@ func (r *Request) Json(selector ...string) any {
 	return out
 }
 
+// ApplyMutation renders pre-compiled template headers and payloads into the request context.
 func (r *Request) ApplyMutation(meta map[string]template.Expression, payload template.Expression, scope template.ScopeProvider) {
 	if len(meta) > 0 {
 		if r.Headers == nil {
@@ -137,4 +155,92 @@ func (r *Request) ApplyMutation(meta map[string]template.Expression, payload tem
 	if payload.Raw != "" {
 		r.Body = fastconv.StringToBytes(payload.Render(scope))
 	}
+}
+
+// File creates a descriptor marking a payload as a multipart file upload.
+// Exposed to the JavaScript runtime as req.file(data, [filename], [contentType]).
+func (r *Request) File(data any, args ...string) map[string]any {
+	filename := "upload.bin"
+	contentType := "application/octet-stream"
+
+	if len(args) > 0 && args[0] != "" {
+		filename = args[0]
+	}
+	if len(args) > 1 && args[1] != "" {
+		contentType = args[1]
+	}
+
+	return map[string]any{
+		"__blaster_file": true,
+		"data":           data,
+		"filename":       filename,
+		"contentType":    contentType,
+	}
+}
+
+// hasMultipartFile checks if any top-level key contains a file descriptor.
+func hasMultipartFile(fields map[string]any) bool {
+	for _, val := range fields {
+		if m, ok := val.(map[string]any); ok {
+			if isFile, _ := m["__blaster_file"].(bool); isFile {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// buildMultipart serializes form fields and file descriptors into a MIME multipart body.
+func (r *Request) buildMultipart(fields map[string]any) {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	for key, val := range fields {
+		if val == nil {
+			continue
+		}
+
+		if fileMap, ok := val.(map[string]any); ok && fileMap["__blaster_file"] == true {
+			filename, _ := fileMap["filename"].(string)
+			contentType, _ := fileMap["contentType"].(string)
+
+			h := make(textproto.MIMEHeader)
+			h.Set("Content-Disposition", `form-data; name="`+key+`"; filename="`+filename+`"`)
+			h.Set("Content-Type", contentType)
+
+			part, err := writer.CreatePart(h)
+			if err != nil {
+				continue
+			}
+
+			var data []byte
+			switch d := fileMap["data"].(type) {
+			case []byte:
+				data = d
+			case string:
+				data = fastconv.StringToBytes(d)
+			case interface{ Bytes() []byte }:
+				data = d.Bytes()
+			case interface{ Export() any }:
+				if raw, ok := d.Export().([]byte); ok {
+					data = raw
+				}
+			}
+
+			if len(data) > 0 {
+				_, _ = part.Write(data)
+			}
+			continue
+		}
+
+		_ = writer.WriteField(key, fastconv.String(val))
+	}
+
+	_ = writer.Close()
+	r.Body = buf.Bytes()
+
+	if r.Headers == nil {
+		r.Headers = make(map[string]string, 2)
+	}
+	r.Headers["Content-Type"] = writer.FormDataContentType()
 }
