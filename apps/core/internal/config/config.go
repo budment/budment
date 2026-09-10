@@ -7,12 +7,6 @@ type ExportersConfig struct {
 	Prometheus string `yaml:"prometheus"`
 }
 
-// Customizes table results
-type SummaryConfig struct {
-	// Eg: ["avg", "p90", "p95", "p99", "max"]
-	TrendStats []string `yaml:"trend_stats"`
-}
-
 // Configures HTTP transport settings.
 type HTTPConfig struct {
 	Timeout         string `yaml:"timeout"`
@@ -32,7 +26,6 @@ type EngineConfig struct {
 	Tags            map[string]string `yaml:"tags"`
 	InsecureSkipTLS bool              `yaml:"insecure_skip_tls_verify"`
 	Exporters       ExportersConfig   `yaml:"exporters"`
-	Summary         SummaryConfig     `yaml:"summary"`
 	HTTP            HTTPConfig        `yaml:"http"`
 }
 
@@ -79,9 +72,6 @@ func DefaultEngineConfig() EngineConfig {
 			Timeout:         "30s",
 			MaxIdleConns:    10000,
 			MaxConnsPerHost: 10000,
-		},
-		Summary: SummaryConfig{
-			TrendStats: []string{"avg", "min", "med", "max", "p90", "p95", "p99"},
 		},
 	}
 }

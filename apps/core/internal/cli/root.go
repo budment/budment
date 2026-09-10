@@ -31,7 +31,7 @@ func IsCIEnvironment() bool {
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:           "budment",
+	Use:           "bud",
 	Short:         "Budment - Testing Engine",
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -43,6 +43,11 @@ var rootCmd = &cobra.Command{
 		})
 		return nil
 	},
+}
+
+func SetVersionInfo(version, commit, date string) {
+	rootCmd.Version = version
+	rootCmd.SetVersionTemplate(fmt.Sprintf("bud version %s (commit: %s, built at: %s)\n", version, commit, date))
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

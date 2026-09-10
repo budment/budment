@@ -272,6 +272,13 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 		msg := n.Message.Render(w.Scope)
 		w.Sink.Log(w.ID, n.ID, "INFO", msg)
 
+	case *planner.TagNode:
+		key := n.Key
+		val := n.Value.Render(w.Scope)
+		if w.Sink != nil {
+			w.Sink.Tag(w.ID, key, val)
+		}
+
 	case *planner.BarrierNode:
 		if w.BarrierManager != nil {
 			w.BarrierManager.ArriveAndWait(ctx, n.Name, n.Quorum, 0)
@@ -336,12 +343,6 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 		}
 		if w.Sink != nil {
 			w.Sink.RecordCustom(w.ID, n.MetricType, n.Name, valFloat)
-		}
-	case *planner.TagNode:
-		key := n.Key
-		val := n.Value.Render(w.Scope)
-		if w.Sink != nil {
-			w.Sink.Tag(w.ID, key, val)
 		}
 	}
 	return false

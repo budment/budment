@@ -287,6 +287,13 @@ func (c *GraphCompiler) compilePipeline(pipeline *pb.Pipeline, depth int) ([]Exe
 				Message: template.NewExpression(n.Log.Message),
 			})
 
+		case *pb.Node_Tag:
+			nodes = append(nodes, &TagNode{
+				ID:    step.Id,
+				Key:   n.Tag.Key,
+				Value: template.NewExpression(n.Tag.Value),
+			})
+
 		case *pb.Node_Barrier:
 			nodes = append(nodes, &BarrierNode{ID: step.Id, Name: n.Barrier.Name, Quorum: int(n.Barrier.Quorum)})
 

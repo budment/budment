@@ -29,7 +29,7 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	}
 
 	// Dynamic bridge: Supports both 'export default [...]', named exports ('export const scn1 = [...]'),
-	// and explicit fluent builder calls ('scenario().build()').
+	// and explicit fluent builder calls ('scenario().config().setup̣().execution()').
 	bridgeScript := `
 		(() => {
 		  let exp = undefined;
@@ -38,46 +38,68 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		  } else if (typeof globalThis !== 'undefined' && globalThis.__BUDMENT_EXPORTS__) {
 		    exp = globalThis.__BUDMENT_EXPORTS__;
 		  }
-
-		  if (!exp) return;
-
+		
 		  globalThis.__BUDMENT_SCENARIOS__ = globalThis.__BUDMENT_SCENARIOS__ || [];
-		  
-		  const compilePipeline = (nodes) => {
-		    if (!nodes) return undefined;
-		    return { steps: nodes.map(n => typeof n.build === 'function' ? n.build() : n) };
+		
+		  const compilePipeline = (input) => {
+		    if (!input) return undefined;		
+		    if (typeof input.build === 'function') {
+		      input = input.build();
+		    }		
+		    if (input && Array.isArray(input.steps)) {
+		      return input;
+		    }
+		    const list = Array.isArray(input) ? input : [input];
+		    return {
+		      steps: list.map(n => (n && typeof n.build === 'function') ? n.build() : n)
+		    };
 		  };
-		  
-		  const globalConfig = exp.options || exp.config || {};
-
-		  // Case 1: Single default export -> export default [ ... ]
-		  if (exp.default && Array.isArray(exp.default)) {
-		    globalThis.__BUDMENT_SCENARIOS__.push({
-		      name: "Default Scenario",
-		      config: globalConfig,
-		      setup: exp.setup ? compilePipeline(exp.setup) : undefined,
-		      execution: compilePipeline(exp.default)
-		    });
-		  } else {
-		    // Case 2: Multi-scenario named exports -> export const scenario_a = [ ... ]
-		    for (const key of Object.keys(exp)) {
-		      if (key === 'options' || key === 'config' || key === 'setup') continue;
-		      const val = exp[key];
-		      if (Array.isArray(val)) {
-		        globalThis.__BUDMENT_SCENARIOS__.push({
-		          name: key,
-		          config: globalConfig,
-		          setup: exp.setup ? compilePipeline(exp.setup) : undefined,
-		          execution: compilePipeline(val)
-		        });
-		      } else if (val && typeof val === 'object' && val.execution) {
-		        globalThis.__BUDMENT_SCENARIOS__.push({
-		          name: key,
-		          config: val.config || globalConfig,
-		          setup: val.setup ? compilePipeline(val.setup) : undefined,
-		          execution: compilePipeline(val.execution)
-		        });
+		
+		  const globalConfig = (exp && (exp.options || exp.config)) || {};
+		
+		  const registerScenario = (name, val) => {
+		    if (val && typeof val.build === 'function') {
+		      val = val.build();
+		    }
+		    if (val && val.execution && val.execution.steps) {
+		      if (!val.name) val.name = name;
+		      val.config = val.config || globalConfig;
+		      globalThis.__BUDMENT_SCENARIOS__.push(val);
+		      return;
+		    }
+		    if (val && typeof val === 'object' && val.execution) {
+		      globalThis.__BUDMENT_SCENARIOS__.push({
+		        name: val.name || name,
+		        config: val.config || globalConfig,
+		        setup: val.setup ? compilePipeline(val.setup) : (exp && exp.setup ? compilePipeline(exp.setup) : undefined),
+		        execution: compilePipeline(val.execution)
+		      });
+		      return;
+		    }
+		    if (Array.isArray(val)) {
+		      globalThis.__BUDMENT_SCENARIOS__.push({
+		        name: name,
+		        config: globalConfig,
+		        setup: exp && exp.setup ? compilePipeline(exp.setup) : undefined,
+		        execution: compilePipeline(val)
+		      });
+		    }
+		  };
+		
+		  if (exp) {
+		    // Case 1: export default
+		    if (exp.default) {
+		      if (Array.isArray(exp.default)) {
+		        registerScenario("Default Scenario", exp.default);
+		      } else {
+		        registerScenario("Default Scenario", exp.default);
 		      }
+		    }
+		
+		    // Case 2: Multi-scenario named exports
+		    for (const key of Object.keys(exp)) {
+		      if (key === 'options' || key === 'config' || key === 'setup' || key === 'default') continue;
+		      registerScenario(key, exp[key]);
 		    }
 		  }
 		})();`
@@ -141,6 +163,9 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 	vm.Set("log", func(msg string) any { return createMockNode("log", map[string]any{"message": msg}) })
 	vm.Set("warn", func(msg string) any { return createMockNode("log", map[string]any{"message": "[WARN] " + msg}) })
 	vm.Set("error", func(msg string) any { return createMockNode("log", map[string]any{"message": "[ERROR] " + msg}) })
+	vm.Set("tag", func(key string, value string) any {
+		return createMockNode("tag", map[string]any{"key": key, "value": value})
+	})
 	vm.Set("set", func(key string, val any) any {
 		return createMockNode("set", map[string]any{"key": key, "valueJson": fmt.Sprint(val), "scope": "worker"})
 	})
