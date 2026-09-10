@@ -41,7 +41,7 @@ func TestAssertions_ParseCondition_Variants(t *testing.T) {
 }
 
 func TestAssertions_EvaluateThresholds_PassAndBreach(t *testing.T) {
-	m := NewEngineMetrics()
+	m := NewEngineMetrics(nil)
 
 	// Simulate test execution: 90 successes, 10 failures (10% failure rate)
 	for i := 0; i < 90; i++ {

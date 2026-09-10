@@ -25,7 +25,7 @@ func intPtr(v int) *int {
 }
 
 func TestScenario_Run_ConstantVUs_And_Iterations(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	ctxAgg, cancelAgg := context.WithCancel(context.Background())
 	aggDone := make(chan struct{})
 	go agg.Run(ctxAgg, aggDone)
@@ -62,7 +62,7 @@ func TestScenario_Run_ConstantVUs_And_Iterations(t *testing.T) {
 }
 
 func TestScenario_Run_DurationTimeout(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	ctxAgg, cancelAgg := context.WithCancel(context.Background())
 	aggDone := make(chan struct{})
 	go agg.Run(ctxAgg, aggDone)

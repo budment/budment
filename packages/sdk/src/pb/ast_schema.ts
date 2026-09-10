@@ -95,6 +95,7 @@ export interface Node {
   metric?: MetricNode | undefined;
   reqMutate?: ReqMutateNode | undefined;
   resAssert?: ResAssertNode | undefined;
+  tag?: TagNode | undefined;
 }
 
 export interface ActionNode {
@@ -198,5 +199,10 @@ export interface DistributeNode {
 export interface MetricNode {
   metricType?: string | undefined;
   name?: string | undefined;
+  value?: string | undefined;
+}
+
+export interface TagNode {
+  key?: string | undefined;
   value?: string | undefined;
 }

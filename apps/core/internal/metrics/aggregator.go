@@ -23,13 +23,13 @@ type Aggregator struct {
 	DroppedEvents int64 // Measures events dropped under overload.
 }
 
-func NewAggregator(bufferSize int) *Aggregator {
+func NewAggregator(bufferSize int, globalTags map[string]string) *Aggregator {
 	if bufferSize <= 0 {
 		bufferSize = 100_000
 	}
 	return &Aggregator{
 		eventChan: make(chan *MetricEvent, bufferSize),
-		Metrics:   NewEngineMetrics(),
+		Metrics:   NewEngineMetrics(globalTags),
 	}
 }
 

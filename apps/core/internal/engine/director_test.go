@@ -12,7 +12,7 @@ import (
 )
 
 func TestDirector_ScenarioOrderAndGracefulShutdown(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	pool := &dummyExecutorPool{}
 	runnerFac := func() *runner.Manager { return nil }
 
@@ -41,7 +41,7 @@ func TestDirector_ScenarioOrderAndGracefulShutdown(t *testing.T) {
 }
 
 func TestDirector_MaxDurationInterruption(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	pool := &dummyExecutorPool{}
 	runnerFac := func() *runner.Manager { return nil }
 

@@ -35,6 +35,7 @@ type EngineMetrics struct {
 	IterationDuration *AtomicHistogram // Per-iteration duration metrics
 	RequestDuration   *AtomicHistogram
 	Custom            *CustomMetricsStore // User-defined JS metrics
+	GlobalTags        map[string]string
 
 	nodes    sync.Map
 	branches sync.Map
@@ -53,12 +54,16 @@ type EngineMetrics struct {
 	VUHistory    []int64
 }
 
-func NewEngineMetrics() *EngineMetrics {
+func NewEngineMetrics(globalTags map[string]string) *EngineMetrics {
+	if globalTags == nil {
+		globalTags = make(map[string]string)
+	}
 	size := 60
 	return &EngineMetrics{
 		IterationDuration: NewAtomicHistogram(),
 		RequestDuration:   NewAtomicHistogram(),
 		Custom:            NewCustomMetricsStore(),
+		GlobalTags:        globalTags,
 		ErrorCounts:       make(map[string]int),
 		TimeSeries:        make([]TimeSeriesPoint, 0, 1000),
 		historySize:       size,

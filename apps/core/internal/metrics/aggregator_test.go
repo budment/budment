@@ -8,7 +8,7 @@ import (
 )
 
 func TestAggregator_DrainOnShutdown(t *testing.T) {
-	agg := NewAggregator(1000)
+	agg := NewAggregator(1000, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 
@@ -45,7 +45,7 @@ func TestAggregator_DrainOnShutdown(t *testing.T) {
 
 func TestAggregator_NonBlockingDrop_OnOverflow(t *testing.T) {
 	// Initialize minimal buffer (capacity 2) without starting Run() consumer loop
-	agg := NewAggregator(2)
+	agg := NewAggregator(2, nil)
 
 	// Enqueue 5 consecutive events
 	for i := 0; i < 5; i++ {

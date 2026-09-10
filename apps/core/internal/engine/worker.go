@@ -337,6 +337,12 @@ func (w *Worker) executeAuxiliaryNode(ctx context.Context, node planner.Executab
 		if w.Sink != nil {
 			w.Sink.RecordCustom(w.ID, n.MetricType, n.Name, valFloat)
 		}
+	case *planner.TagNode:
+		key := n.Key
+		val := n.Value.Render(w.Scope)
+		if w.Sink != nil {
+			w.Sink.Tag(w.ID, key, val)
+		}
 	}
 	return false
 }

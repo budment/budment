@@ -332,6 +332,7 @@ type Node struct {
 	//	*Node_Metric
 	//	*Node_ReqMutate
 	//	*Node_ResAssert
+	//	*Node_Tag
 	Type          isNode_Type `protobuf_oneof:"type"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -507,6 +508,15 @@ func (x *Node) GetResAssert() *ResAssertNode {
 	return nil
 }
 
+func (x *Node) GetTag() *TagNode {
+	if x != nil {
+		if x, ok := x.Type.(*Node_Tag); ok {
+			return x.Tag
+		}
+	}
+	return nil
+}
+
 type isNode_Type interface {
 	isNode_Type()
 }
@@ -567,6 +577,10 @@ type Node_ResAssert struct {
 	ResAssert *ResAssertNode `protobuf:"bytes,15,opt,name=res_assert,json=resAssert,proto3,oneof"`
 }
 
+type Node_Tag struct {
+	Tag *TagNode `protobuf:"bytes,16,opt,name=tag,proto3,oneof"`
+}
+
 func (*Node_Action) isNode_Type() {}
 
 func (*Node_Branch) isNode_Type() {}
@@ -594,6 +608,8 @@ func (*Node_Metric) isNode_Type() {}
 func (*Node_ReqMutate) isNode_Type() {}
 
 func (*Node_ResAssert) isNode_Type() {}
+
+func (*Node_Tag) isNode_Type() {}
 
 type ActionNode struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1485,6 +1501,58 @@ func (x *MetricNode) GetValue() string {
 	return ""
 }
 
+type TagNode struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TagNode) Reset() {
+	*x = TagNode{}
+	mi := &file_ast_schema_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TagNode) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TagNode) ProtoMessage() {}
+
+func (x *TagNode) ProtoReflect() protoreflect.Message {
+	mi := &file_ast_schema_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TagNode.ProtoReflect.Descriptor instead.
+func (*TagNode) Descriptor() ([]byte, []int) {
+	return file_ast_schema_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *TagNode) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *TagNode) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 type LoopNode_RangeConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	From          int32                  `protobuf:"varint,1,opt,name=from,proto3" json:"from,omitempty"`
@@ -1495,7 +1563,7 @@ type LoopNode_RangeConfig struct {
 
 func (x *LoopNode_RangeConfig) Reset() {
 	*x = LoopNode_RangeConfig{}
-	mi := &file_ast_schema_proto_msgTypes[25]
+	mi := &file_ast_schema_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1507,7 +1575,7 @@ func (x *LoopNode_RangeConfig) String() string {
 func (*LoopNode_RangeConfig) ProtoMessage() {}
 
 func (x *LoopNode_RangeConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_ast_schema_proto_msgTypes[25]
+	mi := &file_ast_schema_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1580,7 +1648,7 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\bduration\x18\x01 \x01(\tR\bduration\x12\x16\n" +
 	"\x06target\x18\x02 \x01(\x05R\x06target\"6\n" +
 	"\bPipeline\x12*\n" +
-	"\x05steps\x18\x01 \x03(\v2\x14.budment.ast.v1.NodeR\x05steps\"\x91\x06\n" +
+	"\x05steps\x18\x01 \x03(\v2\x14.budment.ast.v1.NodeR\x05steps\"\xbe\x06\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x124\n" +
 	"\x06action\x18\x02 \x01(\v2\x1a.budment.ast.v1.ActionNodeH\x00R\x06action\x124\n" +
@@ -1601,7 +1669,8 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\n" +
 	"req_mutate\x18\x0e \x01(\v2\x1d.budment.ast.v1.ReqMutateNodeH\x00R\treqMutate\x12>\n" +
 	"\n" +
-	"res_assert\x18\x0f \x01(\v2\x1d.budment.ast.v1.ResAssertNodeH\x00R\tresAssertB\x06\n" +
+	"res_assert\x18\x0f \x01(\v2\x1d.budment.ast.v1.ResAssertNodeH\x00R\tresAssert\x12+\n" +
+	"\x03tag\x18\x10 \x01(\v2\x17.budment.ast.v1.TagNodeH\x00R\x03tagB\x06\n" +
 	"\x04type\"\xba\x01\n" +
 	"\n" +
 	"ActionNode\x12\x1a\n" +
@@ -1681,7 +1750,10 @@ const file_ast_schema_proto_rawDesc = "" +
 	"\vmetric_type\x18\x01 \x01(\tR\n" +
 	"metricType\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\tR\x05valueB,Z*github.com/budment/budment/core/pkg/pb/astb\x06proto3"
+	"\x05value\x18\x03 \x01(\tR\x05value\"1\n" +
+	"\aTagNode\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05valueB,Z*github.com/budment/budment/core/pkg/pb/astb\x06proto3"
 
 var (
 	file_ast_schema_proto_rawDescOnce sync.Once
@@ -1695,7 +1767,7 @@ func file_ast_schema_proto_rawDescGZIP() []byte {
 	return file_ast_schema_proto_rawDescData
 }
 
-var file_ast_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_ast_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_ast_schema_proto_goTypes = []any{
 	(*Scenario)(nil),             // 0: budment.ast.v1.Scenario
 	(*ScenarioConfig)(nil),       // 1: budment.ast.v1.ScenarioConfig
@@ -1717,20 +1789,21 @@ var file_ast_schema_proto_goTypes = []any{
 	(*SetNode)(nil),              // 17: budment.ast.v1.SetNode
 	(*DistributeNode)(nil),       // 18: budment.ast.v1.DistributeNode
 	(*MetricNode)(nil),           // 19: budment.ast.v1.MetricNode
-	nil,                          // 20: budment.ast.v1.ScenarioConfig.ThresholdsEntry
-	nil,                          // 21: budment.ast.v1.ScenarioConfig.TagsEntry
-	nil,                          // 22: budment.ast.v1.ReqMutateNode.MetadataEntry
-	nil,                          // 23: budment.ast.v1.ResAssertNode.ExtractEntry
-	nil,                          // 24: budment.ast.v1.MatchNode.CasesEntry
-	(*LoopNode_RangeConfig)(nil), // 25: budment.ast.v1.LoopNode.RangeConfig
+	(*TagNode)(nil),              // 20: budment.ast.v1.TagNode
+	nil,                          // 21: budment.ast.v1.ScenarioConfig.ThresholdsEntry
+	nil,                          // 22: budment.ast.v1.ScenarioConfig.TagsEntry
+	nil,                          // 23: budment.ast.v1.ReqMutateNode.MetadataEntry
+	nil,                          // 24: budment.ast.v1.ResAssertNode.ExtractEntry
+	nil,                          // 25: budment.ast.v1.MatchNode.CasesEntry
+	(*LoopNode_RangeConfig)(nil), // 26: budment.ast.v1.LoopNode.RangeConfig
 }
 var file_ast_schema_proto_depIdxs = []int32{
 	3,  // 0: budment.ast.v1.Scenario.setup:type_name -> budment.ast.v1.Pipeline
 	3,  // 1: budment.ast.v1.Scenario.execution:type_name -> budment.ast.v1.Pipeline
 	1,  // 2: budment.ast.v1.Scenario.config:type_name -> budment.ast.v1.ScenarioConfig
 	2,  // 3: budment.ast.v1.ScenarioConfig.stages:type_name -> budment.ast.v1.Stage
-	20, // 4: budment.ast.v1.ScenarioConfig.thresholds:type_name -> budment.ast.v1.ScenarioConfig.ThresholdsEntry
-	21, // 5: budment.ast.v1.ScenarioConfig.tags:type_name -> budment.ast.v1.ScenarioConfig.TagsEntry
+	21, // 4: budment.ast.v1.ScenarioConfig.thresholds:type_name -> budment.ast.v1.ScenarioConfig.ThresholdsEntry
+	22, // 5: budment.ast.v1.ScenarioConfig.tags:type_name -> budment.ast.v1.ScenarioConfig.TagsEntry
 	4,  // 6: budment.ast.v1.Pipeline.steps:type_name -> budment.ast.v1.Node
 	5,  // 7: budment.ast.v1.Node.action:type_name -> budment.ast.v1.ActionNode
 	8,  // 8: budment.ast.v1.Node.branch:type_name -> budment.ast.v1.BranchNode
@@ -1746,24 +1819,25 @@ var file_ast_schema_proto_depIdxs = []int32{
 	19, // 18: budment.ast.v1.Node.metric:type_name -> budment.ast.v1.MetricNode
 	6,  // 19: budment.ast.v1.Node.req_mutate:type_name -> budment.ast.v1.ReqMutateNode
 	7,  // 20: budment.ast.v1.Node.res_assert:type_name -> budment.ast.v1.ResAssertNode
-	3,  // 21: budment.ast.v1.ActionNode.before:type_name -> budment.ast.v1.Pipeline
-	3,  // 22: budment.ast.v1.ActionNode.after:type_name -> budment.ast.v1.Pipeline
-	22, // 23: budment.ast.v1.ReqMutateNode.metadata:type_name -> budment.ast.v1.ReqMutateNode.MetadataEntry
-	23, // 24: budment.ast.v1.ResAssertNode.extract:type_name -> budment.ast.v1.ResAssertNode.ExtractEntry
-	3,  // 25: budment.ast.v1.BranchNode.true_path:type_name -> budment.ast.v1.Pipeline
-	3,  // 26: budment.ast.v1.BranchNode.false_path:type_name -> budment.ast.v1.Pipeline
-	24, // 27: budment.ast.v1.MatchNode.cases:type_name -> budment.ast.v1.MatchNode.CasesEntry
-	3,  // 28: budment.ast.v1.MatchNode.default_path:type_name -> budment.ast.v1.Pipeline
-	25, // 29: budment.ast.v1.LoopNode.range:type_name -> budment.ast.v1.LoopNode.RangeConfig
-	3,  // 30: budment.ast.v1.LoopNode.logic:type_name -> budment.ast.v1.Pipeline
-	3,  // 31: budment.ast.v1.PollNode.logic:type_name -> budment.ast.v1.Pipeline
-	12, // 32: budment.ast.v1.PollNode.policy:type_name -> budment.ast.v1.PollPolicy
-	3,  // 33: budment.ast.v1.MatchNode.CasesEntry.value:type_name -> budment.ast.v1.Pipeline
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	20, // 21: budment.ast.v1.Node.tag:type_name -> budment.ast.v1.TagNode
+	3,  // 22: budment.ast.v1.ActionNode.before:type_name -> budment.ast.v1.Pipeline
+	3,  // 23: budment.ast.v1.ActionNode.after:type_name -> budment.ast.v1.Pipeline
+	23, // 24: budment.ast.v1.ReqMutateNode.metadata:type_name -> budment.ast.v1.ReqMutateNode.MetadataEntry
+	24, // 25: budment.ast.v1.ResAssertNode.extract:type_name -> budment.ast.v1.ResAssertNode.ExtractEntry
+	3,  // 26: budment.ast.v1.BranchNode.true_path:type_name -> budment.ast.v1.Pipeline
+	3,  // 27: budment.ast.v1.BranchNode.false_path:type_name -> budment.ast.v1.Pipeline
+	25, // 28: budment.ast.v1.MatchNode.cases:type_name -> budment.ast.v1.MatchNode.CasesEntry
+	3,  // 29: budment.ast.v1.MatchNode.default_path:type_name -> budment.ast.v1.Pipeline
+	26, // 30: budment.ast.v1.LoopNode.range:type_name -> budment.ast.v1.LoopNode.RangeConfig
+	3,  // 31: budment.ast.v1.LoopNode.logic:type_name -> budment.ast.v1.Pipeline
+	3,  // 32: budment.ast.v1.PollNode.logic:type_name -> budment.ast.v1.Pipeline
+	12, // 33: budment.ast.v1.PollNode.policy:type_name -> budment.ast.v1.PollPolicy
+	3,  // 34: budment.ast.v1.MatchNode.CasesEntry.value:type_name -> budment.ast.v1.Pipeline
+	35, // [35:35] is the sub-list for method output_type
+	35, // [35:35] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_ast_schema_proto_init() }
@@ -1787,6 +1861,7 @@ func file_ast_schema_proto_init() {
 		(*Node_Metric)(nil),
 		(*Node_ReqMutate)(nil),
 		(*Node_ResAssert)(nil),
+		(*Node_Tag)(nil),
 	}
 	file_ast_schema_proto_msgTypes[10].OneofWrappers = []any{
 		(*LoopNode_Count)(nil),
@@ -1799,7 +1874,7 @@ func file_ast_schema_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_ast_schema_proto_rawDesc), len(file_ast_schema_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

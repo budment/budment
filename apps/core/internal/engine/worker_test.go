@@ -134,7 +134,7 @@ func (s *stubSink) RecordEvent(workerID int, nodeID, eventType, reason string) {
 func (s *stubSink) RecordCustom(workerID int, mType, name string, val float64) {}
 
 func setupTestWorker(graph *planner.Graph, iters int, sharedIters *int64, target *int64) (*Worker, *stubRunner, *metrics.Aggregator) {
-	agg := metrics.NewAggregator(1024)
+	agg := metrics.NewAggregator(1024, nil)
 	runnerInst := &stubRunner{}
 	rf := func() *runner.Manager {
 		mgr := runner.NewManager()
@@ -171,7 +171,7 @@ func TestWorker_SharedIterations_ConcurrencyIntegrity(t *testing.T) {
 		},
 	}
 
-	agg := metrics.NewAggregator(1024)
+	agg := metrics.NewAggregator(1024, nil)
 	ctx := context.Background()
 	var wg sync.WaitGroup
 

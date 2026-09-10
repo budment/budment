@@ -7,7 +7,7 @@ import (
 )
 
 func TestEngineMetrics_ConcurrentRecording_Integrity(t *testing.T) {
-	m := NewEngineMetrics()
+	m := NewEngineMetrics(nil)
 	workers := 10
 	iterationsPerWorker := 100
 
@@ -55,7 +55,7 @@ func TestEngineMetrics_ConcurrentRecording_Integrity(t *testing.T) {
 }
 
 func TestEngineMetrics_ErrorCounts_CappingLimit(t *testing.T) {
-	m := NewEngineMetrics()
+	m := NewEngineMetrics(nil)
 
 	// Record 250 distinct errors exceeding maxDistinctErrors threshold (200)
 	for i := 0; i < 250; i++ {
@@ -75,7 +75,7 @@ func TestEngineMetrics_ErrorCounts_CappingLimit(t *testing.T) {
 }
 
 func TestEngineMetrics_CircularBuffer_RPSHistory(t *testing.T) {
-	m := NewEngineMetrics()
+	m := NewEngineMetrics(nil)
 
 	// Record 75 ticks exceeding default buffer size (60)
 	for i := 1; i <= 75; i++ {

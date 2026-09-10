@@ -195,7 +195,7 @@ var runCmd = &cobra.Command{
 			reporters = append(reporters, exporters.NewHTMLReporter(finalEngineCfg.Exporters.HTML, fs, testStartTime, exportScenarios))
 		}
 
-		agg := metrics.NewAggregator(1000000)
+		agg := metrics.NewAggregator(1000000, finalEngineCfg.Tags)
 		sink := &cliMetricsSink{agg: agg}
 
 		app, err := pipeline.PrepareExecution(planResult, finalEngineCfg, agg, sink, nil)

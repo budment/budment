@@ -63,6 +63,7 @@ message Node {
     MetricNode     metric     = 13;
     ReqMutateNode  req_mutate = 14;
     ResAssertNode  res_assert = 15;
+    TagNode        tag        = 16;
   }
 }
 
@@ -157,3 +158,8 @@ message MetricNode {
   string name        = 2;
   string value       = 3;
 }
+
+message TagNode {
+    string key = 1;
+    string value = 2; 
+  }

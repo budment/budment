@@ -43,12 +43,6 @@ export const get: <T = any>(key: string) => T | undefined = _g.get || dummyFn;
 /** Stores a value by key. */
 export const set: (key: string, val: any) => void = _g.set || dummyFn;
 
-/** Pushes a value to a queue. */
-export const push: (queue: string, val: any) => void = _g.push || dummyFn;
-
-/** Pops a value from a queue. */
-export const pop: <T = any>(queue: string) => T | undefined = _g.pop || dummyFn;
-
 /** Reads a file from disk as a string (supports both 'open' and 'load'). */
 export const open: (filepath: string, mode?: 'r' | 'b' | string) => any = _g.open || _g.load || dummyFn
 

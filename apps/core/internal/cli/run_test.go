@@ -9,7 +9,7 @@ import (
 )
 
 func TestCLIMetricsSink_Log_WithoutDashboard(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	sink := &cliMetricsSink{agg: agg, dashboard: nil}
 
 	// Ensure log calls across levels do not panic when dashboard is nil
@@ -20,7 +20,7 @@ func TestCLIMetricsSink_Log_WithoutDashboard(t *testing.T) {
 }
 
 func TestCLIMetricsSink_Log_WithDashboardBuffer(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	dash := &tui.LiveDashboard{
 		LogChan: make(chan string, 2),
 	}
@@ -45,7 +45,7 @@ func TestCLIMetricsSink_Log_WithDashboardBuffer(t *testing.T) {
 }
 
 func TestCLIMetricsSink_RecordEvent_LogicFailForwarding(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	aggDone := make(chan struct{})
 	go agg.Run(ctx, aggDone)
@@ -72,7 +72,7 @@ func TestCLIMetricsSink_RecordEvent_LogicFailForwarding(t *testing.T) {
 }
 
 func TestCLIMetricsSink_RecordCustom(t *testing.T) {
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	aggDone := make(chan struct{})
 	go agg.Run(ctx, aggDone)

@@ -147,6 +147,15 @@ type LogNode struct {
 func (n *LogNode) NodeID() string { return n.ID }
 func (n *LogNode) Type() string   { return "LOG" }
 
+type TagNode struct {
+	ID    string
+	Key   string
+	Value template.Expression
+}
+
+func (n *TagNode) NodeID() string { return n.ID }
+func (n *TagNode) Type() string   { return "TAG" }
+
 type Graph struct {
 	Setup     []ExecutableNode
 	Execution []ExecutableNode

@@ -52,7 +52,7 @@ func TestPrepareExecution_LifecycleAndDirectorRun(t *testing.T) {
 		MaxDuration: "1s",
 	}
 
-	agg := metrics.NewAggregator(500)
+	agg := metrics.NewAggregator(500, nil)
 	sink := &stubExecutionSink{}
 
 	app, err := PrepareExecution(plan, baseCfg, agg, sink, nil)
@@ -127,7 +127,7 @@ func TestPrepareExecution_ASTConfigOverrides(t *testing.T) {
 		Order:    1,
 	}
 
-	agg := metrics.NewAggregator(100)
+	agg := metrics.NewAggregator(100, nil)
 	sink := &stubExecutionSink{}
 
 	app, err := PrepareExecution(mockPlan, baseEngineCfg, agg, sink, nil)
