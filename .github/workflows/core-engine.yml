@@ -10,6 +10,8 @@ jobs:
   filter:
     name: Check Changes
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
       should_run: ${{ steps.changes.outputs.core }}
     steps:
