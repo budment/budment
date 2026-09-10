@@ -24,7 +24,7 @@ jobs:
           filters: |
             core:
               - "apps/core/**"
-              - ".github/workflows/core.yml"
+              - ".github/workflows/core-engine.yml"
 
   lint:
     name: Lint Core

@@ -1,21 +1,31 @@
 {
   "name": "@budment/sdk",
-  "version": "0.0.1",
-  "private": true,
+  "version": "0.1.0-alpha.1",
   "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "dev": "tsup --watch",
-    "build": "tsup"
+    "dev": "tsup --watch --dts",
+    "build": "tsup --dts"
   },
   "devDependencies": {
     "@budment/tsconfig": "workspace:*",
