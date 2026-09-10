@@ -1,14 +1,14 @@
 package pipeline
 
 import (
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/engine"
-	"github.com/vunas/blaster/internal/exporters"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/runner"
-	"github.com/vunas/blaster/internal/runner/http"
-	"github.com/vunas/blaster/internal/runtime"
-	"github.com/vunas/blaster/internal/runtime/goja"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/engine"
+	"github.com/budment/budment/internal/exporters"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/runner"
+	"github.com/budment/budment/internal/runner/http"
+	"github.com/budment/budment/internal/runtime"
+	"github.com/budment/budment/internal/runtime/goja"
 )
 
 type gojaPoolAdapter struct {

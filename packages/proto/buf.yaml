@@ -1,6 +1,6 @@
 version: v2
 
-name: buf.build/blaster/blaster
+name: buf.build/budment/budment
 lint:
   use:
     - DEFAULT

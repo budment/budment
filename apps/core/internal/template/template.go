@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/vunas/blaster/internal/fastconv"
+	"github.com/budment/budment/internal/fastconv"
 )
 
 type ScopeProvider interface {

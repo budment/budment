@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package blaster.ast.v1;
+package budment.ast.v1;
 
-option go_package = "github.com/vunas/blaster/core/pkg/pb/ast";
+option go_package = "github.com/budment/budment/core/pkg/pb/ast";
 
 message Scenario {
   string         name      = 1;

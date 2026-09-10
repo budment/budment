@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/tui/theme"
-	"github.com/vunas/blaster/internal/tui/widgets"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/widgets"
 )
 
 func PrintPlanOverview(scriptPath string, compileTimeMs int64, cfg config.EngineConfig) {

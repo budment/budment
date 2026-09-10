@@ -6,7 +6,7 @@
 
 /* eslint-disable */
 
-export const protobufPackage = "blaster.ast.v1";
+export const protobufPackage = "budment.ast.v1";
 
 export interface Scenario {
   name?: string | undefined;

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/tui/theme"
-	"github.com/vunas/blaster/internal/tui/widgets"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/widgets"
 )
 
 var (
@@ -153,7 +153,7 @@ func (d *LiveDashboard) renderFrame(isFinal bool) {
 		status = theme.TextDim("FINISHED")
 		activeVUs = 0
 	}
-	fmt.Fprintf(&sb, "%s %sBLASTER ENGINE%s%s%s\n\n",
+	fmt.Fprintf(&sb, "%s %sBUDMENT ENGINE%s%s%s\n\n",
 		theme.TextCyan(spinners[d.spinnerIdx]),
 		theme.Bold,
 		theme.Reset,

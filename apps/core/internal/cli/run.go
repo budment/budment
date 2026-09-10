@@ -8,14 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/engine"
-	"github.com/vunas/blaster/internal/exporters"
-	"github.com/vunas/blaster/internal/filesystem"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/pipeline"
-	"github.com/vunas/blaster/internal/tui"
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/engine"
+	"github.com/budment/budment/internal/exporters"
+	"github.com/budment/budment/internal/filesystem"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/pipeline"
+	"github.com/budment/budment/internal/tui"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 var (

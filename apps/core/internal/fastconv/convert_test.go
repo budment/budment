@@ -10,9 +10,9 @@ func TestBytesToString_EdgeCases(t *testing.T) {
 		t.Errorf("Expected empty string, got '%s'", str)
 	}
 
-	raw := []byte("blaster-benchmark-token")
+	raw := []byte("budment-benchmark-token")
 	str := BytesToString(raw)
-	if str != "blaster-benchmark-token" {
+	if str != "budment-benchmark-token" {
 		t.Errorf("String mismatch: got '%s'", str)
 	}
 }

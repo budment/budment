@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/metrics"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/metrics"
 )
 
 type Director struct {

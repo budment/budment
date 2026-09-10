@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	"github.com/vunas/blaster/internal/logger"
+	"github.com/budment/budment/internal/logger"
 )
 
 var (
@@ -31,8 +31,8 @@ func IsCIEnvironment() bool {
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:           "blaster",
-	Short:         "Blaster - Testing Engine",
+	Use:           "budment",
+	Short:         "Budment - Testing Engine",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -61,7 +61,7 @@ func Execute() int {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&globalConfigFile, "config", "c", "blaster.yaml", "Path to global project config file")
+	rootCmd.PersistentFlags().StringVarP(&globalConfigFile, "config", "c", "budment.yaml", "Path to global project config file")
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "Enable verbose debug logging")
 	rootCmd.PersistentFlags().BoolVarP(&quietMode, "quiet", "q", false, "Suppress all terminal output (returns only exit codes)")
 	rootCmd.PersistentFlags().BoolVar(&jsonMode, "json", false, "Output logs and reports in JSON format")

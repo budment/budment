@@ -35,14 +35,14 @@ export class ScenarioBuilder {
         // Dedup Guard: Ensure the scenario is registered exactly once in the global list
         if (!this.isRegistered) {
             const _global = globalThis as any;
-            _global.__BLASTER_SCENARIOS__ = _global.__BLASTER_SCENARIOS__ || [];
+            _global.__BUDMENT_SCENARIOS__ = _global.__BUDMENT_SCENARIOS__ || [];
 
             // Check if scenario with identical name is already registered
-            const exists = _global.__BLASTER_SCENARIOS__.some(
+            const exists = _global.__BUDMENT_SCENARIOS__.some(
                 (existing: ProtoScenario) => existing.name === this.scenarioName
             );
             if (!exists) {
-                _global.__BLASTER_SCENARIOS__.push(scn);
+                _global.__BUDMENT_SCENARIOS__.push(scn);
             }
             this.isRegistered = true;
         }

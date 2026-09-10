@@ -3,8 +3,8 @@ package goja
 import (
 	"math"
 
+	"github.com/budment/budment/internal/runtime"
 	"github.com/dop251/goja"
-	"github.com/vunas/blaster/internal/runtime"
 )
 
 // Exposes metrics APIs
@@ -228,7 +228,7 @@ func (b *JSBridge) Abort(reason string) {
 	if b.Sink != nil {
 		b.Sink.RecordEvent(b.VuId, b.CurrentHook, "ABORT", reason)
 	}
-	panic("BLASTER_ABORT")
+	panic("BUDMENT_ABORT")
 }
 
 func (b *JSBridge) Sleep(s float64) {
@@ -236,7 +236,7 @@ func (b *JSBridge) Sleep(s float64) {
 		return
 	}
 	b.SleepTime = int(s * 1000)
-	panic("BLASTER_SLEEP")
+	panic("BUDMENT_SLEEP")
 }
 
 func (b *JSBridge) Barrier(name string, opts map[string]any) {
@@ -245,7 +245,7 @@ func (b *JSBridge) Barrier(name string, opts map[string]any) {
 	}
 	b.BarrierName = name
 	b.BarrierOptions = opts
-	panic("BLASTER_BARRIER")
+	panic("BUDMENT_BARRIER")
 }
 
 func (b *JSBridge) Distribute(key string, items []any, fallback any) {

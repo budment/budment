@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
+	"github.com/budment/budment/internal/config"
 )
 
 type Scheduler interface {

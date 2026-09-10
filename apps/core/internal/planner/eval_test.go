@@ -9,7 +9,7 @@ func TestEvaluator_EvaluateDefaultExport(t *testing.T) {
 
 	// Simulate bundled JS script from user TypeScript source
 	jsBundle := `
-		globalThis.__BLASTER_EXPORTS__ = {
+		globalThis.__BUDMENT_EXPORTS__ = {
 			options: {
 				vus: 10,
 				duration: "10s"
@@ -69,7 +69,7 @@ func TestEvaluator_DSL_TemplateExpressions(t *testing.T) {
 
 	// Verify template DSL helpers generate valid token syntax {{@...}}
 	jsBundle := `
-		globalThis.__BLASTER_EXPORTS__ = {
+		globalThis.__BUDMENT_EXPORTS__ = {
 			default: [
 				log(random.uuid()),
 				log(env("API_KEY", "default_secret")),

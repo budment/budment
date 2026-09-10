@@ -10,8 +10,8 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/tidwall/gjson"
 
-	"github.com/vunas/blaster/internal/fastconv"
-	"github.com/vunas/blaster/internal/template"
+	"github.com/budment/budment/internal/fastconv"
+	"github.com/budment/budment/internal/template"
 )
 
 // Request represents the mutable HTTP request passed to the .before(req) pipeline hook.
@@ -171,7 +171,7 @@ func (r *Request) File(data any, args ...string) map[string]any {
 	}
 
 	return map[string]any{
-		"__blaster_file": true,
+		"__budment_file": true,
 		"data":           data,
 		"filename":       filename,
 		"contentType":    contentType,
@@ -182,7 +182,7 @@ func (r *Request) File(data any, args ...string) map[string]any {
 func hasMultipartFile(fields map[string]any) bool {
 	for _, val := range fields {
 		if m, ok := val.(map[string]any); ok {
-			if isFile, _ := m["__blaster_file"].(bool); isFile {
+			if isFile, _ := m["__budment_file"].(bool); isFile {
 				return true
 			}
 		}
@@ -200,7 +200,7 @@ func (r *Request) buildMultipart(fields map[string]any) {
 			continue
 		}
 
-		if fileMap, ok := val.(map[string]any); ok && fileMap["__blaster_file"] == true {
+		if fileMap, ok := val.(map[string]any); ok && fileMap["__budment_file"] == true {
 			filename, _ := fileMap["filename"].(string)
 			contentType, _ := fileMap["contentType"].(string)
 

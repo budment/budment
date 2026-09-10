@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"sync"
 
+	"github.com/budment/budment/internal/fastconv"
 	"github.com/goccy/go-json"
 	"github.com/tidwall/gjson"
-	"github.com/vunas/blaster/internal/fastconv"
 )
 
 var bufferPool = sync.Pool{

@@ -16,7 +16,7 @@ export interface RequestOptions {
  * Internal descriptor marking payload data as a multipart file upload.
  */
 export interface FileData {
-    readonly __blaster_file: true;
+    readonly __budment_file: true;
     readonly data: ArrayBuffer | Uint8Array | string;
     readonly filename: string;
     readonly contentType: string;

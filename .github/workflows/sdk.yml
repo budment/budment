@@ -36,4 +36,4 @@ jobs:
           node-version: 25
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @blaster/sdk build
+      - run: pnpm --filter @budment/sdk build

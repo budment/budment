@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/vunas/blaster/internal/planner/pb"
+	pb "github.com/budment/budment/internal/planner/pb"
 )
 
 func TestGraphCompiler_CompileBasicNodes(t *testing.T) {

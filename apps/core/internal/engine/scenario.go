@@ -7,11 +7,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/runner"
-	"github.com/vunas/blaster/internal/runtime"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/planner"
+	"github.com/budment/budment/internal/runner"
+	"github.com/budment/budment/internal/runtime"
 )
 
 type Scenario struct {

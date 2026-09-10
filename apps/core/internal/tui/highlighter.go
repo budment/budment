@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 // Applies ANSI color codes to raw JSON strings for terminal output.

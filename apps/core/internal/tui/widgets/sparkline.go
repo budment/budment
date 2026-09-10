@@ -3,7 +3,7 @@ package widgets
 import (
 	"strings"
 
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 var sparkChars = []string{" ", "▂", "▃", "▄", "▅", "▆", "▇", "█"}

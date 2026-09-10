@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/vunas/blaster/internal/cli"
+	"github.com/budment/budment/internal/cli"
 )
 
 func main() {

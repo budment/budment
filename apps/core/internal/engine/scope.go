@@ -5,8 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/vunas/blaster/internal/fastconv"
-	"github.com/vunas/blaster/internal/template"
+	"github.com/budment/budment/internal/fastconv"
+	"github.com/budment/budment/internal/template"
 )
 
 type QueueStore struct {

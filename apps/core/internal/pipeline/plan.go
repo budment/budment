@@ -6,9 +6,9 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/planner/bundler"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/planner"
+	"github.com/budment/budment/internal/planner/bundler"
 )
 
 type CompiledScenario struct {

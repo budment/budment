@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
+	"github.com/budment/budment/internal/config"
 )
 
 func TestConstantVUScheduler_Spawn(t *testing.T) {

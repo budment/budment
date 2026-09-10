@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	pb "github.com/vunas/blaster/internal/planner/pb"
-	"github.com/vunas/blaster/internal/template"
+	pb "github.com/budment/budment/internal/planner/pb"
+	"github.com/budment/budment/internal/template"
 )
 
 type ExecutableNode interface {

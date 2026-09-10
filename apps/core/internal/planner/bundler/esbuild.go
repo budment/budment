@@ -13,7 +13,7 @@ func BundleInMemory(entryPoint string) ([]byte, error) {
 		Bundle:      true,
 		Write:       false,
 		Format:      api.FormatIIFE,
-		GlobalName:  "__BLASTER_EXPORTS__",
+		GlobalName:  "__BUDMENT_EXPORTS__",
 		Platform:    api.PlatformNeutral,
 		Target:      api.ES2017,
 		Loader: map[string]api.Loader{

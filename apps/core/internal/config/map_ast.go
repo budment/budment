@@ -3,7 +3,7 @@ package config
 import (
 	"maps"
 
-	ast "github.com/vunas/blaster/internal/planner/pb"
+	ast "github.com/budment/budment/internal/planner/pb"
 )
 
 func Ptr[T any](v T) *T {

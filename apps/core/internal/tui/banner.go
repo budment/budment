@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 func PrintBanner() {

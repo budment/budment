@@ -5,8 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/planner"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 func getVisibleNodes(nodes []planner.ExecutableNode, detailed bool) []planner.ExecutableNode {

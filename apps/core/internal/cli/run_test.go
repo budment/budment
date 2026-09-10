@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/tui"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/tui"
 )
 
 func TestCLIMetricsSink_Log_WithoutDashboard(t *testing.T) {

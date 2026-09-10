@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/vunas/blaster/internal/filesystem"
+	"github.com/budment/budment/internal/filesystem"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,7 +15,7 @@ type Loader struct {
 
 func NewLoader(path string, fs filesystem.FS) *Loader {
 	if path == "" {
-		path = "blaster.yaml"
+		path = "budment.yaml"
 	}
 	if fs == nil {
 		fs = filesystem.NewLocal()
@@ -27,7 +27,7 @@ func (l *Loader) Load() (EngineConfig, error) {
 	cfg := DefaultEngineConfig()
 
 	if !l.fs.Exists(l.filePath) {
-		if l.filePath == "blaster.yaml" {
+		if l.filePath == "budment.yaml" {
 			return cfg, nil
 		}
 		return cfg, fmt.Errorf("config file not found: %s", l.filePath)

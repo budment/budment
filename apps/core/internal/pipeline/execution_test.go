@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/engine"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/runtime/goja"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/engine"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/planner"
+	"github.com/budment/budment/internal/runtime/goja"
 )
 
 type stubExecutionSink struct{}

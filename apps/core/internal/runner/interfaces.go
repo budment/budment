@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 
-	"github.com/vunas/blaster/internal/template"
+	"github.com/budment/budment/internal/template"
 )
 
 type ExecutionResult struct {

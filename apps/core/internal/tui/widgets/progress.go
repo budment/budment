@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 func RenderProgress(percent float64, width int) string {

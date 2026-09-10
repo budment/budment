@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 var ansiRegexp = regexp.MustCompile(`\x1b\[[0-9;]*m`)

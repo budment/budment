@@ -7,9 +7,9 @@ import (
 
 	"github.com/dop251/goja"
 
-	"github.com/vunas/blaster/internal/runner"
-	"github.com/vunas/blaster/internal/runtime"
-	"github.com/vunas/blaster/internal/template"
+	"github.com/budment/budment/internal/runner"
+	"github.com/budment/budment/internal/runtime"
+	"github.com/budment/budment/internal/template"
 )
 
 type VMInstance struct {
@@ -168,7 +168,7 @@ func (inst *VMInstance) ExecuteHook(hookID string, req runner.ProtocolRequest, r
 	defer func() {
 		if r := recover(); r != nil {
 			errStr := fmt.Sprintf("%v", r)
-			if strings.HasPrefix(errStr, "BLASTER_") {
+			if strings.HasPrefix(errStr, "BUDMENT_") {
 				err = nil
 			} else {
 				err = fmt.Errorf("JS Panic: %v", r)
@@ -192,7 +192,7 @@ func (inst *VMInstance) EvaluateBoolean(hookID string) (result bool, err error) 
 	defer func() {
 		if r := recover(); r != nil {
 			errStr := fmt.Sprintf("%v", r)
-			if !strings.HasPrefix(errStr, "BLASTER_") {
+			if !strings.HasPrefix(errStr, "BUDMENT_") {
 				err = fmt.Errorf("JS Panic: %v", r)
 			}
 		}
@@ -214,7 +214,7 @@ func (inst *VMInstance) EvaluateString(hookID string) (result string, err error)
 	defer func() {
 		if r := recover(); r != nil {
 			errStr := fmt.Sprintf("%v", r)
-			if !strings.HasPrefix(errStr, "BLASTER_") {
+			if !strings.HasPrefix(errStr, "BUDMENT_") {
 				err = fmt.Errorf("JS Panic: %v", r)
 			}
 		}

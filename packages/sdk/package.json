@@ -1,5 +1,5 @@
 {
-  "name": "@blaster/sdk",
+  "name": "@budment/sdk",
   "version": "0.0.1",
   "private": true,
   "sideEffects": false,
@@ -18,7 +18,7 @@
     "build": "tsup"
   },
   "devDependencies": {
-    "@blaster/tsconfig": "workspace:*",
+    "@budment/tsconfig": "workspace:*",
     "@types/node": "^25.0.10",
     "ts-proto": "^2.12.0",
     "tsx": "^4.21.0",

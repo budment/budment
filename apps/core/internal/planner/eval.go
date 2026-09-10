@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	pb "github.com/budment/budment/internal/planner/pb"
 	"github.com/dop251/goja"
-	pb "github.com/vunas/blaster/internal/planner/pb"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -33,15 +33,15 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	bridgeScript := `
 		(() => {
 		  let exp = undefined;
-		  if (typeof __BLASTER_EXPORTS__ !== 'undefined' && __BLASTER_EXPORTS__ && Object.keys(__BLASTER_EXPORTS__).length > 0) {
-		    exp = __BLASTER_EXPORTS__;
-		  } else if (typeof globalThis !== 'undefined' && globalThis.__BLASTER_EXPORTS__) {
-		    exp = globalThis.__BLASTER_EXPORTS__;
+		  if (typeof __BUDMENT_EXPORTS__ !== 'undefined' && __BUDMENT_EXPORTS__ && Object.keys(__BUDMENT_EXPORTS__).length > 0) {
+		    exp = __BUDMENT_EXPORTS__;
+		  } else if (typeof globalThis !== 'undefined' && globalThis.__BUDMENT_EXPORTS__) {
+		    exp = globalThis.__BUDMENT_EXPORTS__;
 		  }
 
 		  if (!exp) return;
 
-		  globalThis.__BLASTER_SCENARIOS__ = globalThis.__BLASTER_SCENARIOS__ || [];
+		  globalThis.__BUDMENT_SCENARIOS__ = globalThis.__BUDMENT_SCENARIOS__ || [];
 		  
 		  const compilePipeline = (nodes) => {
 		    if (!nodes) return undefined;
@@ -52,7 +52,7 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 
 		  // Case 1: Single default export -> export default [ ... ]
 		  if (exp.default && Array.isArray(exp.default)) {
-		    globalThis.__BLASTER_SCENARIOS__.push({
+		    globalThis.__BUDMENT_SCENARIOS__.push({
 		      name: "Default Scenario",
 		      config: globalConfig,
 		      setup: exp.setup ? compilePipeline(exp.setup) : undefined,
@@ -64,14 +64,14 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		      if (key === 'options' || key === 'config' || key === 'setup') continue;
 		      const val = exp[key];
 		      if (Array.isArray(val)) {
-		        globalThis.__BLASTER_SCENARIOS__.push({
+		        globalThis.__BUDMENT_SCENARIOS__.push({
 		          name: key,
 		          config: globalConfig,
 		          setup: exp.setup ? compilePipeline(exp.setup) : undefined,
 		          execution: compilePipeline(val)
 		        });
 		      } else if (val && typeof val === 'object' && val.execution) {
-		        globalThis.__BLASTER_SCENARIOS__.push({
+		        globalThis.__BUDMENT_SCENARIOS__.push({
 		          name: key,
 		          config: val.config || globalConfig,
 		          setup: val.setup ? compilePipeline(val.setup) : undefined,
@@ -85,12 +85,12 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		return nil, fmt.Errorf("bridge script failed: %w", err)
 	}
 
-	astArrayValue, err := vm.RunString("globalThis.__BLASTER_SCENARIOS__ || (typeof __BLASTER_SCENARIOS__ !== 'undefined' ? __BLASTER_SCENARIOS__ : undefined)")
+	astArrayValue, err := vm.RunString("globalThis.__BUDMENT_SCENARIOS__ || (typeof __BUDMENT_SCENARIOS__ !== 'undefined' ? __BUDMENT_SCENARIOS__ : undefined)")
 	if err != nil || astArrayValue == nil || goja.IsUndefined(astArrayValue) {
 		return nil, fmt.Errorf("no scenarios found. Ensure you use 'export default [...]' or 'scenario().build()'")
 	}
 
-	jsonScript := `JSON.stringify(globalThis.__BLASTER_SCENARIOS__ || (typeof __BLASTER_SCENARIOS__ !== 'undefined' ? __BLASTER_SCENARIOS__ : []));`
+	jsonScript := `JSON.stringify(globalThis.__BUDMENT_SCENARIOS__ || (typeof __BUDMENT_SCENARIOS__ !== 'undefined' ? __BUDMENT_SCENARIOS__ : []));`
 	jsonVal, err := vm.RunString(jsonScript)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stringify JS AST: %w", err)

@@ -7,11 +7,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/vunas/blaster/internal/config"
-	"github.com/vunas/blaster/internal/filesystem"
-	"github.com/vunas/blaster/internal/pipeline"
-	"github.com/vunas/blaster/internal/tui"
-	"github.com/vunas/blaster/internal/tui/theme"
+	"github.com/budment/budment/internal/config"
+	"github.com/budment/budment/internal/filesystem"
+	"github.com/budment/budment/internal/pipeline"
+	"github.com/budment/budment/internal/tui"
+	"github.com/budment/budment/internal/tui/theme"
 )
 
 var planDetailed bool
@@ -90,7 +90,7 @@ var planCmd = &cobra.Command{
 		}
 		fmt.Println()
 		tui.PrintDivider()
-		fmt.Printf("%s Plan is valid. Run %s to execute.\n", theme.TextGreen("✓"), theme.TextBold(fmt.Sprintf("blaster run %s", scriptPath)))
+		fmt.Printf("%s Plan is valid. Run %s to execute.\n", theme.TextGreen("✓"), theme.TextBold(fmt.Sprintf("budment run %s", scriptPath)))
 
 		return nil
 	},

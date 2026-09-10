@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/tui/theme"
-	"github.com/vunas/blaster/internal/tui/widgets"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/tui/theme"
+	"github.com/budment/budment/internal/tui/widgets"
 )
 
 type TerminalReporter struct {
@@ -76,7 +76,7 @@ func (r *TerminalReporter) Export(
 	}
 
 	fmt.Println()
-	title := theme.TextBold("BLASTER TEST SUMMARY")
+	title := theme.TextBold("BUDMENT TEST SUMMARY")
 	timestamp := r.StartTime.Format("2006-01-02 15:04:05")
 	fmt.Printf("%-40s%s\n", title, timestamp)
 

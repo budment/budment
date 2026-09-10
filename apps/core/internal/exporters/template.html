@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blaster · Execution Telemetry Report</title>
+    <title>Budment · Execution Telemetry Report</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -166,7 +166,7 @@
           <span
             class="font-mono font-bold text-xs tracking-wider text-white bg-blue-600 px-2.5 py-1 rounded-md shadow-xs"
           >
-            BLASTER
+            BUDMENT
           </span>
           <span
             class="text-xs font-semibold text-slate-400 dark:text-slate-500"
@@ -646,15 +646,15 @@
         const html = document.documentElement;
         if (html.classList.contains("dark")) {
           html.classList.remove("dark");
-          localStorage.setItem("blaster-theme", "light");
+          localStorage.setItem("budment-theme", "light");
         } else {
           html.classList.add("dark");
-          localStorage.setItem("blaster-theme", "dark");
+          localStorage.setItem("budment-theme", "dark");
         }
         updateChartTheme();
       }
 
-      if (localStorage.getItem("blaster-theme") === "light") {
+      if (localStorage.getItem("budment-theme") === "light") {
         document.documentElement.classList.remove("dark");
       }
 

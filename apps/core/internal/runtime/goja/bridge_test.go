@@ -87,7 +87,7 @@ func TestJSBridge_ColdStartGuards(t *testing.T) {
 		t.Fatalf("expected nil on cold-start Get, got %v", val)
 	}
 
-	// Must not trigger BLASTER_SLEEP or BLASTER_ABORT panics when IsRuntime = false
+	// Must not trigger BUDMENT_SLEEP or BUDMENT_ABORT panics when IsRuntime = false
 	bridge.Sleep(1.0)
 	bridge.Abort("stop")
 	bridge.Barrier("sync", nil)
@@ -130,7 +130,7 @@ func TestJSBridge_ControlFlowPanics(t *testing.T) {
 	bridge.AttachWorker(newStubVUContext(), nil, 1, 0, "Test")
 
 	// Sleep panic
-	assertPanic(t, "BLASTER_SLEEP", func() {
+	assertPanic(t, "BUDMENT_SLEEP", func() {
 		bridge.Sleep(2.5)
 	})
 	if bridge.SleepTime != 2500 {
@@ -138,7 +138,7 @@ func TestJSBridge_ControlFlowPanics(t *testing.T) {
 	}
 
 	// Abort panic
-	assertPanic(t, "BLASTER_ABORT", func() {
+	assertPanic(t, "BUDMENT_ABORT", func() {
 		bridge.Abort("assertion failed")
 	})
 	if !bridge.AbortFlag {
@@ -146,7 +146,7 @@ func TestJSBridge_ControlFlowPanics(t *testing.T) {
 	}
 
 	// Barrier panic
-	assertPanic(t, "BLASTER_BARRIER", func() {
+	assertPanic(t, "BUDMENT_BARRIER", func() {
 		bridge.Barrier("gate_1", map[string]any{"quorum": 5.0})
 	})
 	if bridge.BarrierName != "gate_1" {

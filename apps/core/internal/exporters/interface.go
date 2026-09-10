@@ -3,7 +3,7 @@ package exporters
 import (
 	"strings"
 
-	"github.com/vunas/blaster/internal/metrics"
+	"github.com/budment/budment/internal/metrics"
 )
 
 type Reporter interface {

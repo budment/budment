@@ -12,9 +12,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/vunas/blaster/internal/filesystem"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/planner"
+	"github.com/budment/budment/internal/filesystem"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/planner"
 )
 
 //go:embed template.html
@@ -102,7 +102,7 @@ type HTMLReporter struct {
 
 func NewHTMLReporter(filepath string, fs filesystem.FS, startTime time.Time, scenarios []ExportScenario) *HTMLReporter {
 	if filepath == "" {
-		filepath = "blaster-report.html"
+		filepath = "budment-report.html"
 	}
 	return &HTMLReporter{StartTime: startTime, FilePath: filepath, fs: fs, Scenarios: scenarios}
 }
@@ -142,7 +142,7 @@ func (r *HTMLReporter) Export(engine *metrics.EngineMetrics, assert *metrics.Ass
 	}
 
 	data := HTMLReportData{
-		TestName:        "Blaster Load Test Execution",
+		TestName:        "Budment Load Test Execution",
 		StartTime:       r.StartTime.Format(time.RFC1123),
 		DurationSeconds: durSecs,
 		TotalRequests:   total,

@@ -31,7 +31,7 @@ func TestTemplate_StaticExpression(t *testing.T) {
 
 func TestTemplate_DynamicExpressions(t *testing.T) {
 	// Configure test environment variables
-	t.Setenv("BLASTER_REGION", "ap-southeast-1")
+	t.Setenv("BUDMENT_REGION", "ap-southeast-1")
 
 	scope := &stubScope{
 		vars: map[string]any{
@@ -40,7 +40,7 @@ func TestTemplate_DynamicExpressions(t *testing.T) {
 		},
 	}
 
-	rawTmpl := "https://api.com/users/{{user_id}}?region={{@env:BLASTER_REGION:us-east-1}}&env={{@env:NOT_SET:fallback_val}}&token={{token}}"
+	rawTmpl := "https://api.com/users/{{user_id}}?region={{@env:BUDMENT_REGION:us-east-1}}&env={{@env:NOT_SET:fallback_val}}&token={{token}}"
 	expr := NewExpression(rawTmpl)
 
 	if expr.IsStatic() {

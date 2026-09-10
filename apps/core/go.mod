@@ -1,4 +1,4 @@
-module github.com/vunas/blaster
+module github.com/budment/budment
 
 go 1.26.4
 

@@ -1,4 +1,4 @@
 {
-  "extends": "@blaster/tsconfig/library.json",
+  "extends": "@budment/tsconfig/library.json",
   "include": ["src"]
 }

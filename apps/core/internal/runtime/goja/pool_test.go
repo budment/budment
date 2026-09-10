@@ -73,19 +73,19 @@ func TestVMInstance_ExecuteHook_SignalsAndPanics(t *testing.T) {
 	vm := pool.GetVM(newStubVUContext(), nil, 1, 0, "Test")
 	defer pool.PutVM(vm)
 
-	// Sleep signal: engine catches BLASTER_SLEEP panic, returns err=nil, captures SleepTime
+	// Sleep signal: engine catches BUDMENT_SLEEP panic, returns err=nil, captures SleepTime
 	err := vm.ExecuteHook("h_sleep", nil, nil)
 	if err != nil {
-		t.Fatalf("unexpected error on BLASTER_SLEEP: %v", err)
+		t.Fatalf("unexpected error on BUDMENT_SLEEP: %v", err)
 	}
 	if vm.GetSleepTime() != 1500 {
 		t.Fatalf("sleep time mismatch: expected 1500ms, got %d", vm.GetSleepTime())
 	}
 
-	// Abort signal: engine catches BLASTER_ABORT panic, returns err=nil, marks IsAborted=true
+	// Abort signal: engine catches BUDMENT_ABORT panic, returns err=nil, marks IsAborted=true
 	err = vm.ExecuteHook("h_abort", nil, nil)
 	if err != nil {
-		t.Fatalf("unexpected error on BLASTER_ABORT: %v", err)
+		t.Fatalf("unexpected error on BUDMENT_ABORT: %v", err)
 	}
 	if !vm.IsAborted() {
 		t.Fatal("expected IsAborted to be true")

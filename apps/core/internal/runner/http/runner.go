@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vunas/blaster/internal/runner"
+	"github.com/budment/budment/internal/runner"
 )
 
 var requestPool = sync.Pool{

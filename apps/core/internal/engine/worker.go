@@ -10,11 +10,11 @@ import (
 
 	"github.com/goccy/go-json"
 
-	"github.com/vunas/blaster/internal/fastconv"
-	"github.com/vunas/blaster/internal/metrics"
-	"github.com/vunas/blaster/internal/planner"
-	"github.com/vunas/blaster/internal/runner"
-	"github.com/vunas/blaster/internal/runtime"
+	"github.com/budment/budment/internal/fastconv"
+	"github.com/budment/budment/internal/metrics"
+	"github.com/budment/budment/internal/planner"
+	"github.com/budment/budment/internal/runner"
+	"github.com/budment/budment/internal/runtime"
 )
 
 type HookExecutor interface {
