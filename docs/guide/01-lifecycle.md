@@ -91,12 +91,11 @@ flowchart LR
 
 - **Worker Traversal:** Concurrency scales according to the scenario's configured Virtual Users (`vus`) or dynamic ramping profile (`stages`).
 - **Iteration Isolation:** Each worker iterates through the configured pipeline steps. Once an iteration finishes, worker-scoped memory is cleaned to prevent state leakage between cycles.
-- **Native Non-Blocking Yield:** When timers (`sleep`) or synchronization primitives (`barrier`) are encountered, execution yields control back to the Go concurrency scheduler without blocking operating system threads.
+- **Native Yield:** When timers (`sleep`) or synchronization primitives (`barrier`) are encountered, execution yields control back to the Go concurrency scheduler without blocking operating system threads.
 
 ### Phase 3: Engine Drain & SLA Quality Gates
 
 - **Connection Drain:** Once scenario duration or target iterations are exhausted, active HTTP connections finish their in-flight cycles gracefully.
-- **No Custom Teardown Hook:** Budment does **not** provide a programmable `teardown` export pipeline. All test cleanup should be handled through target environment orchestration or external CI/CD hooks.
 - **SLA Evaluation:** The AssertionManager inspects cumulative metrics (`p95`, `p99`, error rates, and custom counters). Threshold violations result in a non-zero process exit code for CI/CD status reporting.
 
 ## 3. Multi-Scenario Orchestration
