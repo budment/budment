@@ -277,7 +277,7 @@ var runCmd = &cobra.Command{
 		}
 
 		assertMgr := metrics.NewAssertionManager(finalEngineCfg.Thresholds)
-		_ = assertMgr.EvaluateThresholds(app.Aggregator.Metrics)
+		slaErr := assertMgr.EvaluateThresholds(app.Aggregator.Metrics)
 
 		for _, rep := range reporters {
 			if expErr := rep.Export(app.Aggregator.Metrics, assertMgr); expErr != nil && !quietMode {
@@ -287,6 +287,9 @@ var runCmd = &cobra.Command{
 
 		if runErr != nil {
 			return runErr
+		}
+		if slaErr != nil {
+			return slaErr
 		}
 
 		return nil
