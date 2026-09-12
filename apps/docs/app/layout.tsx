@@ -1,4 +1,5 @@
 import { Plus_Jakarta_Sans, JetBrains_Mono, Instrument_Sans } from "next/font/google";
+import { ThemeProvider } from "next-themes"; 
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -25,26 +26,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      suppressHydrationWarning
+      suppressHydrationWarning 
       className={`${jakarta.variable} ${instrument.variable} ${jetbrainsMono.variable}`}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                if (localStorage.getItem('budment_theme') === 'dark' || (!localStorage.getItem('budment_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch (_) {}
-            `,
-          }}
-        />
-      </head>
       <body className="font-sans antialiased text-slate-800 dark:text-slate-200 bg-[#fbfbfa] dark:bg-[#0c0d12] transition-colors duration-200">
-        {children}
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="system" 
+          enableSystem
+          disableTransitionOnChange 
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
