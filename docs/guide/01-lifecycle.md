@@ -18,7 +18,7 @@ Budment supports two primary authoring styles. Both compile directly into identi
 Ideal for standard load test scripts and CI/CD pipelines. Uses native JavaScript/TypeScript module exports.
 
 ```typescript
-import { http, sleep, metrics } from '@budment';
+import { http, sleep, metrics } from 'budment';
 
 // 1. Scenario configuration & SLA Quality Gates (alias: export const options = { ... })
 export const config = {
@@ -49,7 +49,7 @@ export default [
 Ideal for complex scenarios requiring strict TypeScript type-checking, dynamic programmatic generation, or reusable modular test components.
 
 ```typescript
-import { scenario, http, sleep } from '@budment';
+import { scenario, http, sleep } from 'budment';
 
 export const checkoutScenario = scenario("Checkout Flow")
     .config({
@@ -105,7 +105,7 @@ Budment supports running multiple independent scenarios within a single script. 
 ### Declarative Multi-Scenario Script
 
 ```typescript
-import { http, sleep } from '@budment';
+import { http, sleep } from 'budment';
 
 // Global options applied to all scenarios unless overridden locally
 export const options = {

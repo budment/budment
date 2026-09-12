@@ -12,7 +12,7 @@ Budment's HTTP client is tightly integrated into its native Go execution engine,
 Initialize request builders using the `http` factory. These builders must be exported within a scenario pipeline to be executed by the engine.
 
 ```typescript
-import { http } from '@budment';
+import { http } from 'budment';
 
 export default [
     http.get("https://api.example.com/v1/users"),
@@ -25,7 +25,7 @@ export default [
 Target URLs support dynamic expressions using SDK template strings, which are resolved natively by the Go engine during execution:
 
 ```typescript
-import { http, env, get } from '@budment';
+import { http, env, get } from 'budment';
 
 export default [
     http.get(`https://${env('API_HOST','api.example.com')}/users/${get('user_id')}`)
@@ -37,7 +37,7 @@ export default [
 The `.before()` method is not just a single configuration object; it is a **sequential execution pipeline**. It accepts variadic arguments (`...args`), allowing you to chain declarative objects, dynamic JavaScript hooks, and operational nodes (like logs or barriers) in a strict, predictable order.
 
 ```typescript
-import { http, log, barrier } from '@budment';
+import { http, log, barrier } from 'budment';
 
 http.post("https://api.example.com/orders")
     .before(
@@ -55,7 +55,7 @@ http.post("https://api.example.com/orders")
 For static configurations, pass a declarative object containing `headers` and `body`. The SDK automatically serializes plain JavaScript objects into JSON during the compilation phase.
 
 ```typescript
-import { http, env, get, random } from '@budment';
+import { http, env, get, random } from 'budment';
 
 http.post("https://api.example.com/orders")
     .before({
@@ -143,7 +143,7 @@ http.post("https://api.example.com/auth/login")
 Use a JavaScript callback when validations require complex branching. Calling `res.json()` without arguments parses the entire payload into a JavaScript object:
 
 ```typescript
-import { http, set, abort } from '@budment';
+import { http, set, abort } from 'budment';
 
 http.get("https://api.example.com/account/profile")
     .after((res, req) => {
@@ -179,7 +179,7 @@ export interface HttpResponse {
 Uploading binary assets (images, PDFs, archives) requires preserving raw byte streams. Use `open(path, 'b')` to read the file into an `ArrayBuffer`, then attach it using `req.file()`:
 
 ```typescript
-import { http, open } from '@budment';
+import { http, open } from 'budment';
 
 // Read file into an ArrayBuffer during compilation
 const invoiceData = open("./fixtures/invoice.pdf", "b");

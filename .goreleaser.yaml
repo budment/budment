@@ -1,12 +1,12 @@
 version: 2
 
-project_name: bud
+project_name: budment
 
 builds:
-  - id: bud
+  - id: budment
     dir: apps/core
     main: ./cmd
-    binary: bud
+    binary: budment
     env:
       - CGO_ENABLED=0
     goos:

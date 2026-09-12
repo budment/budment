@@ -13,7 +13,7 @@ Budment features a built-in observability subsystem engineered to tracks default
 Beyond standard HTTP latency and request counts, scripts can record custom domain KPIs using the `metrics` primitive. These metrics appear directly in the terminal summary and exported reports.
 
 ```typescript
-import { metrics, get, http } from '@budment';
+import { metrics, get, http } from 'budment';
 
 export default [
     http.post("https://api.example.com/checkout")
@@ -48,7 +48,7 @@ The `tag(key, value)` primitive attaches metadata labels to the active Virtual U
 **TypeScript**
 
 ```typescript
-import { tag, http, get } from '@budment';
+import { tag, http, get } from 'budment';
 
 export default [
     http.post("https://api.example.com/auth/login")
@@ -66,7 +66,7 @@ When arbitrary JavaScript logic must execute sequentially between requests—wit
 **TypeScript**
 
 ```typescript
-import { script, set, log, metrics } from '@budment';
+import { script, set, log, metrics } from 'budment';
 
 export default [
     script(() => {
@@ -85,7 +85,7 @@ Budment differentiates between non-fatal logic violations and critical errors th
 **TypeScript**
 
 ```typescript
-import { fail, abort, get, script } from '@budment';
+import { fail, abort, get, script } from 'budment';
 
 export default [
     script(() => {

@@ -48,7 +48,7 @@ Operational nodes that cause the JavaScript VM to immediately suspend and yield 
 * **Inside a JS Hook:** If you place a `sleep()` or `abort()` inside a JS hook, the TypeScript compiler's Control Flow Analysis takes over. Your IDE will automatically **gray out** any code written below it.
 
 ```typescript
-import { abort, get, script } from '@budment/sdk';
+import { abort, get, script } from 'budment/';
 
 export default [
     script(() => {

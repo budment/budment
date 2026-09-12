@@ -1,5 +1,5 @@
 {
-  "name": "@budment",
+  "name": "budment",
   "version": "0.1.0-alpha.1",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -19,9 +19,6 @@
         "default": "./dist/index.js"
       }
     }
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "dev": "tsup --watch --dts",
