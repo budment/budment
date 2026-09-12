@@ -31,4 +31,5 @@ func PrintBanner() {
 	lastLine := theme.TextCyan(lines[len(lines)-1])
 	authorTag := theme.TextDim("@") + theme.TextMagenta("vunas")
 	fmt.Printf("%s%s\n", lastLine, authorTag)
+	fmt.Printf("\n")
 }

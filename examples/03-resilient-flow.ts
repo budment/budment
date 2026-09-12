@@ -5,6 +5,10 @@ export const config = {
     duration: "10s",
 };
 
+export const setup = [
+    http.get("https://httpbin.org/get")
+]
+
 export default [
     // 1. Synchronize workers before starting the complex flow
     barrier("sync_start", { quorum: 2 }),
@@ -14,7 +18,7 @@ export default [
         .after(
             { expect: { status: 200 }, extract: { "uuid": "request_id" } },
             // Uses standard template literals; resolves natively via Go tokens
-            log("Generated Request ID: ${get('request_id')}") 
+            log(`Generated Request ID: ${get('request_id')}`) 
         ),
 
     // 2. Declarative branching based on extracted state
