@@ -51,7 +51,7 @@ At the start of **every iteration**, the Go FSM automatically retrieves the next
 **TypeScript**
 
 ```typescript
-import { http, distribute, get, script } from 'budment';
+import { http, distribute, get, script } from '@budment/sdk';
 
 export const setup = [
     script(() => {
@@ -114,7 +114,7 @@ The engine automatically injects routing and context metadata into every active 
 **Example of Seamless Integration:**
 
 ```typescript
-import { http, random, get, env, info } from 'budment';
+import { http, random, get, env, info } from '@budment/sdk';
 
 export default [
     // Outside a hook: The SDK returns tokens. The Go engine natively resolves this string 

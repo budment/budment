@@ -1,0 +1,7 @@
+{
+  "name": "budment-examples",
+  "private": true,
+  "devDependencies": {
+    "@budment/sdk": "latest"
+  }
+}

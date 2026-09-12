@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="assets/under-logo.svg" alt="Budment" width="280">
+  <img src="assets/beside-logo.svg" alt="Budment" width="400" height='auto' />
 
   <p><strong>Scenarios as AST, Logic as Code.</strong></p>
 
@@ -34,7 +34,6 @@ Budment uses a **two-phase execution model** that separates scenario compilation
 - **Context-Aware SDK:** `budment` primitives automatically adapt to their execution context.
 - **Resource Efficiency:** A lightweight architecture minimizes runtime overhead and infrastructure requirements.
 - **Test as Code:** Scenarios are authored as type-safe code with IDE and Git support.
-- **Test as Docs:** `budment plan` renders scenarios as inspectable execution plans.
 - **Test as Docs:** `budment plan` renders scenarios as inspectable execution plans, reducing the time needed to understand, preview, and maintain workflows.
 - **Dynamic Expressions:** The DSL supports dynamic expressions for common test data and runtime values.
 - **CI/CD Quality Gates:** Thresholds produce deterministic results for automated pipelines.
@@ -67,7 +66,7 @@ npm install -D budment
 Create a test scenario (e.g., `test.ts`). Declare requests, assertions, and pacing delays:
 
 ```typescript
-import { http, sleep, random } from 'budment';
+import { http, sleep, random } from '@budment/sdk';
 
 export const config = {
     vus: 10,

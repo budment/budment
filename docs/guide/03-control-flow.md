@@ -14,7 +14,7 @@ Control structures are natively executed by the Go FSM, allowing Budment to auto
 The `branch(condition, truePath, falsePath?)` node splits execution based on the boolean result of a condition callback.
 
 ```typescript
-import { branch, http, get, log } from 'budment';
+import { branch, http, get, log } from '@budment/sdk';
 
 export default [
     http.get("https://api.example.com/user/profile")
@@ -40,7 +40,7 @@ export default [
 The `match(condition, cases, defaultPath?)` node acts as a declarative `switch/case` construct. It evaluates a condition returning a string or number and natively directs the worker to the matching pipeline.
 
 ```typescript
-import { match, http, get, log, sleep } from 'budment';
+import { match, http, get, log, sleep } from '@budment/sdk';
 
 export default [
     http.get("https://api.example.com/orders/next")
@@ -76,7 +76,7 @@ The `loop(count, logicPath)` node executes a sub-pipeline for a fixed number of 
 Inside the loop, the engine automatically injects a `loop_index` variable (a 0-indexed counter) into the worker's memory scope.
 
 ```typescript
-import { loop, http } from 'budment';
+import { loop, http } from '@budment/sdk';
 
 export default [
     loop(5, [
@@ -102,7 +102,7 @@ The `poll(condition, logicPath, policy)` node behaves as a native **Do-While loo
 When the worker enters this node, it **executes the action pipeline first**, and only then evaluates the condition predicate. The cycle repeats until the condition returns `true` or the `maxAttempts` limit is reached.
 
 ```typescript
-import { poll, http, get } from 'budment';
+import { poll, http, get } from '@budment/sdk';
 
 export default [
     // 1. Trigger an asynchronous background report generation
