@@ -16,9 +16,9 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-md">
-              High-throughput declarative API execution engine and distributed
-              load generation platform. Compiles TypeScript workflows into
-              native Go execution graphs.
+              An open-source declarative API execution engine. Compiles
+              TypeScript workflows into deterministic execution plans for load
+              testing.
             </p>
           </div>
 
@@ -120,8 +120,8 @@ export default function Footer() {
               <strong className="text-slate-900 dark:text-slate-200">
                 MIT License
               </strong>
-              . Designed for deterministic high-concurrency microservices
-              benchmarking.
+              . Community contributions and
+              feedback are welcome.
             </p>
           </div>
         </div>

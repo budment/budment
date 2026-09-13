@@ -32,7 +32,7 @@ export default function Header() {
                   alt="Budment Logo"
                   width={32}
                   height={32}
-                  className="w-full h-full object-contain scale-125 transition-transform group-hover:scale-130"
+                  className="object-contain scale-125 transition-transform group-hover:scale-130"
                   priority
                 />
               </div>
