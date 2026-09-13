@@ -44,7 +44,7 @@ snapshot:
 changelog:
   sort: asc
   use: github
-  format: "{{ .Title }} ({{ .AuthorLink }})"
+  format: "{{ .Summary }} ({{ .AuthorLink }})"
   filters:
     exclude:
       - "^docs:"
@@ -54,13 +54,13 @@ changelog:
       - "Merge pull request"
   groups:
     - title: "Features"
-      regexp: '^.*?feat(\([ws]+\))?:'
+      regexp: '^.*?feat(\([\\w\\s]+\))?:'
       order: 0
     - title: "Bug Fixes"
-      regexp: '^.*?fix(\([ws]+\))?:'
+      regexp: '^.*?fix(\([\\w\\s]+\))?:'
       order: 1
     - title: "Performance Improvements"
-      regexp: '^.*?perf(\([ws]+\))?:'
+      regexp: '^.*?perf(\([\\w\\s]+\))?:'
       order: 2
     - title: "Others"
       order: 999
