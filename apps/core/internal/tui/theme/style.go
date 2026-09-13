@@ -18,8 +18,12 @@ func TextMagenta(t string) string { return Apply(t, Magenta) }
 func TextGray(t string) string    { return Apply(t, Gray) }
 func TextBold(t string) string    { return Apply(t, Bold) }
 func TextDim(t string) string     { return Apply(t, Dim) }
+func TextItalic(t string) string  { return Apply(t, Italic) }
 
 func Success(t string) string { return Apply(t, Green, Bold) }
 func Warning(t string) string { return Apply(t, Yellow, Bold) }
 func Error(t string) string   { return Apply(t, Red, Bold) }
 func Info(t string) string    { return Apply(t, Cyan) }
+
+func Brand(t string) string    { return Apply(t, Cyan, Bold) }
+func Subtitle(t string) string { return Apply(t, Gray, Italic) }

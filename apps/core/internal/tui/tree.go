@@ -24,14 +24,22 @@ func getVisibleNodes(nodes []planner.ExecutableNode, detailed bool) []planner.Ex
 }
 
 func PrintPhase(phaseName string, nodes []planner.ExecutableNode, detailed bool) {
-	fmt.Printf("\n%s\n", theme.TextMagenta("▶ "+strings.ToUpper(phaseName)+" PHASE"))
-	PrintDivider()
+	if len(nodes) == 0 {
+		return
+	}
 
 	visible := getVisibleNodes(nodes, detailed)
 	if len(visible) == 0 {
-		fmt.Printf("  %s\n", theme.TextDim("(empty)"))
+		if !detailed {
+			fmt.Printf("\n%s\n", theme.TextMagenta("▶ "+strings.ToUpper(phaseName)+" PHASE"))
+			PrintDivider()
+			fmt.Printf("  %s\n", theme.TextDim("→ "+summarizePipeline(nodes)))
+		}
 		return
 	}
+
+	fmt.Printf("\n%s\n", theme.TextMagenta("▶ "+strings.ToUpper(phaseName)+" PHASE"))
+	PrintDivider()
 
 	printTreeReal(visible, "", detailed)
 }
@@ -223,24 +231,32 @@ func printHTTPNode(prefix, connector, childPrefix string, n *planner.ActionNode,
 func printBranchNode(prefix, connector, childPrefix string, n *planner.BranchNode, nodeID string, detailed bool) {
 	fmt.Printf("%s%s %s Condition: %s%s\n", theme.TextDim(prefix), theme.TextDim(connector), theme.TextYellow("[BRANCH]"), n.ConditionHookID, nodeID)
 
-	trueVisible := getVisibleNodes(n.TruePath, detailed)
-	if len(trueVisible) > 0 {
-		fmt.Printf("%s├── %s\n", theme.TextDim(childPrefix), theme.TextGreen("[TRUE]"))
-		printTreeReal(trueVisible, childPrefix+"│   ", detailed)
-	} else if len(n.TruePath) > 0 {
-		fmt.Printf("%s├── %s → %s\n", theme.TextDim(childPrefix), theme.TextGreen("[TRUE]"), theme.TextDim(summarizePipeline(n.TruePath)))
-	} else {
-		fmt.Printf("%s├── %s %s\n", theme.TextDim(childPrefix), theme.TextGreen("[TRUE]"), theme.TextDim("(empty)"))
+	hasFalse := len(n.FalsePath) > 0
+	trueConnector := "├──"
+	trueChildPrefix := childPrefix + "│   "
+	if !hasFalse {
+		trueConnector = "└──"
+		trueChildPrefix = childPrefix + "    "
 	}
 
-	falseVisible := getVisibleNodes(n.FalsePath, detailed)
-	if len(falseVisible) > 0 {
-		fmt.Printf("%s└── %s\n", theme.TextDim(childPrefix), theme.TextRed("[FALSE]"))
-		printTreeReal(falseVisible, childPrefix+"    ", detailed)
-	} else if len(n.FalsePath) > 0 {
-		fmt.Printf("%s└── %s → %s\n", theme.TextDim(childPrefix), theme.TextRed("[FALSE]"), theme.TextDim(summarizePipeline(n.FalsePath)))
-	} else {
-		fmt.Printf("%s└── %s %s\n", theme.TextDim(childPrefix), theme.TextRed("[FALSE]"), theme.TextDim("(empty)"))
+	trueVisible := getVisibleNodes(n.TruePath, detailed)
+	if len(trueVisible) > 0 {
+		fmt.Printf("%s%s %s\n", theme.TextDim(childPrefix), theme.TextDim(trueConnector), theme.TextGreen("[TRUE]"))
+		printTreeReal(trueVisible, trueChildPrefix, detailed)
+	} else if len(n.TruePath) > 0 {
+		fmt.Printf("%s%s %s → %s\n", theme.TextDim(childPrefix), theme.TextDim(trueConnector), theme.TextGreen("[TRUE]"), theme.TextDim(summarizePipeline(n.TruePath)))
+	} else if hasFalse {
+		fmt.Printf("%s%s %s %s\n", theme.TextDim(childPrefix), theme.TextDim(trueConnector), theme.TextGreen("[TRUE]"), theme.TextDim("(empty)"))
+	}
+
+	if hasFalse {
+		falseVisible := getVisibleNodes(n.FalsePath, detailed)
+		if len(falseVisible) > 0 {
+			fmt.Printf("%s└── %s\n", theme.TextDim(childPrefix), theme.TextRed("[FALSE]"))
+			printTreeReal(falseVisible, childPrefix+"    ", detailed)
+		} else {
+			fmt.Printf("%s└── %s → %s\n", theme.TextDim(childPrefix), theme.TextRed("[FALSE]"), theme.TextDim(summarizePipeline(n.FalsePath)))
+		}
 	}
 }
 
