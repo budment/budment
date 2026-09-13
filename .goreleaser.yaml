@@ -42,25 +42,26 @@ snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  sort: asc
   use: github
-  format: "{{ .Summary }} ({{ .AuthorLink }})"
+  sort: asc
+  abbrev: -1
+  format: "{{ .Message }}"
   filters:
     exclude:
       - "^docs:"
       - "^test:"
       - "^ci:"
       - "^chore:"
-      - "Merge pull request"
+      - "^Merge pull request"
   groups:
     - title: "Features"
-      regexp: '^.*?feat(\([\\w\\s]+\))?:'
+      regexp: '^.*?feat(\([\w\s]+\))?!?:'
       order: 0
     - title: "Bug Fixes"
-      regexp: '^.*?fix(\([\\w\\s]+\))?:'
+      regexp: '^.*?fix(\([\w\s]+\))?!?:'
       order: 1
     - title: "Performance Improvements"
-      regexp: '^.*?perf(\([\\w\\s]+\))?:'
+      regexp: '^.*?perf(\([\w\s]+\))?!?:'
       order: 2
     - title: "Others"
       order: 999
