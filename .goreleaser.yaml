@@ -24,7 +24,7 @@ builds:
 
 archives:
   - id: default
-    name_template: "bud_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "budment_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
     format_overrides:
