@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write 
+  id-token: write
 
 jobs:
   goreleaser:
@@ -43,8 +44,8 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           
       - run: pnpm install --frozen-lockfile
-      
-      - run: pnpm --filter @budment/sdk build
-      - run: pnpm --filter @budment/sdk publish --no-git-checks --access public
+      - run: pnpm --filter "@budment/sdk" exec npm version ${GITHUB_REF_NAME#v} --no-git-tag-version --allow-same-version
+      - run: pnpm --filter "@budment/sdk" build
+      - run: pnpm --filter "@budment/sdk" publish --no-git-checks --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
