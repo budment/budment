@@ -1,53 +1,73 @@
 $ErrorActionPreference = 'Stop'
 
-Write-Host "==> Installing Budment CLI for Windows..." -ForegroundColor Cyan
+function Write-Info($msg) { Write-Host "info: " -ForegroundColor Cyan -NoNewline; Write-Host $msg }
+function Write-Success($msg) { Write-Host "ok: " -ForegroundColor Green -NoNewline; Write-Host $msg }
+function Write-Warn($msg) { Write-Host "warn: " -ForegroundColor Yellow -NoNewline; Write-Host $msg }
+function Write-Err($msg) { Write-Host "error: " -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
 
-# Detect CPU architecture
+Write-Host "`nInstalling Budment CLI for Windows..." -ForegroundColor White
+
+# 1. Architecture detection
 $Arch = if ([System.Environment]::Is64BitOperatingSystem) {
     if ($env:PROCESSOR_ARCHITECTURE -match "ARM") { "arm64" } else { "amd64" }
-} else {
-    Write-Error "Unsupported architecture: 32-bit is not supported."
-    exit 1
+}
+else {
+    Write-Err "32-bit Windows systems are not supported."
 }
 
-# Fetch latest version from GitHub
+# 2. Release metadata retrieval
 $Owner = "budment"
 $Repo = "budment"
 
 try {
-    $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases" -UseBasicParsing
-    $LatestTag = $Release[0].tag_name
-} catch {
-    Write-Error "Failed to fetch latest release from GitHub."
-    exit 1
+    $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases/latest" -UseBasicParsing
+    $LatestTag = $Release.tag_name
+}
+catch {
+    Write-Err "Failed to query latest release from GitHub API: $_"
 }
 
-$VersionNoV = $LatestTag.TrimStart('v')
-$FileName = "budment_${VersionNoV}_windows_${Arch}.zip"
+if (-not $LatestTag) {
+    Write-Err "Could not resolve valid release tag."
+}
+
+$Version = $LatestTag.TrimStart('v')
+$FileName = "budment_${Version}_windows_${Arch}.zip"
 $DownloadUrl = "https://github.com/$Owner/$Repo/releases/download/$LatestTag/$FileName"
 
-# Create install directory at ~/.budment/bin
+# 3. Create destination workspace
 $InstallDir = Join-Path $HOME ".budment\bin"
 if (-not (Test-Path $InstallDir)) {
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 }
 
-# Download and extract binary
+# 4. Download and extract binary
 $TempZip = Join-Path $env:TEMP $FileName
-Write-Host "Downloading version $LatestTag..." -ForegroundColor Cyan
+Write-Info "Downloading $LatestTag ($FileName)..."
 Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempZip -UseBasicParsing
 
 Expand-Archive -Path $TempZip -DestinationPath $env:TEMP -Force
-Move-Item -Path (Join-Path $env:TEMP "budment.exe") -Destination (Join-Path $InstallDir "budment.exe") -Force
-Remove-Item $TempZip -Force
-
-# Add install directory to User PATH if missing
-$UserPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
-if ($UserPath -notlike "*$InstallDir*") {
-    [System.Environment]::SetEnvironmentVariable("Path", "$UserPath;$InstallDir", [System.EnvironmentVariableTarget]::User)
-    $env:Path = "$env:Path;$InstallDir"
-    Write-Host "`n✔ Added $InstallDir to User PATH." -ForegroundColor Green
+$ExtractedExe = Join-Path $env:TEMP "budment.exe"
+if (-not (Test-Path $ExtractedExe)) {
+    Write-Err "Extracted zip does not contain 'budment.exe'."
 }
 
-Write-Host "`n✔ Budment installed successfully!" -ForegroundColor Green
-Write-Host "Restart your terminal and run 'budment --help' to get started.`n" -ForegroundColor Yellow
+Move-Item -Path $ExtractedExe -Destination (Join-Path $InstallDir "budment.exe") -Force
+Remove-Item $TempZip -Force
+
+# 5. Persist PATH in User Environment Variable
+$UserPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User)
+if ($UserPath -notlike "*$InstallDir*") {
+    $NewUserPath = if ($UserPath.EndsWith(";")) { "$UserPath$InstallDir" } else { "$UserPath;$InstallDir" }
+    [System.Environment]::SetEnvironmentVariable("Path", $NewUserPath, [System.EnvironmentVariableTarget]::User)
+    Write-Success "Added $InstallDir to persistent User PATH."
+}
+
+# 6. Apply PATH immediately to the active PowerShell session
+if ($env:Path -notlike "*$InstallDir*") {
+    $env:Path = "$InstallDir;$env:Path"
+}
+
+# 7. Completion Banner
+Write-Success "Budment CLI $LatestTag installed successfully to $InstallDir\budment.exe"
+Write-Host "`nReady to use! Run: budment --help`n" -ForegroundColor Cyan

@@ -154,7 +154,7 @@ var runCmd = &cobra.Command{
 
 		isTUIActive := !quietMode && !jsonMode && !debugMode && !noTUIMode && IsTerminal() && !IsCIEnvironment()
 		if !quietMode && !jsonMode {
-			tui.PrintBanner(cmd.Version)
+			tui.PrintBanner(Version)
 			tui.PrintPlanOverview(scriptPath, elapsed.Milliseconds(), finalEngineCfg)
 		}
 		if !isTUIActive && !quietMode && !jsonMode {

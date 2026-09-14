@@ -12,6 +12,12 @@ import (
 )
 
 var (
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
+)
+
+var (
 	globalLog *slog.Logger
 
 	globalConfigFile string
@@ -45,9 +51,14 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func SetVersionInfo(version, commit, date string) {
-	rootCmd.Version = version
-	rootCmd.SetVersionTemplate(fmt.Sprintf("budment version %s (commit: %s, built at: %s)\n", version, commit, date))
+func SetVersionInfo(v, c, d string) {
+	Version = v
+	Commit = c
+	Date = d
+
+	rootCmd.Version = v
+	rootCmd.SetVersionTemplate(fmt.Sprintf("budment version %s (commit: %s, built at: %s)\n", v, c, d))
+	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

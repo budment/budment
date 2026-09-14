@@ -64,7 +64,7 @@ var planCmd = &cobra.Command{
 			return nil
 		}
 
-		tui.PrintBanner(cmd.Version)
+		tui.PrintBanner(Version)
 		tui.PrintPlanOverview(scriptPath, elapsed.Milliseconds(), finalCfg)
 
 		if debugMode {
