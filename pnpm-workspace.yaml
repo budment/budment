@@ -5,4 +5,5 @@ packages:
 allowBuilds:
   '@bufbuild/buf': true
   esbuild: true
+  sharp: true
   unrs-resolver: true

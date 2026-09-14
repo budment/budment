@@ -3,6 +3,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import InstallCommand from "@/components/home/InstallCommand";
+import HeroAnimation from "@/components/home/HeroAnimation";
 
 export const metadata: Metadata = {
   title: "Budment — Scenarios as AST, Logic as Code",
@@ -19,51 +20,47 @@ export default function HomePage() {
       <Header />
 
       <main className="flex-1">
-        {/* HERO */}
-        <section className="pt-10 pb-5 px-6 max-w-7xl mx-auto border-b border-slate-200 dark:border-slate-800/80">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-            <div className="lg:col-span-5 flex flex-col justify-center">
-              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500 font-semibold mb-3 block">
+        {/* HERO SECTION */}
+        <section className="pt-10 sm:pt-16 pb-14 sm:pb-20 px-4 sm:px-6 max-w-7xl mx-auto border-b border-slate-200 dark:border-slate-800/80">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* HERO CONTENT */}
+            <div className="lg:col-span-7 flex flex-col justify-center text-left">
+              <span className="font-mono text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 font-semibold mb-3.5 block">
                 Open-Source API Execution Engine
               </span>
 
-              <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-slate-950 dark:text-white leading-[1.08] mb-5">
-                Scenarios as AST.
+              <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-light tracking-[-0.035em] text-slate-950 dark:text-white leading-[1.05] mb-6">
+                Scenarios as{" "}
+                <span className="font-semibold bg-linear-to-r bg-blue-600 bg-clip-text text-transparent">
+                  AST.
+                </span>
                 <br />
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
                   Logic as Code.
                 </span>
               </h1>
 
-              <p className="text-base text-slate-600 dark:text-slate-400 font-normal leading-relaxed mb-6">
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 font-normal leading-relaxed mb-8 max-w-xl">
                 Budment separates scenario compilation from runtime execution.
                 Define workflows in TypeScript, compile into an immutable
                 Abstract Syntax Tree (AST).
               </p>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 font-mono text-xs">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 font-mono text-xs">
                 <Link
                   href="/docs/getting-started/01-introduction"
-                  className="px-5 py-2.5 bg-slate-950 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 text-white font-semibold text-center transition-colors shadow-2xs"
+                  className="px-6 py-3 bg-slate-950 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200 text-white font-semibold text-center transition-colors shadow-2xs shrink-0"
                 >
-                  Started
+                  Get Started
                 </Link>
 
                 <InstallCommand />
               </div>
             </div>
 
-            <div className="lg:col-span-7 w-full">
-              <div className="w-full rounded-md overflow-hidden bg-black border border-slate-300 dark:border-slate-800">
-                <video
-                  src="/demo.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-96 block"
-                />
-              </div>
+            {/* Right side: Animation (5 cols) */}
+            <div className="lg:col-span-5 w-full flex items-center justify-center lg:justify-end">
+              <HeroAnimation src="/ship.lottie" />
             </div>
           </div>
         </section>

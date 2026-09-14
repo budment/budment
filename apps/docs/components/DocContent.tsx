@@ -60,7 +60,7 @@ export default function DocContent({ html }: { html: string }) {
         )
         .replace(
           /\[(TRUE|FALSE)\]/gi,
-          '<span class="text-cyan-400 font-semibold">[$1]</span>',
+          '<span class="text-cyan-400 font-semibold">[TRUE]</span>',
         )
         .replace(
           /(Case:\s*[a-zA-Z0-9_-]+)/g,
@@ -87,7 +87,7 @@ export default function DocContent({ html }: { html: string }) {
   };
 
   /**
-   * Initializes Mermaid diagrams with horizontal touch scroll and zoom controls.
+   * Renders Mermaid diagrams with touch-friendly horizontal scroll.
    */
   const setupMermaid = async () => {
     if (!containerRef.current) return;
@@ -146,14 +146,8 @@ export default function DocContent({ html }: { html: string }) {
       if (el.parentElement?.classList.contains("mermaid-wrapper")) return;
 
       const wrapper = document.createElement("div");
-      // Use overflow-x-auto and touch-pan-x for fluid mobile swiping
       wrapper.className =
-        "mermaid-wrapper notranslate relative group mt-8 rounded-2xl bg-white/80 dark:bg-slate-900/60 p-4 shadow-2xs overflow-x-auto touch-pan-x";
-      (
-        wrapper.style as HTMLElement["style"] & {
-          webkitOverflowScrolling?: string;
-        }
-      ).webkitOverflowScrolling = "touch";
+        "mermaid-wrapper notranslate relative group mt-8 rounded-2xl bg-white/80 dark:bg-slate-900/60 p-4 shadow-2xs overflow-x-auto overflow-y-hidden";
       wrapper.setAttribute("translate", "no");
 
       el.parentNode?.insertBefore(wrapper, el);
@@ -161,7 +155,7 @@ export default function DocContent({ html }: { html: string }) {
 
       const toolbar = document.createElement("div");
       toolbar.className =
-        "sticky top-3 float-right flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 text-xs font-mono notranslate";
+        "absolute top-3 right-3 flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 text-xs font-mono notranslate";
       toolbar.setAttribute("translate", "no");
 
       toolbar.innerHTML = `
@@ -199,7 +193,9 @@ export default function DocContent({ html }: { html: string }) {
   };
 
   /**
-   * Configures terminal expandable blocks while strictly preserving horizontal code scrolling.
+   * Manages expandable code boxes:
+   * - Strictly locks vertical overflow to prevent unwanted internal scrollbars.
+   * - Keeps horizontal scrolling active for wide code snippets.
    */
   const setupCodeExpand = () => {
     if (!containerRef.current) return;
@@ -211,28 +207,23 @@ export default function DocContent({ html }: { html: string }) {
       box.classList.add("notranslate");
 
       const pre = box.querySelector("pre");
-      if (!pre) return;
-
-      // Always guarantee horizontal touch scrolling on mobile
-      pre.style.overflowX = "auto";
-      (
-        pre.style as HTMLElement["style"] & { webkitOverflowScrolling?: string }
-      ).webkitOverflowScrolling = "touch";
-
-      if (box.querySelector(".expand-toggle-btn")) return;
+      if (!pre || box.querySelector(".expand-toggle-btn")) return;
 
       const COLLAPSED_HEIGHT = 320;
 
       if (pre.scrollHeight > COLLAPSED_HEIGHT + 40) {
         box.classList.add("relative");
+
+        // Lock vertical height and hide vertical overflow strictly
         pre.style.maxHeight = `${COLLAPSED_HEIGHT}px`;
-        // Only clamp vertical height, NEVER clamp overflow-x
         pre.style.overflowY = "hidden";
+        pre.style.overflowX = "auto";
         pre.style.transition = "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
 
+        // Fade overlay (pointer-events-none prevents blocking vertical page scrolls)
         const fadeOverlay = document.createElement("div");
         fadeOverlay.className =
-          "expand-fade absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#16181d] via-[#16181d]/80 to-transparent pointer-events-none transition-opacity duration-300 z-1";
+          "expand-fade absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#16181d] via-[#16181d]/85 to-transparent pointer-events-none transition-opacity duration-300 z-1";
         box.appendChild(fadeOverlay);
 
         const toggleBtn = document.createElement("button");
@@ -249,7 +240,6 @@ export default function DocContent({ html }: { html: string }) {
           const isCollapsed = pre.style.maxHeight === `${COLLAPSED_HEIGHT}px`;
           if (isCollapsed) {
             pre.style.maxHeight = `${pre.scrollHeight}px`;
-            pre.style.overflowY = "visible";
             fadeOverlay.classList.add("opacity-0");
             toggleBtn.innerHTML = `${COLLAPSE_ICON_SVG}<span class="btn-text">Collapse</span>`;
           } else {
@@ -267,7 +257,7 @@ export default function DocContent({ html }: { html: string }) {
   };
 
   /**
-   * Wraps markdown tables with a responsive horizontal scroll container.
+   * Wraps markdown tables inside a responsive horizontal container.
    */
   const setupTableScroll = () => {
     if (!containerRef.current) return;
@@ -277,12 +267,7 @@ export default function DocContent({ html }: { html: string }) {
         return;
       const wrapper = document.createElement("div");
       wrapper.className =
-        "table-scroll-wrapper my-8 w-full max-w-full overflow-x-auto touch-pan-x rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs";
-      (
-        wrapper.style as HTMLElement["style"] & {
-          webkitOverflowScrolling?: string;
-        }
-      ).webkitOverflowScrolling = "touch";
+        "table-scroll-wrapper my-8 w-full max-w-full overflow-x-auto overflow-y-hidden rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs";
       table.parentNode?.insertBefore(wrapper, table);
       wrapper.appendChild(table);
     });
@@ -344,7 +329,7 @@ export default function DocContent({ html }: { html: string }) {
         [&_ol]:my-4 [&_ol]:pl-6 [&_ol]:space-y-2.5
         [&_code]:text-[13.5px] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:bg-slate-100 dark:[&_code]:bg-slate-800 [&_code]:text-slate-800 dark:[&_code]:text-slate-200 [&_code]:border [&_code]:border-slate-200 dark:[&_code]:border-slate-700
         [&_.terminal-box]:w-full [&_.terminal-box]:max-w-full
-        [&_.terminal-box_pre]:w-full [&_.terminal-box_pre]:max-w-full [&_.terminal-box_pre]:overflow-x-auto [&_.terminal-box_pre]:touch-pan-x
+        [&_.terminal-box_pre]:w-full [&_.terminal-box_pre]:max-w-full [&_.terminal-box_pre]:overflow-x-auto [&_.terminal-box_pre]:overflow-y-hidden
         [&_.terminal-box_code]:bg-transparent [&_.terminal-box_code]:border-0 [&_.terminal-box_code]:p-0 [&_.terminal-box_code]:text-slate-200
         [&_table]:w-full [&_table]:min-w-140 [&_table]:text-left [&_table]:text-[13.5px] [&_table]:border-separate [&_table]:border-spacing-0
         [&_thead]:bg-slate-200/75 dark:[&_thead]:bg-[#181b22]
