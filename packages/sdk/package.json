@@ -1,6 +1,11 @@
 {
   "name": "@budment/sdk",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/budment/budment.git",
+    "directory": "packages/sdk"
+  },
   "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
