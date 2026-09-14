@@ -17,6 +17,9 @@ const COLLAPSE_ICON_SVG = `
 export default function DocContent({ html }: { html: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Parses and syntax-highlights ASCII AST trees and execution graphs.
+   */
   const setupAstHighlighting = () => {
     if (!containerRef.current) return;
     const astBlocks = containerRef.current.querySelectorAll<HTMLElement>(
@@ -83,6 +86,9 @@ export default function DocContent({ html }: { html: string }) {
     });
   };
 
+  /**
+   * Initializes Mermaid diagrams with horizontal touch scroll and zoom controls.
+   */
   const setupMermaid = async () => {
     if (!containerRef.current) return;
     const mermaidElements = containerRef.current.querySelectorAll<HTMLElement>(
@@ -132,7 +138,7 @@ export default function DocContent({ html }: { html: string }) {
     try {
       await mermaid.run({ nodes: Array.from(mermaidElements) });
     } catch (err) {
-      console.error("Lỗi khi render sơ đồ Mermaid:", err);
+      console.error("Failed to render Mermaid diagram:", err);
     }
 
     mermaidElements.forEach((el) => {
@@ -140,8 +146,14 @@ export default function DocContent({ html }: { html: string }) {
       if (el.parentElement?.classList.contains("mermaid-wrapper")) return;
 
       const wrapper = document.createElement("div");
+      // Use overflow-x-auto and touch-pan-x for fluid mobile swiping
       wrapper.className =
-        "mermaid-wrapper notranslate relative group mt-8 rounded-2xl bg-white/80 dark:bg-slate-900/60 p-4 shadow-2xs overflow-hidden";
+        "mermaid-wrapper notranslate relative group mt-8 rounded-2xl bg-white/80 dark:bg-slate-900/60 p-4 shadow-2xs overflow-x-auto touch-pan-x";
+      (
+        wrapper.style as HTMLElement["style"] & {
+          webkitOverflowScrolling?: string;
+        }
+      ).webkitOverflowScrolling = "touch";
       wrapper.setAttribute("translate", "no");
 
       el.parentNode?.insertBefore(wrapper, el);
@@ -149,7 +161,7 @@ export default function DocContent({ html }: { html: string }) {
 
       const toolbar = document.createElement("div");
       toolbar.className =
-        "absolute top-3 right-3 flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 text-xs font-mono notranslate";
+        "sticky top-3 float-right flex items-center gap-1 bg-slate-100/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 text-xs font-mono notranslate";
       toolbar.setAttribute("translate", "no");
 
       toolbar.innerHTML = `
@@ -186,6 +198,9 @@ export default function DocContent({ html }: { html: string }) {
     });
   };
 
+  /**
+   * Configures terminal expandable blocks while strictly preserving horizontal code scrolling.
+   */
   const setupCodeExpand = () => {
     if (!containerRef.current) return;
     const boxes =
@@ -196,19 +211,28 @@ export default function DocContent({ html }: { html: string }) {
       box.classList.add("notranslate");
 
       const pre = box.querySelector("pre");
-      if (!pre || box.querySelector(".expand-toggle-btn")) return;
+      if (!pre) return;
+
+      // Always guarantee horizontal touch scrolling on mobile
+      pre.style.overflowX = "auto";
+      (
+        pre.style as HTMLElement["style"] & { webkitOverflowScrolling?: string }
+      ).webkitOverflowScrolling = "touch";
+
+      if (box.querySelector(".expand-toggle-btn")) return;
 
       const COLLAPSED_HEIGHT = 320;
 
       if (pre.scrollHeight > COLLAPSED_HEIGHT + 40) {
         box.classList.add("relative");
         pre.style.maxHeight = `${COLLAPSED_HEIGHT}px`;
-        pre.style.overflow = "hidden";
+        // Only clamp vertical height, NEVER clamp overflow-x
+        pre.style.overflowY = "hidden";
         pre.style.transition = "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
 
         const fadeOverlay = document.createElement("div");
         fadeOverlay.className =
-          "expand-fade absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-[#16181d] via-[#16181d]/85 to-transparent cursor-pointer transition-opacity duration-300 z-1";
+          "expand-fade absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#16181d] via-[#16181d]/80 to-transparent pointer-events-none transition-opacity duration-300 z-1";
         box.appendChild(fadeOverlay);
 
         const toggleBtn = document.createElement("button");
@@ -225,22 +249,26 @@ export default function DocContent({ html }: { html: string }) {
           const isCollapsed = pre.style.maxHeight === `${COLLAPSED_HEIGHT}px`;
           if (isCollapsed) {
             pre.style.maxHeight = `${pre.scrollHeight}px`;
-            fadeOverlay.classList.add("opacity-0", "pointer-events-none");
+            pre.style.overflowY = "visible";
+            fadeOverlay.classList.add("opacity-0");
             toggleBtn.innerHTML = `${COLLAPSE_ICON_SVG}<span class="btn-text">Collapse</span>`;
           } else {
             pre.style.maxHeight = `${COLLAPSED_HEIGHT}px`;
-            fadeOverlay.classList.remove("opacity-0", "pointer-events-none");
+            pre.style.overflowY = "hidden";
+            fadeOverlay.classList.remove("opacity-0");
             toggleBtn.innerHTML = `${EXPAND_ICON_SVG}<span class="btn-text">Expand</span>`;
             box.scrollIntoView({ behavior: "smooth", block: "nearest" });
           }
         };
 
         toggleBtn.addEventListener("click", toggleState);
-        fadeOverlay.addEventListener("click", toggleState);
       }
     });
   };
 
+  /**
+   * Wraps markdown tables with a responsive horizontal scroll container.
+   */
   const setupTableScroll = () => {
     if (!containerRef.current) return;
     const tables = containerRef.current.querySelectorAll("table");
@@ -249,7 +277,12 @@ export default function DocContent({ html }: { html: string }) {
         return;
       const wrapper = document.createElement("div");
       wrapper.className =
-        "table-scroll-wrapper my-8 w-full overflow-x-auto rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs";
+        "table-scroll-wrapper my-8 w-full max-w-full overflow-x-auto touch-pan-x rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs";
+      (
+        wrapper.style as HTMLElement["style"] & {
+          webkitOverflowScrolling?: string;
+        }
+      ).webkitOverflowScrolling = "touch";
       table.parentNode?.insertBefore(wrapper, table);
       wrapper.appendChild(table);
     });
@@ -301,7 +334,7 @@ export default function DocContent({ html }: { html: string }) {
       ref={containerRef}
       onClick={handleClick}
       suppressHydrationWarning
-      className="prose-content text-[15.5px] leading-[1.8] text-slate-600 dark:text-slate-300 font-sans
+      className="prose-content w-full min-w-0 max-w-full wrap-break-word text-[15.5px] leading-[1.8] text-slate-600 dark:text-slate-300 font-sans
         [&_h1]:text-3xl sm:[&_h1]:text-4xl [&_h1]:font-extrabold [&_h1]:tracking-tight [&_h1]:text-slate-900 dark:[&_h1]:text-white [&_h1]:mt-10 [&_h1]:mb-5
         [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-slate-900 dark:[&_h2]:text-slate-100 [&_h2]:mt-12 [&_h2]:mb-4 [&_h2]:border-b [&_h2]:border-slate-200/60 dark:[&_h2]:border-slate-800 [&_h2]:pb-2.5
         [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-slate-800 dark:[&_h3]:text-slate-200 [&_h3]:mt-8 [&_h3]:mb-3
@@ -310,6 +343,8 @@ export default function DocContent({ html }: { html: string }) {
         [&_ul]:my-4 [&_ul]:pl-6 [&_ul]:space-y-2.5
         [&_ol]:my-4 [&_ol]:pl-6 [&_ol]:space-y-2.5
         [&_code]:text-[13.5px] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:bg-slate-100 dark:[&_code]:bg-slate-800 [&_code]:text-slate-800 dark:[&_code]:text-slate-200 [&_code]:border [&_code]:border-slate-200 dark:[&_code]:border-slate-700
+        [&_.terminal-box]:w-full [&_.terminal-box]:max-w-full
+        [&_.terminal-box_pre]:w-full [&_.terminal-box_pre]:max-w-full [&_.terminal-box_pre]:overflow-x-auto [&_.terminal-box_pre]:touch-pan-x
         [&_.terminal-box_code]:bg-transparent [&_.terminal-box_code]:border-0 [&_.terminal-box_code]:p-0 [&_.terminal-box_code]:text-slate-200
         [&_table]:w-full [&_table]:min-w-140 [&_table]:text-left [&_table]:text-[13.5px] [&_table]:border-separate [&_table]:border-spacing-0
         [&_thead]:bg-slate-200/75 dark:[&_thead]:bg-[#181b22]
