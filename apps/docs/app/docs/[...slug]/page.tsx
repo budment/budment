@@ -4,24 +4,33 @@ import matter from "gray-matter";
 import { marked, type Tokens } from "marked";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
 import DocContent from "../../../components/DocContent";
 import RightSidebar, { HeadingItem } from "../../../components/TableOfContents";
 import hljs from "highlight.js";
 import DocFooter from "@/components/DocFooter";
+import { DOCS_NAV } from "@/config/docs-nav";
 
 interface PageProps {
   params: Promise<{ slug: string[] }>;
 }
 
+/**
+ * Resolves the root documentation directory across workspace structures.
+ */
 function resolveDocsDir(): string {
   const fromApp = path.resolve(process.cwd(), "../../docs");
   if (fs.existsSync(fromApp)) return fromApp;
   return path.resolve(process.cwd(), "docs");
 }
 
+/**
+ * Locates the markdown file corresponding to the route slug.
+ */
 function getFilePath(slug: string[]): string | null {
   const docsDir = resolveDocsDir();
 
+  // Route alias: reference architecture mapping
   if (
     slug.length === 2 &&
     slug[0] === "reference" &&
@@ -37,6 +46,9 @@ function getFilePath(slug: string[]): string | null {
   return null;
 }
 
+/**
+ * Generates dynamic static routing params for SSG builds.
+ */
 export async function generateStaticParams() {
   const docsDir = resolveDocsDir();
   if (!fs.existsSync(docsDir)) return [];
@@ -62,6 +74,9 @@ export async function generateStaticParams() {
   return paramsList;
 }
 
+/**
+ * Extracts SEO frontmatter metadata per document page.
+ */
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -127,6 +142,9 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+/**
+ * Applies syntax tokenization and color highlights to AST trees.
+ */
 function highlightAST(raw: string): string {
   let text = escapeHtml(raw);
 
@@ -304,7 +322,7 @@ export default async function DocPage({ params }: PageProps) {
           </div>
           <button type="button" class="copy-btn my-1.5 flex items-center gap-1.5 px-2.5 py-1 bg-[#282d37] hover:bg-[#323846] text-slate-200 border border-slate-700/60 transition-all cursor-pointer font-sans shadow-xs" data-code="${encoded}">
             <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             <span class="copy-text text-[13px] font-medium">Copy</span>
           </button>
@@ -315,26 +333,69 @@ export default async function DocPage({ params }: PageProps) {
   };
 
   const htmlContent = await marked.parse(cleanContent, { renderer });
+
+  // Resolve breadcrumb navigation URLs
+  const currentPath = `/docs/${slug.join("/")}`;
+  const docsHomeHref = DOCS_NAV[0]?.items[0]?.href || "/docs";
+
+  // Match the first valid link of the parent section to avoid 404 on category landing
+  const parentSection = DOCS_NAV.find((section) =>
+    section.items.some((item) => item.href.includes(`/${slug[0]}`)),
+  );
+  const sectionHref = parentSection?.items[0]?.href || `/docs/${slug[0]}`;
+
+  // Clean raw segment titles (e.g., "01-getting-started" -> "getting started")
   const breadcrumb = slug.map((s) => s.replace(/^\d+-/, "").replace(/-/g, " "));
 
   return (
     <div className="w-full flex justify-between gap-10">
       <article className="flex-1 min-w-0 max-w-3xl">
+        {/* Interactive Breadcrumbs Navigation */}
         <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 mb-6 font-medium">
-          <div className="flex items-center gap-1.5 capitalize">
-            <span>Docs</span>
-            <span>/</span>
-            <span>{breadcrumb[0]}</span>
-            {breadcrumb[1] && (
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-1.5 capitalize flex-wrap"
+          >
+            <Link
+              href={docsHomeHref}
+              className="hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              Docs
+            </Link>
+
+            <span className="text-slate-300 dark:text-slate-600">/</span>
+
+            {slug.length > 1 ? (
               <>
-                <span>/</span>
-                <span className="text-slate-600 dark:text-slate-300">
-                  {breadcrumb[1]}
-                </span>
+                <Link
+                  href={sectionHref}
+                  className="hover:text-slate-900 dark:hover:text-white transition-colors"
+                >
+                  {breadcrumb[0]}
+                </Link>
+
+                <span className="text-slate-300 dark:text-slate-600">/</span>
+
+                <Link
+                  href={currentPath}
+                  aria-current="page"
+                  className="text-slate-700 dark:text-slate-300 font-semibold hover:text-slate-950 dark:hover:text-white transition-colors"
+                >
+                  {breadcrumb.slice(1).join(" / ")}
+                </Link>
               </>
+            ) : (
+              <Link
+                href={currentPath}
+                aria-current="page"
+                className="text-slate-700 dark:text-slate-300 font-semibold hover:text-slate-950 dark:hover:text-white transition-colors"
+              >
+                {breadcrumb[0]}
+              </Link>
             )}
-          </div>
-          <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full text-[11px]">
+          </nav>
+
+          <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full text-[11px] shrink-0">
             {readTime} min read
           </span>
         </div>

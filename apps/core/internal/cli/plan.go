@@ -92,6 +92,12 @@ var planCmd = &cobra.Command{
 		tui.PrintDivider()
 		fmt.Printf("%s Plan is valid. Run %s to execute.\n", theme.TextGreen("✓"), theme.TextBold(fmt.Sprintf("budment run %s", scriptPath)))
 
+		if !isDetailed {
+			fmt.Printf("%s Standalone nodes (sleep, log, metrics...) are collapsed. Pass %s to inspect full tree.\n",
+				theme.TextCyan(">"),
+				theme.TextBold("--detail"),
+			)
+		}
 		return nil
 	},
 }

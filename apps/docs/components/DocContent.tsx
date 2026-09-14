@@ -241,10 +241,25 @@ export default function DocContent({ html }: { html: string }) {
     });
   };
 
+  const setupTableScroll = () => {
+    if (!containerRef.current) return;
+    const tables = containerRef.current.querySelectorAll("table");
+    tables.forEach((table) => {
+      if (table.parentElement?.classList.contains("table-scroll-wrapper"))
+        return;
+      const wrapper = document.createElement("div");
+      wrapper.className =
+        "table-scroll-wrapper my-8 w-full overflow-x-auto rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs";
+      table.parentNode?.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    });
+  };
+
   useEffect(() => {
     setupAstHighlighting();
     setupMermaid();
     setupCodeExpand();
+    setupTableScroll();
 
     const handleThemeChange = () => {
       if (containerRef.current) {
@@ -296,9 +311,9 @@ export default function DocContent({ html }: { html: string }) {
         [&_ol]:my-4 [&_ol]:pl-6 [&_ol]:space-y-2.5
         [&_code]:text-[13.5px] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_code]:bg-slate-100 dark:[&_code]:bg-slate-800 [&_code]:text-slate-800 dark:[&_code]:text-slate-200 [&_code]:border [&_code]:border-slate-200 dark:[&_code]:border-slate-700
         [&_.terminal-box_code]:bg-transparent [&_.terminal-box_code]:border-0 [&_.terminal-box_code]:p-0 [&_.terminal-box_code]:text-slate-200
-        [&_table]:w-full [&_table]:text-left [&_table]:text-[13.5px] [&_table]:my-8 [&_table]:border [&_table]:border-slate-300 dark:[&_table]:border-slate-700 [&_table]:rounded-xl [&_table]:overflow-hidden [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:shadow-xs
+        [&_table]:w-full [&_table]:min-w-140 [&_table]:text-left [&_table]:text-[13.5px] [&_table]:border-separate [&_table]:border-spacing-0
         [&_thead]:bg-slate-200/75 dark:[&_thead]:bg-[#181b22]
-        [&_th]:py-3.5 [&_th]:px-4 [&_th]:font-bold [&_th]:text-slate-950 dark:[&_th]:text-white [&_th]:text-[12px] [&_th]:uppercase [&_th]:tracking-wider [&_th]:border-b-2 [&_th]:border-slate-300 dark:[&_th]:border-slate-700 [&_th]:border-r last:[&_th]:border-r-0
+        [&_th]:py-3.5 [&_th]:px-4 [&_th]:font-bold [&_th]:text-slate-950 dark:[&_th]:text-white [&_th]:text-[12px] [&_th]:uppercase [&_th]:tracking-wider [&_th]:border-b-2 [&_th]:border-slate-300 dark:[&_th]:border-slate-700 [&_th]:border-r last:[&_th]:border-r-0 [&_th]:whitespace-nowrap
         [&_tbody_tr]:transition-colors [&_tbody_tr]:hover:bg-slate-100/50 dark:[&_tbody_tr]:hover:bg-slate-800/40
         [&_td]:py-3 [&_td]:px-4 [&_td]:border-b [&_td]:border-r last:[&_td]:border-r-0 [&_td]:border-slate-200 dark:[&_td]:border-slate-800 [&_td]:text-slate-700 dark:[&_td]:text-slate-300 [&_td]:leading-relaxed
         [&_tbody_tr:last-child_td]:border-b-0

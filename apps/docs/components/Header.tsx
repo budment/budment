@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import packageJson from "@/package.json";
+import { DOCS_NAV } from "@/config/docs-nav";
 import ThemeToggle from "./ThemeToggle";
 import SearchDialog from "./SearchDialog";
 
@@ -15,17 +17,57 @@ const getServerIsMac = () => false;
 
 export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setMobileMenuOpen(false);
+  }
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [mobileMenuOpen]);
+
   const isMac = useSyncExternalStore(subscribeOS, getIsMac, getServerIsMac);
   const currentVersion = `v${packageJson.version || "0.0.0"}`;
 
   return (
     <>
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-[#0c0d12]/90 backdrop-blur-md transition-colors">
-        <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-          {/* Brand & navigation */}
-          <div className="flex items-center gap-3.5 shrink-0">
+        <div className="w-full px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
+          {/* Brand, Hamburger & desktop links */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
+            {/* Button Hamburger */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden p-1.5 -ml-1 text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
+              aria-label="Open documentation navigation"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+
             <Link href="/" className="flex items-center gap-2 p-0 m-0 group">
-              {/* Scaled container to offset internal SVG padding */}
               <div className="w-8.5 h-8.5 p-0 m-0 shrink-0 flex items-center justify-center">
                 <Image
                   src="/logo.svg"
@@ -79,7 +121,7 @@ export default function Header() {
             </nav>
           </div>
 
-          {/* Desktop search trigger */}
+          {/* Search trigger desktop */}
           <div className="flex-1 min-w-0 hidden sm:flex">
             <button
               type="button"
@@ -110,7 +152,6 @@ export default function Header() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* Mobile search button */}
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
@@ -132,7 +173,6 @@ export default function Header() {
               </svg>
             </button>
 
-            {/* GitHub repository */}
             <a
               href="https://github.com/budment/budment"
               target="_blank"
@@ -155,6 +195,103 @@ export default function Header() {
           </div>
         </div>
       </header>
+
+      {/* FULLSCREEN MOBILE MENU */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden bg-white dark:bg-[#0c0d12] flex flex-col overflow-y-auto">
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+            @keyframes dropTogether {
+              0% {
+                opacity: 0;
+                transform: translateY(-16px);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+            .animate-drop-together {
+              animation: dropTogether 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+          `,
+            }}
+          />
+
+          {/* Header menu */}
+          <div className="sticky top-0 z-10 w-full px-5 h-14 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0c0d12]/95 backdrop-blur-md">
+            <div className="flex items-center gap-2 pt-4">
+              <Image
+                src="/logo.svg"
+                alt="Budment"
+                width={36}
+                height={36}
+                className="pb-2"
+              />
+              <span className="font-mono text-xl font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                BUDMENT
+              </span>
+            </div>
+
+            {/* Button ✕*/}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-4 pt-6 text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white transition-all duration-200 hover:rotate-90 active:scale-90 cursor-pointer"
+              aria-label="Close menu"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div className="animate-drop-together flex-1 w-full px-6 py-8 space-y-8">
+            {DOCS_NAV.map((section) => (
+              <div key={section.title}>
+                <div className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-3">
+                  {section.title}
+                </div>
+
+                <ul className="space-y-1.5">
+                  {section.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center justify-between px-3.5 py-3 rounded-xl text-[15px] transition-all ${
+                            isActive
+                              ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-semibold border-l-4 border-blue-600 rounded-l-none"
+                              : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium"
+                          }`}
+                        >
+                          <span>{item.title}</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-600 font-mono">
+                            →
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SearchDialog open={searchOpen} setOpen={setSearchOpen} />
     </>
