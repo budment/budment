@@ -1,6 +1,6 @@
 {
   "globalDependencies": [".env.*local", "proto/*.proto", "buf.gen.yaml"],
-  "pipeline": {
+  "tasks": {
     "generate": {
       "outputs": ["apps/core/internal/pb/", "packages/sdk/src/pb/"],
       "cache": true
