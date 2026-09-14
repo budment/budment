@@ -60,7 +60,7 @@ export default function HomePage() {
 
             {/* Right side: Animation (5 cols) */}
             <div className="lg:col-span-5 w-full flex items-center justify-center lg:justify-end">
-              <HeroAnimation src="/ship.lottie" />
+              <HeroAnimation src="/Ship.lottie" />
             </div>
           </div>
         </section>
