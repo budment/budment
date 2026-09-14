@@ -127,12 +127,12 @@ budment run test.ts --vus 100 --duration 5m --quiet
 
 Full guides and architectural specifications are available at [budment.com/docs](https://budment.com/docs):
 
-- [System Architecture & Runtime Engine](https://budment.com/docs/reference/architecture)
+- [System Architecture & Runtime Engine](https://budment.com/docs/ARCHITECTURE)
 - [Scenario Lifecycle & Multi-Stage Coordination](https://budment.com/docs/guide/01-lifecycle)
 - [HTTP Pipelines, Mutations & Assertions](https://budment.com/docs/guide/02-http)
 - [Control Flow Nodes (Branch, Loop, Poll)](https://budment.com/docs/guide/03-control-flow)
 - [Memory Scopes & Native Templates](https://budment.com/docs/guide/04-state)
-- [Metrics, SLA Gates & Custom Telemetry](https://budment.com/docs/guide/05-metrics)
+- [Metrics, SLA Gates & Custom Telemetry](https://budment.com/docs/guide/05-metrics-thresholds)
 - [FAQ & Best Practices](https://budment.com/docs/guide/06-faq-best-practices)
 - [CLI Command Reference](https://budment.com/docs/reference/cli)
 

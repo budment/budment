@@ -40,7 +40,7 @@ export const DOCS_NAV: DocSection[] = [
       },
       {
         title: "02. HTTP Pipelines",
-        href: "/docs/guide/02-http-requests",
+        href: "/docs/guide/02-http",
         keywords: "http request pipeline mutate assert client status code",
       },
       {
@@ -50,7 +50,7 @@ export const DOCS_NAV: DocSection[] = [
       },
       {
         title: "04. Test Data & Memory",
-        href: "/docs/guide/04-test-data",
+        href: "/docs/guide/04-state",
         keywords: "memory scope global local worker context pool test data",
       },
       {

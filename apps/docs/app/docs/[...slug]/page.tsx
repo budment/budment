@@ -66,18 +66,47 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  if (!slug || slug.length === 0) {
+    return {
+      title: "Documentation",
+      alternates: { canonical: "/docs" },
+    };
+  }
+
   const targetFilePath = getFilePath(slug);
-  if (!targetFilePath) return { title: "Documentation | Budment" };
+  const currentPath = `/docs/${slug.join("/")}`;
+
+  if (!targetFilePath) {
+    return {
+      title: "Documentation",
+      alternates: { canonical: currentPath },
+    };
+  }
 
   const rawContent = fs.readFileSync(targetFilePath, "utf8");
   const { data: frontmatter } = matter(rawContent);
 
+  const title = frontmatter.title || "Documentation";
+  const description =
+    frontmatter.description || "Budment declarative engine documentation.";
+
   return {
-    title: frontmatter.title
-      ? `${frontmatter.title} — Budment Docs`
-      : "Documentation | Budment",
-    description:
-      frontmatter.description || "Budment declarative engine documentation.",
+    title,
+    description,
+    alternates: {
+      canonical: currentPath,
+    },
+    openGraph: {
+      title: `${title} | Budment Docs`,
+      description,
+      url: currentPath,
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | Budment Docs`,
+      description,
+    },
   };
 }
 

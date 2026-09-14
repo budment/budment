@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "Budment — Scenarios as AST, Logic as Code",
   description:
     "Open-source API execution engine. Define workflows as code and compile them into deterministic execution plans.",
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function HomePage() {
