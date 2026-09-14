@@ -12,16 +12,16 @@ Budment consists of two components:
 
 ## CLI
 
-### Homebrew
-
-```bash
-brew install budment/tap/budment
-```
-
-### Install Script
+### macOS / Linux
 
 ```bash
 curl -fsSL https://budment.com/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```bash
+irm https://budment.com/install.ps1 | iex
 ```
 
 ### Docker

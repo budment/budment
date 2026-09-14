@@ -263,14 +263,14 @@ export default async function DocPage({ params }: PageProps) {
     }
 
     return `
-      <div class="terminal-box my-6 rounded-xl border border-slate-800/80 bg-[#16181d] shadow-sm overflow-hidden text-left" translate="no">
+      <div class="terminal-box my-6 rounded-lg border border-slate-800/80 bg-[#16181d] overflow-hidden text-left" translate="no">
         <div class="flex items-center justify-between px-4 bg-[#1e222b] border-b border-slate-800">
           <div class="flex items-center">
             <div class="relative py-2 px-1">
               <span class="font-mono text-xs font-semibold uppercase tracking-wider ${theme.text}">
                 ${language}
               </span>
-              <span class="absolute bottom-0 left-0 right-0 h-0.5 ${theme.bar} rounded-full"></span>
+              <span class="absolute bottom-0 left-0 right-0 h-0.5 ${theme.bar}"></span>
             </div>
           </div>
           <button type="button" class="copy-btn my-1.5 flex items-center gap-1.5 px-2.5 py-1 bg-[#282d37] hover:bg-[#323846] text-slate-200 border border-slate-700/60 transition-all cursor-pointer font-sans shadow-xs" data-code="${encoded}">
