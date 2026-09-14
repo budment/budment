@@ -14,6 +14,9 @@
     <a href="https://budment.com/docs">Full Documentation</a>
   </p>
 
+  <br />
+  <img src="assets/gif/demo.gif" alt="Budment Demo" width="850" style="max-width: 100%; height: auto; border-radius: 8px;" />
+
 </div>
 
 ---
