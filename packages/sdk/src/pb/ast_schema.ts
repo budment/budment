@@ -13,6 +13,7 @@ export interface Scenario {
   setup?: Pipeline | undefined;
   execution?: Pipeline | undefined;
   config?: ScenarioConfig | undefined;
+  teardown?: Pipeline | undefined;
 }
 
 export interface ScenarioConfig {

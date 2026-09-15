@@ -9,6 +9,7 @@ export class ScenarioBuilder {
     private scenarioConfig?: ScenarioConfig;
     private setupPipeline = new Pipeline();
     private executionPipeline = new Pipeline();
+    private teardownPipeline = new Pipeline();
 
     constructor(name: string) {
         this.scenarioName = name;
@@ -29,11 +30,17 @@ export class ScenarioBuilder {
         return this;
     }
 
+    teardown(...builders: any[]): this {
+        this.teardownPipeline.add(...builders);
+        return this;
+    }
+
     build(configOverride?: ScenarioConfig): ProtoScenario {
         return {
             name: this.scenarioName,
             setup: this.setupPipeline.build(),
             execution: this.executionPipeline.build(),
+            teardown: this.teardownPipeline.build(),
             config: configOverride || this.scenarioConfig
         };
     }

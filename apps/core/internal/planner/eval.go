@@ -42,10 +42,10 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		  globalThis.__BUDMENT_SCENARIOS__ = globalThis.__BUDMENT_SCENARIOS__ || [];
 		
 		  const compilePipeline = (input) => {
-		    if (!input) return undefined;		
+		    if (!input) return undefined;       
 		    if (typeof input.build === 'function') {
 		      input = input.build();
-		    }		
+		    }       
 		    if (input && Array.isArray(input.steps)) {
 		      return input;
 		    }
@@ -72,7 +72,8 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		        name: val.name || name,
 		        config: val.config || globalConfig,
 		        setup: val.setup ? compilePipeline(val.setup) : (exp && exp.setup ? compilePipeline(exp.setup) : undefined),
-		        execution: compilePipeline(val.execution)
+		        execution: compilePipeline(val.execution),
+		        teardown: val.teardown ? compilePipeline(val.teardown) : (exp && exp.teardown ? compilePipeline(exp.teardown) : undefined)
 		      });
 		      return;
 		    }
@@ -81,7 +82,8 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		        name: name,
 		        config: globalConfig,
 		        setup: exp && exp.setup ? compilePipeline(exp.setup) : undefined,
-		        execution: compilePipeline(val)
+		        execution: compilePipeline(val),
+		        teardown: exp && exp.teardown ? compilePipeline(exp.teardown) : undefined 
 		      });
 		    }
 		  };
@@ -98,7 +100,7 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 		
 		    // Case 2: Multi-scenario named exports
 		    for (const key of Object.keys(exp)) {
-		      if (key === 'options' || key === 'config' || key === 'setup' || key === 'default') continue;
+		      if (key === 'options' || key === 'config' || key === 'setup' || key === 'default' || key === 'teardown') continue;
 		      registerScenario(key, exp[key]);
 		    }
 		  }

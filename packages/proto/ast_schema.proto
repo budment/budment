@@ -9,6 +9,7 @@ message Scenario {
   Pipeline       setup     = 2;
   Pipeline       execution = 3;
   ScenarioConfig config    = 4;
+  Pipeline       teardown  = 5;
 }
 
 message ScenarioConfig {
@@ -160,6 +161,6 @@ message MetricNode {
 }
 
 message TagNode {
-    string key = 1;
-    string value = 2; 
-  }
+  string key   = 1;
+  string value = 2;
+}
