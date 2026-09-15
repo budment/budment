@@ -1,5 +1,4 @@
 ---
-
 title: System Architecture
 description: Comprehensive technical architecture, node taxonomy, and execution model of the Budment engine.
 ---
@@ -88,39 +87,39 @@ Nodes within the Budment architecture are categorized into three distinct functi
 
 | **1. STRUCTURAL NODES**                                         | **2. OPERATIONAL NODES**                                                          | **3. EXPRESSION NODES**                                                            |
 | --------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `Action` (HTTP)                                        | `Log` / `Abort` / `Fail`                                                                       | Context Get                                                                 |
-| `Branch` (if/else)                                          | `Script`                                                                         | Random Generators                                                                  |
-| `Match` (switch)                                            | `Set` / `Distribute`                                                      | Environment Config                                                                 |
-| `Loop` (for/while)                                          | `Metric`                                                                      | Binary / File Buffers                                                              |
-| `Poll` (retry)                                              | `Barrier`/ `Sleep`                                                                     | Execution Info                                                                     |
+| `Action` (HTTP)                                                 | `Log` / `Abort` / `Fail`                                                          | Context Get                                                                        |
+| `Branch` (if/else)                                              | `Script`                                                                          | Random Generators                                                                  |
+| `Match` (switch)                                                | `Set` / `Distribute`                                                              | Environment Config                                                                 |
+| `Loop` (for/while)                                              | `Metric`                                                                          | Binary / File Buffers                                                              |
+| `Poll` (retry)                                                  | `Barrier`/ `Sleep`                                                                | Execution Info                                                                     |
 | **Governs topology and routing in the static execution graph.** | **Represents discrete lifecycle actions executed natively by worker goroutines.** | **Resolves dynamic values and expressions without adding structural graph nodes.** |
 
 ### Tier 1: Structural Flow Nodes (Graph Topology)
 
 Structural nodes define the branching, iteration, and protocol routing boundaries of a scenario.
 
-* **Nodes:** `ActionNode` (HTTP), `BranchNode`, `MatchNode`, `LoopNode`, `PollNode`.
-* **Behavior:** Compiled during Phase 1 into native Go graph structures. During Phase 2, the worker FSM evaluates conditional routing directly in native Go code. JavaScript is only consulted if a condition explicitly requires dynamic hook evaluation.
+- **Nodes:** `ActionNode` (HTTP), `BranchNode`, `MatchNode`, `LoopNode`, `PollNode`.
+- **Behavior:** Compiled during Phase 1 into native Go graph structures. During Phase 2, the worker FSM evaluates conditional routing directly in native Go code. JavaScript is only consulted if a condition explicitly requires dynamic hook evaluation.
 
 ### Tier 2: Operational Executable Nodes (Lifecycle Actions)
 
 Operational nodes represent discrete instructions executed along a pipeline path.
 
-* **Nodes:** `SleepNode`, `LogNode`, `SetNode`, `DistributeNode`, `MetricNode`, `AbortNode`, `FailNode`, `BarrierNode`...
-* **Dual-Context Role:**
+- **Nodes:** `SleepNode`, `LogNode`, `SetNode`, `DistributeNode`, `MetricNode`, `AbortNode`, `FailNode`, `BarrierNode`...
+- **Dual-Context Role:**
 
-  * *In Phase 1:* They emit lightweight AST descriptor nodes containing configuration parameters (e.g., target duration, metric labels, variable keys).
-  * *In Phase 2:* They trigger immediate native system actions: goroutine timers for sleep, atomic counters for metrics, or cross-worker coordination via `BarrierManager`.
+  - _In Phase 1:_ They emit lightweight AST descriptor nodes containing configuration parameters (e.g., target duration, metric labels, variable keys).
+  - _In Phase 2:_ They trigger immediate native system actions: goroutine timers for sleep, atomic counters for metrics, or cross-worker coordination via `BarrierManager`.
 
 ### Tier 3: Expression & Dynamic Data Nodes (Value Providers)
 
 Expression nodes provide dynamic data resolution without adding structural nodes to the AST graph.
 
-* **Nodes:** `get()`, `env()`, `open()`, `random.*`, `info.*`.
-* **Template Substitution vs. Hook Evaluation:**
+- **Nodes:** `get()`, `env()`, `open()`, `random.*`, `info.*`.
+- **Template Substitution vs. Hook Evaluation:**
 
-  * *Declarative Templates:* In static declarations, these nodes compile down to native template tokens (e.g., `{{@env:API_KEY:default}}`, `{{@random:uuid}}`, `{{@open:/path/file:b}}`). At runtime, the native Go template engine interpolates these tokens.
-  * *Imperative Hooks:* Inside JavaScript callbacks, these nodes interact directly with the attached `WorkerScope` via memory bridges, permitting zero-copy reads and writes to worker-local or scenario-shared memory.
+  - _Declarative Templates:_ In static declarations, these nodes compile down to native template tokens (e.g., `{{@env:API_KEY:default}}`, `{{@random:uuid}}`, `{{@open:/path/file:b}}`). At runtime, the native Go template engine interpolates these tokens.
+  - _Imperative Hooks:_ Inside JavaScript callbacks, these nodes interact directly with the attached `WorkerScope` via memory bridges, permitting zero-copy reads and writes to worker-local or scenario-shared memory.
 
 ## 3. The "Blind SDK" Pattern
 
@@ -155,8 +154,8 @@ flowchart TD
 
 All functions exported by the SDK are direct bindings to `globalThis`. The Go engine binds concrete implementations into the VM based entirely on the active lifecycle phase:
 
-* During Phase 1, `sleep(1)` returns a descriptor object `{ build: () => ({ type: "sleep", duration: 1 }) }`.
-* During Phase 2, calling `sleep(1)` within an imperative hook records the sleep interval and yields thread control back to the native Go runtime.
+- During Phase 1, `sleep(1)` returns a descriptor object `{ build: () => ({ type: "sleep", duration: 1 }) }`.
+- During Phase 2, calling `sleep(1)` within an imperative hook records the sleep interval and yields thread control back to the native Go runtime.
 
 ## 4. Inter-Language Yielding: The Panic-Recovery Protocol
 

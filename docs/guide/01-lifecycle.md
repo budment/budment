@@ -5,7 +5,7 @@ description: Complete specification of Budment's scenario execution phases, auth
 
 # Scenario Lifecycle & Orchestration
 
-Budment separates test definitions into deterministic execution phases. This design guarantees that administrative initialization, resource distribution, and high-throughput concurrent loops remain strictly isolated throughout test execution.
+Budment separates test definitions into deterministic execution phases. This design guarantees that administrative initialization, resource distribution, and graceful cleanup remain strictly isolated from high-throughput concurrent loops throughout test execution.
 
 ---
 
@@ -18,30 +18,28 @@ Budment supports two primary authoring styles. Both compile directly into identi
 Ideal for standard load test scripts and CI/CD pipelines. Uses native JavaScript/TypeScript module exports.
 
 ```typescript
-import { http, sleep, metrics } from '@budment/sdk';
+import { http, sleep, metrics } from "@budment/sdk";
 
-// 1. Scenario configuration & SLA Quality Gates (alias: export const options = { ... })
+// 1. Scenario configuration
 export const config = {
-    vus: 10,
-    duration: "30s",
-    thresholds: {
-        "http_req_duration": "p95<200ms",
-        "http_req_failed": "rate<0.01"
-    }
+  vus: 10,
+  duration: "30s",
 };
 
 // 2. Setup Phase: Executed strictly once before any concurrent workers spawn
 export const setup = [
-    http.get("https://api.example.com/health")
-        .after({ expect: { status: 200 } })
+  http.get("https://api.example.com/health").after({ expect: { status: 200 } }),
 ];
 
 // 3. Execution Phase: Traversed concurrently by active Virtual Users (VUs)
 export default [
-    http.get("https://api.example.com/items"),
-    sleep(0.5),
-    metrics.counter("completed_passes", 1)
+  http.get("https://api.example.com/items"),
+  sleep(0.5),
+  metrics.counter("completed_passes", 1),
 ];
+
+// 4. Teardown Phase: Executed strictly once after execution finishes or is aborted
+export const teardown = [http.delete("https://api.example.com/test-data")];
 ```
 
 ### Paradigm B: Fluent Builder Pattern
@@ -49,22 +47,21 @@ export default [
 Ideal for complex scenarios requiring strict TypeScript type-checking, dynamic programmatic generation, or reusable modular test components.
 
 ```typescript
-import { scenario, http, sleep } from '@budment/sdk';
+import { scenario, http, sleep } from "@budment/sdk";
 
 export const checkoutScenario = scenario("Checkout Flow")
-    .config({
-        vus: 20,
-        duration: "1m",
-        order: 1
-    })
-    .setup(
-        http.post("https://api.example.com/auth/admin-token")
-            .after({ extract: { "token": "admin_jwt" } })
-    )
-    .execution(
-        http.get("https://api.example.com/cart"),
-        sleep(1)
-    );
+  .config({
+    vus: 20,
+    duration: "1m",
+    order: 1,
+  })
+  .setup(
+    http
+      .post("https://api.example.com/auth/admin-token")
+      .after({ extract: { token: "admin_jwt" } }),
+  )
+  .execution(http.get("https://api.example.com/cart"), sleep(1))
+  .teardown(http.post("https://api.example.com/auth/logout"));
 ```
 
 ## 2. Phase Execution Lifecycle
@@ -73,8 +70,7 @@ Every Budment execution flows through a deterministic sequence:
 
 ```mermaid
 flowchart LR
-
-    S["SETUP"] --> E["EXECUTION"] --> T["DRAIN & SLA GATES"]
+    S["SETUP"] --> E["EXECUTION"] --> T["TEARDOWN"]
 
     style S fill:#334155,stroke:#94a3b8,stroke-width:1.5px,color:#f8fafc
     style E fill:#1e3a5f,stroke:#60a5fa,stroke-width:1.5px,color:#f8fafc
@@ -93,10 +89,10 @@ flowchart LR
 - **Iteration Isolation:** Each worker iterates through the configured pipeline steps. Once an iteration finishes, worker-scoped memory is cleaned to prevent state leakage between cycles.
 - **Native Yield:** When timers (`sleep`) or synchronization primitives (`barrier`) are encountered, execution yields control back to the Go concurrency scheduler without blocking operating system threads.
 
-### Phase 3: Engine Drain & SLA Quality Gates
+### Phase 3: Teardown Pipeline
 
-- **Connection Drain:** Once scenario duration or target iterations are exhausted, active HTTP connections finish their in-flight cycles gracefully.
-- **SLA Evaluation:** The AssertionManager inspects cumulative metrics (`p95`, `p99`, error rates, and custom counters). Threshold violations result in a non-zero process exit code for CI/CD status reporting.
+- **Execution Boundary:** Executed strictly **once** using a dedicated teardown worker (`VU 0`, `Iteration 0`) after the Execution phase completes natively, exhausts its duration, or is interrupted (e.g., via `SIGINT` / `Ctrl+C`).
+- **Graceful Cleanup:** The teardown phase operates within a highly isolated background context with its own dedicated timeout. This guarantees that critical cleanup tasks—such as wiping ephemeral test records, revoking authentication tokens, or flushing final webhooks—are reliably executed even if the primary load test is forcefully canceled by the user.
 
 ## 3. Multi-Scenario Orchestration
 
@@ -105,52 +101,33 @@ Budment supports running multiple independent scenarios within a single script. 
 ### Declarative Multi-Scenario Script
 
 ```typescript
-import { http, sleep } from '@budment/sdk';
+import { http, sleep } from "@budment/sdk";
 
 // Global options applied to all scenarios unless overridden locally
 export const options = {
-    thresholds: { "http_req_failed": "rate<0.01" }
+  duration: "30s",
 };
 
 // Scenario 1: Cache Warming (Runs first in Order 1)
 export const warmUpPhase = {
-    config: { 
-        vus: 2, 
-        duration: "15s", 
-        order: 1 
-    },
-    setup: [
-        http.get("https://api.example.com/health")
-    ],
-    execution: [
-        http.get("https://api.example.com/cache/warm"),
-        sleep(1)
-    ]
+  config: {
+    vus: 2,
+    duration: "15s",
+    order: 1,
+  },
+  setup: [http.get("https://api.example.com/health")],
+  execution: [http.get("https://api.example.com/cache/warm"), sleep(1)],
 };
 
 // Scenario 2: Main Traffic (Runs in Order 2 after Order 1 completely finishes)
 export const peakTraffic = {
-    config: { 
-        vus: 50, 
-        duration: "2m", 
-        order: 2 
-    },
-    execution: [
-        http.get("https://api.example.com/search?q=budment"),
-        sleep(0.2)
-    ]
-};
-
-// Scenario 3: Background Batch Sync (Runs at an exact scheduled offset)
-export const backgroundSync = {
-    config: { 
-        vus: 5, 
-        duration: "1m", 
-        startAt: "30s" // Optional delay after order 2 starts
-    },
-    execution: [
-        http.post("https://api.example.com/sync")
-    ]
+  config: {
+    vus: 50,
+    duration: "2m",
+    order: 2,
+  },
+  execution: [http.get("https://api.example.com/search?q=budment"), sleep(0.2)],
+  teardown: [http.delete("https://api.example.com/cache/warm")],
 };
 ```
 
@@ -160,18 +137,17 @@ export const backgroundSync = {
 
 Configurations declared in `config` or `options` accept the following fields:
 
-| **Field** | **Type** | **Default** | **Description** |
-| --- | --- | --- | --- |
-| `vus` | `number` | `1` | Number of concurrent Virtual Users (workers) assigned to this scenario. |
-| `duration` | `string` | `""` | Target duration for this scenario (e.g., `"30s"`, `"5m"`). |
-| `maxDuration` | `string` | `""` | Hard upper time boundary before the scenario is forcefully terminated. |
-| `iterations` | `number` | `null` | Total iterations across all VUs. When reached, the scenario stops. |
-| `order` | `number` | `0` | Execution priority group. Lower order values complete 100% before the next tier starts. |
-| `startAt` | `string` | `""` | Duration offset to wait after its designated order group is unlocked before firing requests. |
-| `stages` | `Stage[]` | `[]` | Dynamic load ramping curve (`[{ duration: "1m", target: 50 }]`). Overrides `vus`. |
-| `thresholds` | `Record<string, string>` | `{}` | Metric pass/fail quality criteria (e.g. `{"http_req_duration": "p95<250ms"}`). |
-| `tags` | `Record<string, string>` | `{}` | Key-value metadata tags appended to all metrics emitted by this scenario. |
-| `insecureSkipTLS` | `boolean` | `false` | Disables SSL/TLS server certificate validation for this scenario. |
+| **Field**         | **Type**                 | **Default** | **Description**                                                                              |
+| ----------------- | ------------------------ | ----------- | -------------------------------------------------------------------------------------------- |
+| `vus`             | `number`                 | `1`         | Number of concurrent Virtual Users (workers) assigned to this scenario.                      |
+| `duration`        | `string`                 | `""`        | Target duration for this scenario (e.g., `"30s"`, `"5m"`).                                   |
+| `maxDuration`     | `string`                 | `""`        | Hard upper time boundary before the scenario is forcefully terminated.                       |
+| `iterations`      | `number`                 | `null`      | Total iterations across all VUs. When reached, the scenario stops.                           |
+| `order`           | `number`                 | `0`         | Execution priority group. Lower order values complete 100% before the next tier starts.      |
+| `startAt`         | `string`                 | `""`        | Duration offset to wait after its designated order group is unlocked before firing requests. |
+| `stages`          | `Stage[]`                | `[]`        | Dynamic load ramping curve (`[{ duration: "1m", target: 50 }]`). Overrides `vus`.            |
+| `tags`            | `Record<string, string>` | `{}`        | Key-value metadata tags appended to all metrics emitted by this scenario.                    |
+| `insecureSkipTLS` | `boolean`                | `false`     | Disables SSL/TLS server certificate validation for this scenario.                            |
 
 ### Configuration Hierarchy & Override Order
 
@@ -203,8 +179,9 @@ flowchart LR
 
 To ensure your scenarios compile as intended, avoid using the following reserved export identifiers as scenario names:
 
-| **Identifier** | **Purpose** |
-| --- | --- |
-| `default` | Reserved for the primary execution pipeline in single-scenario tests. |
-| `config` / `options` | Reserved for scenario and engine configuration definitions. |
-| `setup` | Reserved for global initialization steps executed before Phase 2. |
+| **Identifier**       | **Purpose**                                                                   |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `default`            | Reserved for the primary execution pipeline in single-scenario tests.         |
+| `config` / `options` | Reserved for scenario and engine configuration definitions.                   |
+| `setup`              | Reserved for global initialization steps executed before Phase 2.             |
+| `teardown`           | Reserved for global cleanup steps executed after Phase 2 completes or aborts. |

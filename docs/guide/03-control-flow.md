@@ -14,22 +14,23 @@ Control structures are natively executed by the Go FSM, allowing Budment to auto
 The `branch(condition, truePath, falsePath?)` node splits execution based on the boolean result of a condition callback.
 
 ```typescript
-import { branch, http, get, log } from '@budment/sdk';
+import { branch, http, get, log } from "@budment/sdk";
 
 export default [
-    http.get("https://api.example.com/user/profile")
-        .after({ extract: { "role": "user_role" } }),
+  http
+    .get("https://api.example.com/user/profile")
+    .after({ extract: { role: "user_role" } }),
 
-    branch(
-        () => get("user_role") === "admin",
-        // True Path (executed if condition evaluates to true)
-        [
-            http.get("https://api.example.com/admin/metrics"),
-            log("Admin panel metrics retrieved.")
-        ],
-        // False Path (executed if condition evaluates to false)
-        http.get("https://api.example.com/user/dashboard")
-    )
+  branch(
+    () => get("user_role") === "admin",
+    // True Path (executed if condition evaluates to true)
+    [
+      http.get("https://api.example.com/admin/metrics"),
+      log("Admin panel metrics retrieved."),
+    ],
+    // False Path (executed if condition evaluates to false)
+    http.get("https://api.example.com/user/dashboard"),
+  ),
 ];
 ```
 
@@ -40,30 +41,31 @@ export default [
 The `match(condition, cases, defaultPath?)` node acts as a declarative `switch/case` construct. It evaluates a condition returning a string or number and natively directs the worker to the matching pipeline.
 
 ```typescript
-import { match, http, get, log, sleep } from '@budment/sdk';
+import { match, http, get, log, sleep } from "@budment/sdk";
 
 export default [
-    http.get("https://api.example.com/orders/next")
-        .after({ extract: { "status": "order_status" } }),
+  http
+    .get("https://api.example.com/orders/next")
+    .after({ extract: { status: "order_status" } }),
 
-    match(
-        () => get("order_status") || "unknown",
-        {
-            // Single node: Do not wrap in []
-            "COMPLETED": log("Order completed. Skipping."),
+  match(
+    () => get("order_status") || "unknown",
+    {
+      // Single node: Do not wrap in []
+      COMPLETED: log("Order completed. Skipping."),
 
-            // Multi-nodes pipeline: Wrap in an array when chaining actions
-            "PENDING": [
-                http.post("https://api.example.com/orders/process"),
-                sleep(0.5),
-                http.get("https://api.example.com/orders/status")
-            ],
+      // Multi-nodes pipeline: Wrap in an array when chaining actions
+      PENDING: [
+        http.post("https://api.example.com/orders/process"),
+        sleep(0.5),
+        http.get("https://api.example.com/orders/status"),
+      ],
 
-            "CANCELLED": http.post("https://api.example.com/orders/archive")
-        },
-        // Fallback default path
-        log("Unrecognized order status received.")
-    )
+      CANCELLED: http.post("https://api.example.com/orders/archive"),
+    },
+    // Fallback default path
+    log("Unrecognized order status received."),
+  ),
 ];
 ```
 
@@ -76,18 +78,17 @@ The `loop(count, logicPath)` node executes a sub-pipeline for a fixed number of 
 Inside the loop, the engine automatically injects a `loop_index` variable (a 0-indexed counter) into the worker's memory scope.
 
 ```typescript
-import { loop, http } from '@budment/sdk';
+import { loop, http } from "@budment/sdk";
 
 export default [
-    loop(5, [
-        http.post("https://api.example.com/messages/send")
-            .before({
-                body: {
-                    message: "Ping",
-                    index: "{{loop_index}}"
-                }
-            })
-    ])
+  loop(5, [
+    http.post("https://api.example.com/messages/send").before({
+      body: {
+        message: "Ping",
+        index: "{{loop_index}}",
+      },
+    }),
+  ]),
 ];
 ```
 
@@ -102,26 +103,28 @@ The `poll(condition, logicPath, policy)` node behaves as a native **Do-While loo
 When the worker enters this node, it **executes the action pipeline first**, and only then evaluates the condition predicate. The cycle repeats until the condition returns `true` or the `maxAttempts` limit is reached.
 
 ```typescript
-import { poll, http, get } from '@budment/sdk';
+import { poll, http, get } from "@budment/sdk";
 
 export default [
-    // 1. Trigger an asynchronous background report generation
-    http.post("https://api.example.com/reports/generate")
-        .after({ extract: { "job_id": "report_job_id" } }),
+  // 1. Trigger an asynchronous background report generation
+  http
+    .post("https://api.example.com/reports/generate")
+    .after({ extract: { job_id: "report_job_id" } }),
 
-    // 2. Poll until the backend marks the job as READY
-    poll(
-        () => get("job_state") === "READY",
-        [
-            // This runs immediately on the first attempt, then checks the condition
-            http.get("https://api.example.com/reports/status/{{report_job_id}}")
-                .after({ extract: { "status": "job_state" } })
-        ],
-        {
-            interval: "1000ms", // Pause timer between failed attempts
-            maxAttempts: 10     // Bounded limit before exiting the poll
-        }
-    )
+  // 2. Poll until the backend marks the job as READY
+  poll(
+    () => get("job_state") === "READY",
+    [
+      // This runs immediately on the first attempt, then checks the condition
+      http
+        .get("https://api.example.com/reports/status/{{report_job_id}}")
+        .after({ extract: { status: "job_state" } }),
+    ],
+    {
+      interval: "1000ms", // Pause timer between failed attempts
+      maxAttempts: 10, // Bounded limit before exiting the poll
+    },
+  ),
 ];
 ```
 
