@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"mime/multipart"
 	"net/textproto"
-	"net/url"
-	"strings"
 
 	"github.com/goccy/go-json"
 	"github.com/tidwall/gjson"
@@ -16,13 +14,22 @@ import (
 
 // Request represents the mutable HTTP request passed to the .before(req) pipeline hook.
 type Request struct {
-	URL     string
+	Target  template.Expression
+	Scope   template.ScopeProvider
 	Method  string
 	Headers map[string]string
 	Body    []byte
 }
 
-// Set mutates the outgoing payload and options (headers, path, query parameters).
+// GetTarget evaluates and returns the rendered URL on-demand using the latest Scope.
+func (r *Request) GetTarget() string {
+	if r.Scope != nil && r.Target.Raw != "" {
+		return r.Target.Render(r.Scope)
+	}
+	return r.Target.Raw
+}
+
+// Set mutates the outgoing payload and options (headers).
 func (r *Request) Set(body any, options map[string]any) {
 	if body != nil {
 		switch v := body.(type) {
@@ -93,30 +100,6 @@ ProcessOptions:
 		}
 		for k, v := range rawHeaders {
 			r.Headers[k] = fastconv.String(v)
-		}
-	}
-
-	if pathVal, ok := options["path"].(string); ok && pathVal != "" {
-		if strings.HasPrefix(pathVal, "http://") || strings.HasPrefix(pathVal, "https://") {
-			r.URL = pathVal
-		} else if u, err := url.Parse(r.URL); err == nil {
-			if strings.HasPrefix(pathVal, "/") {
-				u.Path = pathVal
-			} else {
-				u.Path = strings.TrimSuffix(u.Path, "/") + "/" + pathVal
-			}
-			r.URL = u.String()
-		}
-	}
-
-	if rawParams, ok := options["params"].(map[string]any); ok {
-		if u, err := url.Parse(r.URL); err == nil {
-			q := u.Query()
-			for k, v := range rawParams {
-				q.Set(k, fastconv.String(v))
-			}
-			u.RawQuery = q.Encode()
-			r.URL = u.String()
 		}
 	}
 }

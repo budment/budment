@@ -21,6 +21,7 @@ type ExecutionResult struct {
 type ProtocolRequest interface {
 	Set(body any, options map[string]any)
 	Json(selector ...string) any
+	GetTarget() string
 	ApplyMutation(meta map[string]template.Expression, payload template.Expression, scope template.ScopeProvider)
 }
 
@@ -32,7 +33,7 @@ type ProtocolResponse interface {
 }
 
 type ProtocolRunner interface {
-	AcquireRequest(method, target string) ProtocolRequest
+	AcquireRequest(method string, target template.Expression, scope template.ScopeProvider) ProtocolRequest
 	ReleaseRequest(req ProtocolRequest)
 	Execute(ctx context.Context, req ProtocolRequest) (ProtocolResponse, ExecutionResult)
 }

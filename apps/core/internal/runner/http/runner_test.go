@@ -5,6 +5,8 @@ import (
 	nethttp "net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/budment/budment/internal/template"
 )
 
 func TestRunner_RequestPool_Sanitization(t *testing.T) {
@@ -12,7 +14,7 @@ func TestRunner_RequestPool_Sanitization(t *testing.T) {
 	r := NewRunner(transport)
 
 	// Acquire request from pool and mutate fields
-	req := r.AcquireRequest("POST", "http://example.com/test")
+	req := r.AcquireRequest("POST", template.NewExpression("http://example.com/test"), nil)
 	httpReq := req.(*Request)
 	httpReq.Headers["Authorization"] = "Bearer dirty_data"
 	httpReq.Body = append(httpReq.Body, []byte("dirty_body")...)
@@ -21,11 +23,14 @@ func TestRunner_RequestPool_Sanitization(t *testing.T) {
 	r.ReleaseRequest(req)
 
 	// Re-acquire request; instance must be cleanly reset
-	cleanReq := r.AcquireRequest("GET", "http://example.com/new")
+	cleanReq := r.AcquireRequest("GET", template.NewExpression("http://example.com/new"), nil)
 	cleanHttp := cleanReq.(*Request)
 
-	if cleanHttp.Method != "GET" || cleanHttp.URL != "http://example.com/new" {
-		t.Errorf("method/URL mismatch: expected GET http://example.com/new, got %s %s", cleanHttp.Method, cleanHttp.URL)
+	if cleanHttp.Method != "GET" || cleanHttp.GetTarget() != "http://example.com/new" {
+		t.Errorf("method/URL mismatch: expected GET http://example.com/new, got %s %s", cleanHttp.Method, cleanHttp.GetTarget())
+	}
+	if cleanHttp.Scope != nil {
+		t.Errorf("scope not cleared on acquire")
 	}
 	if len(cleanHttp.Headers) != 0 {
 		t.Errorf("headers not cleared on acquire: %v", cleanHttp.Headers)
@@ -44,7 +49,7 @@ func TestRunner_Execute_ResultMapping(t *testing.T) {
 	defer ts.Close()
 
 	r := NewRunner(NewSharedTransport(true))
-	req := r.AcquireRequest("POST", ts.URL)
+	req := r.AcquireRequest("POST", template.NewExpression(ts.URL), nil)
 	defer r.ReleaseRequest(req)
 
 	resp, result := r.Execute(context.Background(), req)

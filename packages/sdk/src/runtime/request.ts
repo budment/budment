@@ -4,12 +4,6 @@
 export interface RequestOptions {
     /** Headers to inject or override. Values can be strings, numbers, or booleans. */
     headers?: Record<string, any>;
-
-    /** Overrides the URL path (e.g. "/api/v2/login") or the entire target URL. */
-    path?: string;
-
-    /** URL query parameters to append or update. */
-    params?: Record<string, any>;
 }
 
 /**
@@ -26,23 +20,30 @@ export interface FileData {
  * Mutable request context passed to `.before()` hooks.
  */
 export interface HttpRequest {
-    /** Target URL of the request */
-    readonly url: string;
+    /**
+     * Dynamically renders and returns the target URL based on the current Scope.
+     * 
+     * @example
+     * console.log(req.getTarget()); // https://api.example.com/users/{{id}}?page={{page}}
+     * set("id", "123");
+     * set("page", 2);
+     * console.log(req.getTarget()); // https://api.example.com/users/123?page=2
+     */
+    getTarget(): string;
 
     /** HTTP Method (GET, POST, PUT, DELETE, ...) */
     readonly method: string;
 
     /**
-     * Overrides request payload and configuration options (headers, path, query params).
+     * Overrides request payload and configuration options (headers).
      * Objects are automatically serialized to JSON.
      * 
      * @example
      * req.set({ user: "admin" }, { 
-     *     headers: { Authorization: "Bearer token" },
-     *     params: { retry: 1 } 
+     *     headers: { Authorization: "Bearer token" }
      * });
      */
-    set(body: object | string | ArrayBuffer | Uint8Array, options?: RequestOptions): void;
+    set(body: object | string | ArrayBuffer | Uint8Array | null, options?: RequestOptions): void;
 
     /**
      * Wraps binary or text data into a multipart file descriptor for form uploads.
