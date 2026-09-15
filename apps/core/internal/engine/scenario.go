@@ -142,4 +142,19 @@ func (s *Scenario) Run(parentCtx context.Context) {
 	scheduler.Start(ctx, spawnFunc, &activeTarget)
 	cancel()
 	wg.Wait()
+	if len(s.Graph.Teardown) > 0 {
+		teardownCtx, teardownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer teardownCancel()
+
+		teardownWorker := NewWorker(0, 0, s.Graph, s.Pool, s.Aggregator, s.BarrierManager, s.RunnerFactory, 1, s.Name, s.LocalState, s.GlobalState, s.Sink, &sharedIters, nil)
+		teardownWorker.Scope.Set("__VU_ID__", 0)
+		teardownWorker.Scope.Set("__ITER__", 0)
+		teardownWorker.Scope.Set("__SCENARIO__", s.Name)
+
+		if s.Sink != nil {
+			s.Sink.Log(0, "TEARDOWN", "INFO", fmt.Sprintf("Bắt đầu teardown cho kịch bản '%s'", s.Name))
+		}
+
+		_ = teardownWorker.executeNodes(teardownCtx, s.Graph.Teardown)
+	}
 }

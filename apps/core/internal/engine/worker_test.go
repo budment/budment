@@ -23,6 +23,10 @@ type stubRequest struct {
 	mutated bool
 }
 
+func (r *stubRequest) GetTarget() string {
+	return r.target
+}
+
 func (r *stubRequest) ApplyMutation(meta map[string]template.Expression, payload template.Expression, scope template.ScopeProvider) {
 	r.mutated = true
 	if r.headers == nil {
@@ -69,8 +73,13 @@ type stubRunner struct {
 	lastReq      *stubRequest
 }
 
-func (sr *stubRunner) AcquireRequest(method, target string) runner.ProtocolRequest {
-	req := &stubRequest{method: method, target: target}
+func (sr *stubRunner) AcquireRequest(method string, target template.Expression, scope template.ScopeProvider) runner.ProtocolRequest {
+	finalTarget := target.Raw
+	if scope != nil && finalTarget != "" {
+		finalTarget = target.Render(scope)
+	}
+
+	req := &stubRequest{method: method, target: finalTarget}
 	sr.mu.Lock()
 	sr.lastReq = req
 	sr.mu.Unlock()

@@ -216,22 +216,27 @@ func (w *Worker) executeActionProtocol(ctx context.Context, n *planner.ActionNod
 		return true
 	}
 
-	target := n.Target.Render(w.Scope)
-	req := runnerIns.AcquireRequest(n.Method, target)
+	// Inject Target (AST) and Scope into Runner
+	req := runnerIns.AcquireRequest(n.Method, n.Target, w.Scope)
 	defer runnerIns.ReleaseRequest(req)
 
+	// Execute pre-request pipeline
 	for _, bNode := range n.BeforePipeline {
 		if abort := w.executeAuxiliaryNode(ctx, bNode, req, nil, 0); abort {
 			return true
 		}
 	}
 
+	// Execute action protocol request
 	resp, execRes := runnerIns.Execute(ctx, req)
 	if resp != nil {
 		defer resp.Release()
 	}
 
-	w.Aggregator.Metrics.RecordRequest(n.ID, n.Method, target, execRes.IsSuccess, execRes.LatencyUs,
+	// Retrieve final target to record metrics
+	finalTarget := req.GetTarget()
+
+	w.Aggregator.Metrics.RecordRequest(n.ID, n.Method, finalTarget, execRes.IsSuccess, execRes.LatencyUs,
 		execRes.TTFBUs, execRes.TCPConnUs, execRes.TLSHandUs,
 		execRes.BytesOut, execRes.BytesIn, execRes.Code)
 
@@ -243,6 +248,7 @@ func (w *Worker) executeActionProtocol(ctx context.Context, n *planner.ActionNod
 		}
 	}
 
+	// Execute post-request pipeline
 	if resp != nil {
 		for _, aNode := range n.AfterPipeline {
 			if abort := w.executeAuxiliaryNode(ctx, aNode, req, resp, execRes.Code); abort {

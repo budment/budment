@@ -22,6 +22,22 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
 
+dockers_v2:
+  - id: budment-docker
+    images:
+      - "budment/budment"
+    tags:
+      - "latest"
+      - "v{{ .Version }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    annotations:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.title": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+
 archives:
   - id: default
     name_template: "budment_{{ .Version }}_{{ .Os }}_{{ .Arch }}"

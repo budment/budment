@@ -36,6 +36,9 @@ export default function RightSidebar({
   const [copied, setCopied] = useState(false);
   const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
+  const copyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const feedbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const listRef = useRef<HTMLUListElement>(null);
   const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
@@ -49,7 +52,13 @@ export default function RightSidebar({
   const headingsRef = useRef(headings);
   const activeIdRef = useRef(activeId);
 
-  // Render dynamic SVG Bézier indicator
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    };
+  }, []);
+
   const updateIndicator = useCallback(
     (
       currentHeadings: HeadingItem[],
@@ -176,7 +185,7 @@ export default function RightSidebar({
     [],
   );
 
-  // Track active heading on scroll
+  // Track heading đang hiển thị qua IntersectionObserver
   useEffect(() => {
     if (headings.length === 0) return;
 
@@ -221,38 +230,37 @@ export default function RightSidebar({
   const handleCopyMarkdown = () => {
     navigator.clipboard.writeText(rawMarkdown).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     });
   };
 
   const handleOpenAI = (platform: "chatgpt" | "claude") => {
-    navigator.clipboard.writeText(
-      `Documentation Context:\n\n${rawMarkdown}\n\nQuestion: Please explain or summarize this doc.`,
-    );
+    if (typeof window === "undefined") return;
+
+    const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const prompt = `Please review and provide a concise, technical breakdown of this documentation: ${cleanUrl}`;
 
     setAiFeedback(
-      `Copied doc! Opening ${platform === "chatgpt" ? "ChatGPT" : "Claude"}...`,
+      `Opening ${platform === "chatgpt" ? "ChatGPT" : "Claude"}...`,
     );
-    setTimeout(() => setAiFeedback(null), 3000);
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => setAiFeedback(null), 2500);
 
-    const snippet =
-      rawMarkdown.length > 900
-        ? `${rawMarkdown.slice(0, 900)}...`
-        : rawMarkdown;
-    const prompt = `Context preview:\n${snippet}\n\nExplain this topic:`;
-
-    const url =
+    const targetUrl =
       platform === "chatgpt"
         ? `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`
         : `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
 
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
   };
 
   const handleViewRaw = () => {
     const blob = new Blob([rawMarkdown], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener,noreferrer");
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (

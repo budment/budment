@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/budment/budment/internal/runner"
+	"github.com/budment/budment/internal/template"
 )
 
 var requestPool = sync.Pool{
@@ -28,10 +29,11 @@ func NewRunner(transport *nethttp.Transport) *Runner {
 	}
 }
 
-func (r *Runner) AcquireRequest(method, target string) runner.ProtocolRequest {
+func (r *Runner) AcquireRequest(method string, target template.Expression, scope template.ScopeProvider) runner.ProtocolRequest {
 	req := requestPool.Get().(*Request)
 	req.Method = method
-	req.URL = target
+	req.Target = target
+	req.Scope = scope
 	req.Body = req.Body[:0]
 	clear(req.Headers)
 	return req
@@ -39,6 +41,7 @@ func (r *Runner) AcquireRequest(method, target string) runner.ProtocolRequest {
 
 func (r *Runner) ReleaseRequest(req runner.ProtocolRequest) {
 	if httpReq, ok := req.(*Request); ok {
+		httpReq.Scope = nil
 		requestPool.Put(httpReq)
 	}
 }
@@ -52,8 +55,9 @@ func (r *Runner) Execute(ctx context.Context, req runner.ProtocolRequest) (runne
 		}
 	}
 
+	finalURL := httpReq.GetTarget()
 	start := time.Now()
-	resp := r.client.Do(ctx, httpReq.Method, httpReq.URL, httpReq.Headers, httpReq.Body)
+	resp := r.client.Do(ctx, httpReq.Method, finalURL, httpReq.Headers, httpReq.Body)
 	latency := time.Since(start).Microseconds()
 
 	execRes := runner.ExecutionResult{

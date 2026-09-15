@@ -27,6 +27,7 @@ type Scenario struct {
 	Setup         *Pipeline              `protobuf:"bytes,2,opt,name=setup,proto3" json:"setup,omitempty"`
 	Execution     *Pipeline              `protobuf:"bytes,3,opt,name=execution,proto3" json:"execution,omitempty"`
 	Config        *ScenarioConfig        `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`
+	Teardown      *Pipeline              `protobuf:"bytes,5,opt,name=teardown,proto3" json:"teardown,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,6 +86,13 @@ func (x *Scenario) GetExecution() *Pipeline {
 func (x *Scenario) GetConfig() *ScenarioConfig {
 	if x != nil {
 		return x.Config
+	}
+	return nil
+}
+
+func (x *Scenario) GetTeardown() *Pipeline {
+	if x != nil {
+		return x.Teardown
 	}
 	return nil
 }
@@ -1609,12 +1617,13 @@ var File_ast_schema_proto protoreflect.FileDescriptor
 
 const file_ast_schema_proto_rawDesc = "" +
 	"\n" +
-	"\x10ast_schema.proto\x12\x0ebudment.ast.v1\"\xbe\x01\n" +
+	"\x10ast_schema.proto\x12\x0ebudment.ast.v1\"\xf4\x01\n" +
 	"\bScenario\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12.\n" +
 	"\x05setup\x18\x02 \x01(\v2\x18.budment.ast.v1.PipelineR\x05setup\x126\n" +
 	"\texecution\x18\x03 \x01(\v2\x18.budment.ast.v1.PipelineR\texecution\x126\n" +
-	"\x06config\x18\x04 \x01(\v2\x1e.budment.ast.v1.ScenarioConfigR\x06config\"\xac\x05\n" +
+	"\x06config\x18\x04 \x01(\v2\x1e.budment.ast.v1.ScenarioConfigR\x06config\x124\n" +
+	"\bteardown\x18\x05 \x01(\v2\x18.budment.ast.v1.PipelineR\bteardown\"\xac\x05\n" +
 	"\x0eScenarioConfig\x12\x15\n" +
 	"\x03vus\x18\x01 \x01(\x05H\x00R\x03vus\x88\x01\x01\x12\x1f\n" +
 	"\bduration\x18\x02 \x01(\tH\x01R\bduration\x88\x01\x01\x12&\n" +
@@ -1801,43 +1810,44 @@ var file_ast_schema_proto_depIdxs = []int32{
 	3,  // 0: budment.ast.v1.Scenario.setup:type_name -> budment.ast.v1.Pipeline
 	3,  // 1: budment.ast.v1.Scenario.execution:type_name -> budment.ast.v1.Pipeline
 	1,  // 2: budment.ast.v1.Scenario.config:type_name -> budment.ast.v1.ScenarioConfig
-	2,  // 3: budment.ast.v1.ScenarioConfig.stages:type_name -> budment.ast.v1.Stage
-	21, // 4: budment.ast.v1.ScenarioConfig.thresholds:type_name -> budment.ast.v1.ScenarioConfig.ThresholdsEntry
-	22, // 5: budment.ast.v1.ScenarioConfig.tags:type_name -> budment.ast.v1.ScenarioConfig.TagsEntry
-	4,  // 6: budment.ast.v1.Pipeline.steps:type_name -> budment.ast.v1.Node
-	5,  // 7: budment.ast.v1.Node.action:type_name -> budment.ast.v1.ActionNode
-	8,  // 8: budment.ast.v1.Node.branch:type_name -> budment.ast.v1.BranchNode
-	9,  // 9: budment.ast.v1.Node.match:type_name -> budment.ast.v1.MatchNode
-	10, // 10: budment.ast.v1.Node.loop:type_name -> budment.ast.v1.LoopNode
-	11, // 11: budment.ast.v1.Node.poll:type_name -> budment.ast.v1.PollNode
-	13, // 12: budment.ast.v1.Node.script:type_name -> budment.ast.v1.ScriptNode
-	14, // 13: budment.ast.v1.Node.sleep:type_name -> budment.ast.v1.SleepNode
-	15, // 14: budment.ast.v1.Node.log:type_name -> budment.ast.v1.LogNode
-	16, // 15: budment.ast.v1.Node.barrier:type_name -> budment.ast.v1.BarrierNode
-	17, // 16: budment.ast.v1.Node.set:type_name -> budment.ast.v1.SetNode
-	18, // 17: budment.ast.v1.Node.distribute:type_name -> budment.ast.v1.DistributeNode
-	19, // 18: budment.ast.v1.Node.metric:type_name -> budment.ast.v1.MetricNode
-	6,  // 19: budment.ast.v1.Node.req_mutate:type_name -> budment.ast.v1.ReqMutateNode
-	7,  // 20: budment.ast.v1.Node.res_assert:type_name -> budment.ast.v1.ResAssertNode
-	20, // 21: budment.ast.v1.Node.tag:type_name -> budment.ast.v1.TagNode
-	3,  // 22: budment.ast.v1.ActionNode.before:type_name -> budment.ast.v1.Pipeline
-	3,  // 23: budment.ast.v1.ActionNode.after:type_name -> budment.ast.v1.Pipeline
-	23, // 24: budment.ast.v1.ReqMutateNode.metadata:type_name -> budment.ast.v1.ReqMutateNode.MetadataEntry
-	24, // 25: budment.ast.v1.ResAssertNode.extract:type_name -> budment.ast.v1.ResAssertNode.ExtractEntry
-	3,  // 26: budment.ast.v1.BranchNode.true_path:type_name -> budment.ast.v1.Pipeline
-	3,  // 27: budment.ast.v1.BranchNode.false_path:type_name -> budment.ast.v1.Pipeline
-	25, // 28: budment.ast.v1.MatchNode.cases:type_name -> budment.ast.v1.MatchNode.CasesEntry
-	3,  // 29: budment.ast.v1.MatchNode.default_path:type_name -> budment.ast.v1.Pipeline
-	26, // 30: budment.ast.v1.LoopNode.range:type_name -> budment.ast.v1.LoopNode.RangeConfig
-	3,  // 31: budment.ast.v1.LoopNode.logic:type_name -> budment.ast.v1.Pipeline
-	3,  // 32: budment.ast.v1.PollNode.logic:type_name -> budment.ast.v1.Pipeline
-	12, // 33: budment.ast.v1.PollNode.policy:type_name -> budment.ast.v1.PollPolicy
-	3,  // 34: budment.ast.v1.MatchNode.CasesEntry.value:type_name -> budment.ast.v1.Pipeline
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	3,  // 3: budment.ast.v1.Scenario.teardown:type_name -> budment.ast.v1.Pipeline
+	2,  // 4: budment.ast.v1.ScenarioConfig.stages:type_name -> budment.ast.v1.Stage
+	21, // 5: budment.ast.v1.ScenarioConfig.thresholds:type_name -> budment.ast.v1.ScenarioConfig.ThresholdsEntry
+	22, // 6: budment.ast.v1.ScenarioConfig.tags:type_name -> budment.ast.v1.ScenarioConfig.TagsEntry
+	4,  // 7: budment.ast.v1.Pipeline.steps:type_name -> budment.ast.v1.Node
+	5,  // 8: budment.ast.v1.Node.action:type_name -> budment.ast.v1.ActionNode
+	8,  // 9: budment.ast.v1.Node.branch:type_name -> budment.ast.v1.BranchNode
+	9,  // 10: budment.ast.v1.Node.match:type_name -> budment.ast.v1.MatchNode
+	10, // 11: budment.ast.v1.Node.loop:type_name -> budment.ast.v1.LoopNode
+	11, // 12: budment.ast.v1.Node.poll:type_name -> budment.ast.v1.PollNode
+	13, // 13: budment.ast.v1.Node.script:type_name -> budment.ast.v1.ScriptNode
+	14, // 14: budment.ast.v1.Node.sleep:type_name -> budment.ast.v1.SleepNode
+	15, // 15: budment.ast.v1.Node.log:type_name -> budment.ast.v1.LogNode
+	16, // 16: budment.ast.v1.Node.barrier:type_name -> budment.ast.v1.BarrierNode
+	17, // 17: budment.ast.v1.Node.set:type_name -> budment.ast.v1.SetNode
+	18, // 18: budment.ast.v1.Node.distribute:type_name -> budment.ast.v1.DistributeNode
+	19, // 19: budment.ast.v1.Node.metric:type_name -> budment.ast.v1.MetricNode
+	6,  // 20: budment.ast.v1.Node.req_mutate:type_name -> budment.ast.v1.ReqMutateNode
+	7,  // 21: budment.ast.v1.Node.res_assert:type_name -> budment.ast.v1.ResAssertNode
+	20, // 22: budment.ast.v1.Node.tag:type_name -> budment.ast.v1.TagNode
+	3,  // 23: budment.ast.v1.ActionNode.before:type_name -> budment.ast.v1.Pipeline
+	3,  // 24: budment.ast.v1.ActionNode.after:type_name -> budment.ast.v1.Pipeline
+	23, // 25: budment.ast.v1.ReqMutateNode.metadata:type_name -> budment.ast.v1.ReqMutateNode.MetadataEntry
+	24, // 26: budment.ast.v1.ResAssertNode.extract:type_name -> budment.ast.v1.ResAssertNode.ExtractEntry
+	3,  // 27: budment.ast.v1.BranchNode.true_path:type_name -> budment.ast.v1.Pipeline
+	3,  // 28: budment.ast.v1.BranchNode.false_path:type_name -> budment.ast.v1.Pipeline
+	25, // 29: budment.ast.v1.MatchNode.cases:type_name -> budment.ast.v1.MatchNode.CasesEntry
+	3,  // 30: budment.ast.v1.MatchNode.default_path:type_name -> budment.ast.v1.Pipeline
+	26, // 31: budment.ast.v1.LoopNode.range:type_name -> budment.ast.v1.LoopNode.RangeConfig
+	3,  // 32: budment.ast.v1.LoopNode.logic:type_name -> budment.ast.v1.Pipeline
+	3,  // 33: budment.ast.v1.PollNode.logic:type_name -> budment.ast.v1.Pipeline
+	12, // 34: budment.ast.v1.PollNode.policy:type_name -> budment.ast.v1.PollPolicy
+	3,  // 35: budment.ast.v1.MatchNode.CasesEntry.value:type_name -> budment.ast.v1.Pipeline
+	36, // [36:36] is the sub-list for method output_type
+	36, // [36:36] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_ast_schema_proto_init() }

@@ -159,6 +159,7 @@ func (n *TagNode) Type() string   { return "TAG" }
 type Graph struct {
 	Setup     []ExecutableNode
 	Execution []ExecutableNode
+	Teardown  []ExecutableNode
 }
 
 type GraphCompiler struct{}
@@ -180,6 +181,13 @@ func (c *GraphCompiler) Compile(scenario *pb.Scenario) (*Graph, error) {
 			return nil, err
 		}
 		graph.Execution = nodes
+	}
+	if scenario.Teardown != nil {
+		nodes, err := c.compilePipeline(scenario.Teardown, 0)
+		if err != nil {
+			return nil, err
+		}
+		graph.Teardown = nodes
 	}
 	return graph, nil
 }
