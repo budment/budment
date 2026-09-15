@@ -24,6 +24,7 @@ builds:
 
 dockers_v2:
   - id: budment-docker
+    dockerfile: apps/core/Dockerfile
     images:
       - "budment/budment"
     tags:
