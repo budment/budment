@@ -1,22 +1,9 @@
 ---
 title: FAQs, Anti-Patterns & Best Practices
-description: Understand the Budment philosophy, hardware realities of the JS VM pool, syntax safeguards, and the golden rule of test authoring.
+description: Understand the Budment philosophy, hardware realities of the JS VM pool, syntax safeguards.
 ---
 
-# FAQs, Anti-Patterns & Best Practices
-
-Understanding how Budment balances declarative topology with imperative JavaScript hooks is key to mastering the engine. This guide addresses common developer concerns, explains the hardware realities of the Virtual Machine (VM) pool, and outlines the core rules for writing efficient scenarios.
-
-## 1. The Golden Rule: DSL vs. JS Hooks
-
-If you only remember one rule when writing Budment scenarios, it should be this:
-
-> **Outside `() => {}` is the Static DSL. Inside `() => {}` is the Runtime Hook.**
-
-- **The DSL (Static Array):** Used to define the _structure_ of your test (e.g., HTTP requests, branches, loops).
-- **The JS Hook:** Used for complex logic. Any math (`Date.now()`), complex object destructuring, conditional data mutations, or cryptographic hashing **must** be placed inside a JavaScript hook (`script(() => { ... })` or `.before(req => { ... })`).
-
-## 2. The "God Hook" Myth & Concurrency Optimization
+## 1. The "God Hook" Myth & Concurrency Optimization
 
 **The Concern:** _If I put too much logic into JS hooks, won't it create a bottleneck, block the engine, and defeat the purpose of Go's high concurrency?_
 
@@ -26,7 +13,7 @@ If you only remember one rule when writing Budment scenarios, it should be this:
 - **Reducing Context Switching & GC Pressure:** JavaScript is inherently single-threaded. If Budment spawned 10,000 isolated JS VMs, the CPU would drown in OS context switches and Garbage Collection (GC) pauses. By using a warm `sync.Pool`, Budment limits the active VMs to what the CPU can actually handle.
 - **Speed via Warm Recycling:** When a worker finishes a hook, it immediately returns the VM to the pool. Subsequent workers reuse these "warm" VMs, which avoids memory allocation overhead and executes logic significantly faster than spinning up new context scopes.
 
-## 3. Syntax Safeguards: You Can't "Break" the DSL
+## 2. Syntax Safeguards: You Can't "Break" the DSL
 
 **The Concern:** _What if a developer accidentally writes standard JavaScript logic (like `let a = 1`, `if/else`, or `while` loops) directly in the DSL instead of a hook?_
 
@@ -36,7 +23,7 @@ Your scenario is an array of object instances `[ node1, node2, node3 ]` separate
 
 If you need to execute imperative logic, you are naturally forced to wrap it in a function signature: `script(() => { const x = 10; })`. This elegantly protects the execution graph from invalid runtime logic while keeping the topology easy to read.
 
-## 4. The Magic of the `never` Type
+## 3. The Magic of the `never` Type
 
 Budment leverages advanced TypeScript definitions to provide real-time visual feedback on how the engine handles thread yielding via its Panic-Recovery protocol.
 

@@ -196,7 +196,7 @@ export interface HttpResponse {
 }
 ```
 
-## 4. Multipart Form Data & File Uploads
+## 4. File
 
 Uploading binary assets (images, PDFs, archives) requires preserving raw byte streams. Use `open(path, 'b')` to read the file into an `ArrayBuffer`, then attach it using `req.file()`:
 

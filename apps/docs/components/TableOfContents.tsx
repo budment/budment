@@ -266,7 +266,7 @@ export default function RightSidebar({
   return (
     <aside
       aria-label="Table of contents"
-      className="space-y-7 py-4 pr-4 text-[14px] font-sans select-none text-slate-600 dark:text-slate-400"
+      className="space-y-7 py-4 pr-2 text-[14px] font-sans select-none text-slate-600 dark:text-slate-400"
     >
       {headings.length > 0 && (
         <div>

@@ -7,18 +7,18 @@ description: Technical guide to memory scopes, data distribution, template inter
 
 Budment provides an isolated memory model and a high-performance, template interpolation in Go. Variables can be interpolated directly into static requests or managed programmatically inside JavaScript hooks.
 
-## 1. The Golden Rule: Polymorphic SDK & Two-Phase Execution
+## 1. The Golden Rule
 
-Budment operates on a strictly decoupled **Two-Phase Architecture** (Static Planning vs. Native Runtime).
+Budment operates on a strictly decoupled Two-Phase Architecture (Static Planning vs. Native Runtime). If you only remember one rule when writing scenarios, it should be this:
 
-To make developer experience seamless, SDK data providers (`get`, `random`, `env`, `open`) are **polymorphic**. Their behavior changes entirely depending on _where_ you call them:
+> **Outside `() => {}` is the Static DSL. Inside `() => {}` is the Runtime Hook.**
 
-1. **Outside JS Hooks (Phase 1 - Static DSL):** When you use SDK functions in static request builders (e.g., ``http.get(`https://api.example.com/users/${random.uuid()}`)``), they act as mocks. They simply return static template tokens (like `"{{@random:uuid}}"`) to build the execution graph.
-2. **Inside JS Hooks (Phase 2 - Runtime):** When you call these exact same functions inside a runtime callback (e.g., `.before(req => { const id = random.uuid(); })`), they cross the Goja bridge and return the **actual, real-time generated values**.
+To make the developer experience seamless, SDK data providers (`get`, `random`, `env`, `open`) are polymorphic. Their behavior changes entirely depending on where you call them:
 
-> **Crucial Takeaway:** Because static DSL builders are evaluated only once during compilation, any dynamic calculations, `if/else` conditions, or object destructuring (e.g., `user.password`) that must change _per iteration_ **MUST be placed inside a JavaScript Hook**.
+- **Outside JS Hooks (Phase 1 - Static DSL):** Used to define the structure of your test. SDK functions act as mocks, simply returning static template tokens (like `"{{@random:uuid}}"`) to build the execution graph.
+- **Inside JS Hooks (Phase 2 - Runtime):** Used for complex logic. When called inside a callback, they cross the Goja bridge and return the actual, real-time generated values. Any math, `if`/`else` conditions, or object destructuring must be placed here.
 
-## 2. Memory Scopes Architecture
+## 2. Memory Scopes
 
 State is strictly divided into three isolation boundaries:
 
@@ -41,7 +41,7 @@ flowchart TB
 | **Local Scope**  | `local.get/set/push/pop`  | Single Scenario        | Persists across test | Shared FIFO queues, scenario-wide caching.                 |
 | **Global Scope** | `global.get/set/push/pop` | Engine Process         | Persists across test | Cross-scenario signaling, global rate limit counters.      |
 
-## 3. Dataset Distribution:
+## 3. Dataset Distribution
 
 To ensure virtual users consume unique credentials without collisions, use `distribute(key, items)` inside the `setup` phase.
 

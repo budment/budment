@@ -59,26 +59,4 @@ snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  use: github
-  sort: asc
-  abbrev: -1
-  format: "{{ .Message }}"
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
-      - "^chore:"
-      - "^Merge pull request"
-  groups:
-    - title: "Features"
-      regexp: '^.*?feat(\([\w\s]+\))?!?:'
-      order: 0
-    - title: "Bug Fixes"
-      regexp: '^.*?fix(\([\w\s]+\))?!?:'
-      order: 1
-    - title: "Performance Improvements"
-      regexp: '^.*?perf(\([\w\s]+\))?!?:'
-      order: 2
-    - title: "Others"
-      order: 999
+  use: github-native
