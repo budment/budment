@@ -165,6 +165,11 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 	vm.Set("log", func(msg string) any { return createMockNode("log", map[string]any{"message": msg}) })
 	vm.Set("warn", func(msg string) any { return createMockNode("log", map[string]any{"message": "[WARN] " + msg}) })
 	vm.Set("error", func(msg string) any { return createMockNode("log", map[string]any{"message": "[ERROR] " + msg}) })
+	vm.Set("console", map[string]interface{}{
+		"log":   func(msg string) any { return createMockNode("log", map[string]any{"message": msg}) },
+		"warn":  func(msg string) any { return createMockNode("log", map[string]any{"message": "[WARN] " + msg}) },
+		"error": func(msg string) any { return createMockNode("log", map[string]any{"message": "[ERROR] " + msg}) },
+	})
 	vm.Set("tag", func(key string, value string) any {
 		return createMockNode("tag", map[string]any{"key": key, "value": value})
 	})

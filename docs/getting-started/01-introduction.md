@@ -13,4 +13,4 @@ Scenarios are compiled into an inspectable execution graph before being executed
 
 - [Installation](./02-installation): Install the Budment CLI and SDK.
 - [Quickstart](./03-quickstart): Build and run your first load scenario.
-- [Architecture](../reference/architecture): Explore the compiler and runtime architecture.
+- [Architecture](../ARCHITECTURE): Explore the compiler and runtime architecture.
