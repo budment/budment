@@ -28,8 +28,8 @@ export interface StaticAssert {
 }
 
 export type NodeInput = BuilderNode | BuilderNode[];
-export type BeforeAction = (((req: HttpRequest) => void) | NodeInput | StaticRequest | undefined | null);
-export type AfterAction = (((res: HttpResponse, req: HttpRequest) => void) | NodeInput | StaticAssert | undefined | null);
+export type BeforeAction = (((req: HttpRequest) => void) | NodeInput | StaticRequest | undefined | null | void);
+export type AfterAction = (((res: HttpResponse, req: HttpRequest) => void) | NodeInput | StaticAssert | undefined | null | void);
 
 export class HttpBuilder implements BuilderNode {
     private method: string;
