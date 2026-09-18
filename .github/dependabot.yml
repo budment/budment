@@ -9,12 +9,9 @@ updates:
       - "dependencies"
       - "core"
     groups:
-      go-minor-patch:
+      go-dependencies:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -25,12 +22,9 @@ updates:
       - "dependencies"
       - "sdk"
     groups:
-      npm-minor-patch:
+      npm-dependencies:
         patterns:
           - "*"
-        update-types:
-          - "minor"
-          - "patch"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -41,6 +35,6 @@ updates:
       - "dependencies"
       - "ci"
     groups:
-      actions-all:
+      actions-dependencies:
         patterns:
           - "*"

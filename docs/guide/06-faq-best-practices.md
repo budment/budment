@@ -9,9 +9,8 @@ description: Understand the Budment philosophy, hardware realities of the JS VM 
 
 **The Reality:** Writing robust logic inside JS hooks is not a "dirty" anti-pattern—it is exactly how the engine is designed to be used safely and efficiently. Borrowing a VM from the pool is highly optimized for performance:
 
-- **Hardware Reality Check:** Even if you spawn 10,000 Virtual Users (goroutines), if your machine only has a 4-core CPU, it can only physically execute 4 instructions in parallel at any exact nanosecond. The Go scheduler efficiently multiplexes the rest.
-- **Reducing Context Switching & GC Pressure:** JavaScript is inherently single-threaded. If Budment spawned 10,000 isolated JS VMs, the CPU would drown in OS context switches and Garbage Collection (GC) pauses. By using a warm `sync.Pool`, Budment limits the active VMs to what the CPU can actually handle.
-- **Speed via Warm Recycling:** When a worker finishes a hook, it immediately returns the VM to the pool. Subsequent workers reuse these "warm" VMs, which avoids memory allocation overhead and executes logic significantly faster than spinning up new context scopes.
+- **Hardware Reality Check:** Concurrency is not parallelism. Even if you spawn 10,000 Virtual Users (goroutines), a 4-core CPU can only physically execute 4 instructions simultaneously. The Go scheduler multiplexes the rest.
+- **Reducing Heap & GC Pressure:** JavaScript runtimes carry heavy internal states (Global objects, prototype chains). If Budment spawned 10,000 isolated JS VMs for 10,000 VUs, the Go Garbage Collector (GC) would drown trying to traverse a massive object graph, causing severe CPU spikes. By using a bounded `sync.Pool`, Budment keeps the memory footprint minimal, dedicating full CPU power to network I/O.
 
 ## 2. Syntax Safeguards: You Can't "Break" the DSL
 
