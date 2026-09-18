@@ -1,6 +1,6 @@
-import type { Options } from "tsup";
+import { defineConfig } from "tsup";
 
-export const baseTsupConfig: Options = {
+export const baseTsupConfig = defineConfig({
   entry: ["src/index.ts"],
   format: ["esm", "cjs"],
   dts: true,
@@ -9,4 +9,4 @@ export const baseTsupConfig: Options = {
   minify: true,
   splitting: false,
   treeshake: true,
-};
+});

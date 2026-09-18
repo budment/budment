@@ -21,6 +21,11 @@ updates:
     labels:
       - "dependencies"
       - "sdk"
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tsup"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-dependencies:
         patterns:
