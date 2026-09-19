@@ -9,16 +9,17 @@ import (
 )
 
 type Scheduler interface {
-	Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64)
+	Run(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64)
 }
 
 type ConstantVUScheduler struct{ VUs int }
 
-func (s *ConstantVUScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
+func (s *ConstantVUScheduler) Run(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
 	atomic.StoreInt64(activeTarget, int64(s.VUs))
 	for slot := 1; slot <= s.VUs; slot++ {
 		spawnWorker(slot, slot)
 	}
+	<-ctx.Done()
 }
 
 type RampingScheduler struct {
@@ -29,7 +30,7 @@ func NewRampingScheduler(stages []config.Stage) *RampingScheduler {
 	return &RampingScheduler{Stages: stages}
 }
 
-func (s *RampingScheduler) Start(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
+func (s *RampingScheduler) Run(ctx context.Context, spawnWorker func(slot int, id int), activeTarget *int64) {
 	currentVUs := 0
 	totalSpawnedCount := 0
 

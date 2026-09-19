@@ -181,7 +181,10 @@ func TestWorker_SharedIterations_ConcurrencyIntegrity(t *testing.T) {
 	}
 
 	agg := metrics.NewAggregator(1024, nil)
-	ctx := context.Background()
+	hardCtx, hardCancel := context.WithCancel(context.Background())
+	defer hardCancel()
+	softCtx, softCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer softCancel()
 	var wg sync.WaitGroup
 
 	for i := 1; i <= numWorkers; i++ {
@@ -189,7 +192,7 @@ func TestWorker_SharedIterations_ConcurrencyIntegrity(t *testing.T) {
 		w := NewWorker(i, i, graph, &stubExecutorPool{}, agg, nil, rf, totalIterations, "ConcurrencyScenario", nil, nil, &stubSink{}, &sharedIters, nil)
 		go func() {
 			defer wg.Done()
-			w.Run(ctx, func() {})
+			w.Run(hardCtx, softCtx, func() {})
 			atomic.AddInt64(&completedIters, int64(w.currentIter))
 		}()
 	}

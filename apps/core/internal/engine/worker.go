@@ -79,7 +79,7 @@ func (w *Worker) withExecutor(hookID string, fn func(inst HookExecutor)) {
 	fn(inst)
 }
 
-func (w *Worker) Run(ctx context.Context, done func()) {
+func (w *Worker) Run(hardCtx context.Context, softCtx context.Context, done func()) {
 	w.Aggregator.Metrics.AddActiveVU(1)
 	defer w.Aggregator.Metrics.AddActiveVU(-1)
 	defer done()
@@ -100,10 +100,11 @@ func (w *Worker) Run(ctx context.Context, done func()) {
 			}
 		}
 
-		select {
-		case <-ctx.Done():
+		if hardCtx.Err() != nil {
 			return
-		default:
+		}
+		if softCtx.Err() != nil {
+			return
 		}
 
 		w.Scope.Set("__VU_ID__", w.ID)
@@ -120,9 +121,9 @@ func (w *Worker) Run(ctx context.Context, done func()) {
 		}
 		iterStart := time.Now()
 
-		w.executeNodes(ctx, w.Graph.Execution)
+		w.executeNodes(hardCtx, w.Graph.Execution)
 
-		if ctx.Err() != nil {
+		if hardCtx.Err() != nil {
 			return
 		}
 

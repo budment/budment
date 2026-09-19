@@ -43,8 +43,12 @@ func NewScenario(name string, cfg config.EngineConfig, graph *planner.Graph, poo
 }
 
 func (s *Scenario) Run(parentCtx context.Context) {
-	var ctx context.Context
-	var cancel context.CancelFunc
+	// Initialize Dual-Context for Graceful Shutdown
+	hardCtx, hardCancel := context.WithCancel(parentCtx)
+	defer hardCancel()
+
+	softCtx, softCancel := context.WithCancel(parentCtx)
+	defer softCancel()
 
 	isUsingStages := len(s.Config.Stages) > 0
 	hasDuration := s.Config.Duration != "" && s.Config.Duration != "0s"
@@ -53,15 +57,19 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		dur, err := time.ParseDuration(s.Config.Duration)
 		if err != nil {
 			if s.Sink != nil {
-				s.Sink.Log(0, "SCENARIO", "FATAL", fmt.Sprintf("Cấu hình duration sai '%s': %v", s.Config.Duration, err))
+				s.Sink.Log(0, "SCENARIO", "FATAL", fmt.Sprintf("Invalid duration config '%s': %v", s.Config.Duration, err))
 			}
 			return
 		}
-		ctx, cancel = context.WithTimeout(parentCtx, dur)
-	} else {
-		ctx, cancel = context.WithCancel(parentCtx)
+
+		go func() {
+			select {
+			case <-time.After(dur):
+				softCancel() // Trigger graceful stop automatically
+			case <-hardCtx.Done():
+			}
+		}()
 	}
-	defer cancel()
 
 	var actualIters int
 	if s.Config.Iterations != nil {
@@ -82,6 +90,7 @@ func (s *Scenario) Run(parentCtx context.Context) {
 	// Shared flag signaling VUs to ramp down / terminate
 	var activeTarget int64
 
+	// PHASE 1: SETUP
 	if len(s.Graph.Setup) > 0 {
 		// Setup worker runs only once, so pass nil for activeTarget
 		setupWorker := NewWorker(0, 0, s.Graph, s.Pool, s.Aggregator, s.BarrierManager, s.RunnerFactory, 1, s.Name, s.LocalState, s.GlobalState, s.Sink, &sharedIters, nil)
@@ -89,10 +98,10 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		setupWorker.Scope.Set("__ITER__", 0)
 		setupWorker.Scope.Set("__SCENARIO__", s.Name)
 
-		aborted := setupWorker.executeNodes(ctx, s.Graph.Setup)
+		aborted := setupWorker.executeNodes(hardCtx, s.Graph.Setup)
 		if aborted || setupWorker.Scope.IsAbortFlag() {
 			if s.Sink != nil {
-				s.Sink.Log(0, "SETUP", "FATAL", fmt.Sprintf("Setup thất bại trong kịch bản '%s'. Hủy bỏ scenario!", s.Name))
+				s.Sink.Log(0, "SETUP", "FATAL", fmt.Sprintf("Setup failed for scenario '%s'. Aborting!", s.Name))
 			}
 			return
 		}
@@ -105,19 +114,11 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		go func(workerSlot int, workerID int) {
 			defer wg.Done()
 			w := NewWorker(workerID, workerSlot, s.Graph, s.Pool, s.Aggregator, s.BarrierManager, s.RunnerFactory, actualIters, s.Name, s.LocalState, s.GlobalState, s.Sink, &sharedIters, &activeTarget)
-			w.Run(ctx, func() {})
+			w.Run(hardCtx, softCtx, func() {})
 		}(slot, id)
 	}
 
-	if !isUsingStages {
-		scheduler := &ConstantVUScheduler{VUs: s.Config.VUs}
-		scheduler.Start(ctx, spawnFunc, &activeTarget)
-		wg.Wait()
-		return
-	}
-
-	scheduler := NewRampingScheduler(s.Config.Stages)
-
+	// Monitor iteration limits to trigger soft cancellation
 	if actualIters > 0 {
 		go func() {
 			ticker := time.NewTicker(50 * time.Millisecond)
@@ -125,13 +126,13 @@ func (s *Scenario) Run(parentCtx context.Context) {
 
 			for {
 				select {
-				case <-ctx.Done():
+				case <-hardCtx.Done():
 					return
 				case <-ticker.C:
 					claimed := atomic.LoadInt64(&sharedIters)
 					active := atomic.LoadInt64(&s.Aggregator.Metrics.ActiveVUs)
 					if claimed >= int64(actualIters) && active == 0 {
-						cancel()
+						softCancel()
 						return
 					}
 				}
@@ -139,9 +140,38 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		}()
 	}
 
-	scheduler.Start(ctx, spawnFunc, &activeTarget)
-	cancel()
-	wg.Wait()
+	// PHASE 2: EXECUTION
+	if !isUsingStages {
+		scheduler := &ConstantVUScheduler{VUs: s.Config.VUs}
+		scheduler.Run(softCtx, spawnFunc, &activeTarget)
+	} else {
+		scheduler := NewRampingScheduler(s.Config.Stages)
+		scheduler.Run(softCtx, spawnFunc, &activeTarget)
+	}
+
+	// Ensure softCtx is cancelled when the scheduler completes its lifecycle
+	softCancel()
+
+	// Wait for Graceful Shutdown (Cooldown Phase)
+	gracefulDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(gracefulDone)
+	}()
+
+	gracefulTimeout := 30 * time.Second
+	select {
+	case <-gracefulDone:
+		// All VUs finished gracefully
+	case <-time.After(gracefulTimeout):
+		if s.Sink != nil {
+			s.Sink.Log(0, "SCENARIO", "WARN", "Graceful timeout exceeded! Forcefully terminating active VUs.")
+		}
+		hardCancel()
+		<-gracefulDone
+	}
+
+	// PHASE 3: TEARDOWN
 	if len(s.Graph.Teardown) > 0 {
 		teardownCtx, teardownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer teardownCancel()
@@ -152,7 +182,7 @@ func (s *Scenario) Run(parentCtx context.Context) {
 		teardownWorker.Scope.Set("__SCENARIO__", s.Name)
 
 		if s.Sink != nil {
-			s.Sink.Log(0, "TEARDOWN", "INFO", fmt.Sprintf("Bắt đầu teardown cho kịch bản '%s'", s.Name))
+			s.Sink.Log(0, "TEARDOWN", "INFO", fmt.Sprintf("Starting teardown for scenario '%s'", s.Name))
 		}
 
 		_ = teardownWorker.executeNodes(teardownCtx, s.Graph.Teardown)

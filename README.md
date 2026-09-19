@@ -61,7 +61,7 @@ budment --version
 Install the companion DSL builder in your workspace:
 
 ```bash
-npm install -D budment
+npm install -D @budment/sdk
 ```
 
 ### 3. Write a Scenario
