@@ -45,16 +45,15 @@ func (h *PrettyHandler) Handle(ctx context.Context, r slog.Record) error {
 		color = Red
 	}
 
-	timeStr := r.Time.Format("15:04:05.000")
+	timeStr := r.Time.Format("2006-01-02 15:04:05")
 
 	var sb strings.Builder
 	sb.Grow(128)
 
 	// Format: [15:04:05] INFO  | Message
 	sb.WriteString(Gray)
-	sb.WriteString("[")
 	sb.WriteString(timeStr)
-	sb.WriteString("] ")
+	sb.WriteString(" ")
 	sb.WriteString(color)
 	fmt.Fprintf(&sb, "%-5s", level)
 	sb.WriteString(Reset)

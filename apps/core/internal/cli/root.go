@@ -64,12 +64,8 @@ func SetVersionInfo(v, c, d string) {
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() int {
 	if err := rootCmd.Execute(); err != nil {
-		if !quietMode {
-			if globalLog != nil {
-				globalLog.Error("Execution failed", "err", err)
-			} else {
-				fmt.Fprintln(os.Stderr, "Error:", err)
-			}
+		if !quietMode && debugMode && globalLog != nil {
+			globalLog.Error("Execution failed", "err", err)
 		}
 		return 1
 	}
