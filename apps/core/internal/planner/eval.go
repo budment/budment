@@ -20,7 +20,9 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	vm := goja.New()
 	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 
-	e.injectMockDSL(vm)
+	if err := e.injectMockDSL(vm); err != nil {
+		return nil, err
+	}
 
 	// Evaluate the compiled JS bundle.
 	_, err := vm.RunString(jsBundle)
@@ -146,7 +148,7 @@ func (e *Evaluator) Evaluate(jsBundle string) ([]*pb.Scenario, error) {
 	return scenarios, nil
 }
 
-func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
+func (e *Evaluator) injectMockDSL(vm *goja.Runtime) error {
 	var nodeCounter int64 = 0
 
 	genID := func(prefix string) string {
@@ -161,6 +163,41 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 		}
 	}
 
+	// 1. Inject Proxy factory script into the VM to handle AST token generation
+	proxyScript := `
+		globalThis.__makeProxyToken = function(prefix, suffix) {
+			return function(key) {
+				function createProxy(path) {
+					return new Proxy({}, {
+						get: function(target, prop) {
+							// Trap 1: Type coercion safeguard (blocks arithmetic and loose equality)
+							if (prop === Symbol.toPrimitive) {
+								return function(hint) {
+									if (hint === "string") return prefix + path + suffix;
+									throw new Error("Compile Error: Token '" + path + "' cannot be evaluated with operators outside a runtime hook. Use Template Literals ${...} instead.");
+								};
+							}
+							// Trap 2: Ensure JSON.stringify serializes this Proxy into an AST token string
+							if (prop === 'toString' || prop === 'toJSON') {
+								return function() { return prefix + path + suffix; };
+							}
+							// Trap 3: Recursive property traversal for deep dot-notation support
+							if (typeof prop === 'string' && prop !== 'valueOf' && prop !== 'then') {
+    							return createProxy(path + "}{" + prop);
+							}
+							return Reflect.get(target, prop);
+						}
+					});
+				}
+				return createProxy(key);
+			};
+		}; 
+	`
+	if _, err := vm.RunString(proxyScript); err != nil {
+		return fmt.Errorf("failed to initialize proxy token script: %w", err)
+	}
+	makeProxyFn, _ := goja.AssertFunction(vm.Get("__makeProxyToken"))
+
 	vm.Set("sleep", func(s float64) any { return createMockNode("sleep", map[string]any{"durationS": s}) })
 	vm.Set("log", func(msg string) any { return createMockNode("log", map[string]any{"message": msg}) })
 	vm.Set("warn", func(msg string) any { return createMockNode("log", map[string]any{"message": "[WARN] " + msg}) })
@@ -174,7 +211,22 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 		return createMockNode("tag", map[string]any{"key": key, "value": value})
 	})
 	vm.Set("set", func(key string, val any) any {
-		return createMockNode("set", map[string]any{"key": key, "valueJson": fmt.Sprint(val), "scope": "worker"})
+		var strVal string
+
+		if obj, ok := val.(*goja.Object); ok {
+			b, _ := json.Marshal(obj.Export())
+			strVal = string(b)
+		} else {
+			switch v := val.(type) {
+			case map[string]any, []any:
+				b, _ := json.Marshal(v)
+				strVal = string(b)
+			default:
+				strVal = fmt.Sprint(v)
+			}
+		}
+
+		return createMockNode("set", map[string]any{"key": key, "valueJson": strVal, "scope": "worker"})
 	})
 
 	vm.Set("barrier", func(name string, opts map[string]any) any {
@@ -208,9 +260,13 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 		"gauge":   metricFunc("gauge"),
 	})
 
+	getProxy, _ := makeProxyFn(goja.Undefined(), vm.ToValue("{{"), vm.ToValue("}}"))
+	vm.Set("get", getProxy)
+
 	namespaceFunc := func(scope string) map[string]any {
+		nsGetProxy, _ := makeProxyFn(goja.Undefined(), vm.ToValue("{{@"+scope+":"), vm.ToValue("}}"))
 		return map[string]any{
-			"get": func(key string) string { return fmt.Sprintf("{{@%s:%s}}", scope, key) },
+			"get": nsGetProxy,
 			"pop": func(queue string) string { return fmt.Sprintf("{{@pop:%s:%s}}", scope, queue) },
 			"push": func(queue string, val any) any {
 				return createMockNode("log", map[string]any{"message": "Push to " + queue})
@@ -233,7 +289,6 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 		return fmt.Sprintf("{{@open:%s:%s}}", path, m)
 	})
 
-	vm.Set("get", func(key string) string { return fmt.Sprintf("{{%s}}", key) })
 	vm.Set("info", map[string]any{"vuId": "{{__VU_ID__}}", "iteration": "{{__ITER__}}", "scenario": "{{__SCENARIO__}}"})
 
 	vm.Set("random", map[string]any{
@@ -247,4 +302,5 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) {
 			return nil
 		},
 	})
+	return nil
 }

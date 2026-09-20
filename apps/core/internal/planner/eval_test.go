@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -92,5 +93,44 @@ func TestEvaluator_DSL_TemplateExpressions(t *testing.T) {
 	}
 	if steps[2].GetLog().Message != "{{user_token}}" {
 		t.Errorf("get() expression mismatch: expected '{{user_token}}', got '%s'", steps[2].GetLog().Message)
+	}
+}
+
+func TestEvaluator_DSL_DotNotation_And_ObjectSerialization(t *testing.T) {
+	evaluator := NewEvaluator()
+
+	// Simulate DSL script heavily relying on static dot-notation and object state injection
+	jsBundle := `
+		globalThis.__BUDMENT_EXPORTS__ = {
+			default: [
+				log(get("user").profile.id),
+				log(local.get("config").api.url),
+				set("obj", { name: "Alice", age: 25 })
+			]
+		};
+	`
+
+	scenarios, err := evaluator.Evaluate(jsBundle)
+	if err != nil {
+		t.Fatalf("bundle evaluation failed: %v", err)
+	}
+	steps := scenarios[0].Execution.Steps
+
+	// 1. Verify Worker Scope proxy translates property access chains to '}{' AST format
+	log1 := steps[0].GetLog().Message
+	if log1 != "{{user}{profile}{id}}" {
+		t.Errorf("worker proxy AST formatting mismatch: expected '{{user}{profile}{id}}', got '%s'", log1)
+	}
+
+	// 2. Verify Shared Scope (local/global) proxy translates identically
+	log2 := steps[1].GetLog().Message
+	if log2 != "{{@local:config}{api}{url}}" {
+		t.Errorf("local proxy AST formatting mismatch: expected '{{@local:config}{api}{url}}', got '%s'", log2)
+	}
+
+	// 3. Verify object mutations via set() correctly serialize to JSON strings rather than native stringifiers
+	setVal := steps[2].GetSet().ValueJson
+	if !strings.Contains(setVal, `"name":"Alice"`) {
+		t.Errorf("object serialization failed: expected JSON format, got '%s'", setVal)
 	}
 }
