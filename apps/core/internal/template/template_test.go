@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/dop251/goja"
 )
 
 type stubScope struct {
@@ -128,5 +130,48 @@ func BenchmarkTemplate_Render_Dynamic(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_ = expr.Render(scope)
+	}
+}
+
+func TestTemplate_DeepLookup_And_Fallback(t *testing.T) {
+	// Mock a Goja Runtime object to simulate JS hook state injection
+	vm := goja.New()
+	jsObjVal, _ := vm.RunString(`({ profile: { role: "super_admin", tags: ["a", "b"] } })`)
+	jsObj := jsObjVal.ToObject(vm)
+
+	scope := &stubScope{
+		vars: map[string]any{
+			"user": map[string]any{
+				"items": []any{
+					map[string]any{"id": 42},
+				},
+			},
+			"js_data": jsObj,
+		},
+	}
+
+	// 1. Verify traversal through Go native maps and slices using '}{' delimiters
+	expr1 := NewExpression("Item ID: {{user}{items}{0}{id}}")
+	if res := expr1.Render(scope); res != "Item ID: 42" {
+		t.Errorf("native map/slice lookup failed: expected 'Item ID: 42', got '%s'", res)
+	}
+
+	// 2. Verify property access
+	expr2 := NewExpression("Role: {{js_data}{profile}{role}}")
+	if res := expr2.Render(scope); res != "Role: super_admin" {
+		t.Errorf("goja object lookup failed: expected 'Role: super_admin', got '%s'", res)
+	}
+
+	// 3. Verify graceful fallback to raw template string on broken paths
+	expr3 := NewExpression("Bad Path: {{user}{wrong}{path}}")
+	if res := expr3.Render(scope); res != "Bad Path: {{user}{wrong}{path}}" {
+		t.Errorf("broken path fallback failed: expected raw string, got '%s'", res)
+	}
+
+	// 4. Verify JSON serialization dump for zero-path root object resolution
+	expr4 := NewExpression("Dump: {{user}}")
+	res4 := expr4.Render(scope)
+	if !strings.Contains(res4, `"items"`) {
+		t.Errorf("root object JSON dump failed: expected JSON payload, got '%s'", res4)
 	}
 }

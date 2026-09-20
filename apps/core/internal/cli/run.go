@@ -34,7 +34,7 @@ func (c *cliMetricsSink) Log(workerID int, nodeID string, level string, msg stri
 		return
 	}
 
-	timeStr := time.Now().Format("15:04:05.000")
+	timeStr := time.Now().Format("2006-01-02 15:04:05")
 
 	var coloredLog string
 
@@ -47,7 +47,7 @@ func (c *cliMetricsSink) Log(workerID int, nodeID string, level string, msg stri
 		hookCtx = fmt.Sprintf("[Node: %s] ", nodeID)
 	}
 
-	prefix := theme.TextDim(fmt.Sprintf("[%s]", timeStr))
+	prefix := theme.TextDim(timeStr)
 	vuInfo := fmt.Sprintf("[VU:%d]", workerID)
 
 	switch level {
@@ -145,6 +145,10 @@ var runCmd = &cobra.Command{
 
 		planResult, err := pipeline.BuildPlan(scriptPath)
 		if err != nil {
+			if !quietMode {
+				fmt.Printf("\n%s %s\n", theme.TextRed("✗"), theme.TextRed("Plan generation failed"))
+				fmt.Printf("  %s\n", err)
+			}
 			return fmt.Errorf("build plan failed: %w", err)
 		}
 

@@ -105,7 +105,40 @@ func NewPool(registry *HookRegistry, global runtime.SharedState, sink runtime.Me
 			return bridge.Scenario
 		})
 		_, _ = vm.RunString(`globalThis.info = { get vuId() { return __GET_VUID(); }, get iteration() { return __GET_ITER(); }, get scenario() { return __GET_SCEN(); } };`)
+		vm.Set("__bridge_isRuntime", func() bool { return bridge.IsRuntime })
 
+		proxyWrapperScript := `
+			(function() {
+				const isRT = () => globalThis.__bridge_isRuntime();
+				
+				const makeSafeProxy = function() {
+					function createProxy() {
+						return new Proxy({}, {
+							get: function(target, prop) {
+								if (prop === Symbol.toPrimitive || prop === 'toString' || prop === 'valueOf') return function() { return ""; };
+								if (prop === 'then') return undefined;
+								return createProxy(); 
+							}
+						});
+					}
+					return createProxy();
+				};
+
+				const origGet = globalThis.get;
+				globalThis.get = function(k) { return isRT() ? origGet(k) : makeSafeProxy(); };
+
+				if (globalThis.local && globalThis.local.get) {
+					const origLocalGet = globalThis.local.get.bind(globalThis.local);
+					globalThis.local.get = function(k) { return isRT() ? origLocalGet(k) : makeSafeProxy(); };
+				}
+
+				if (globalThis.global && globalThis.global.get) {
+					const origGlobalGet = globalThis.global.get.bind(globalThis.global);
+					globalThis.global.get = function(k) { return isRT() ? origGlobalGet(k) : makeSafeProxy(); };
+				}
+			})();
+		`
+		_, _ = vm.RunString(proxyWrapperScript)
 		_, err := vm.RunString(registry.GetCode())
 		if err != nil {
 			fmt.Printf("[POOL WARNING] Failed to load script into VM: %v\n", err)

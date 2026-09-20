@@ -126,3 +126,28 @@ func TestVMInstance_EvaluateConditions(t *testing.T) {
 		t.Fatalf("evaluation mismatch: expected 'case_beta', got '%s' (err: %v)", strVal, err)
 	}
 }
+
+func TestPool_InfiniteProxy_ColdStart_Safeguard(t *testing.T) {
+	// Simulate aggressive static property access during VM initialization (IsRuntime = false).
+	// Without the Infinite Proxy safeguard, this will trigger an immediate TypeError panic.
+	code := `
+		const userRole = get("user").profile.role.deep.deep;
+		const globalCfg = global.get("env").api.url;
+
+		globalThis.HookRegistry.hooks.set("h_test", function() {
+			return userRole + " | " + globalCfg;
+		});
+	`
+
+	reg := newTestRegistry(code)
+
+	// Pool initialization will execute the cold-start script immediately.
+	// A successful return confirms the Infinite Proxy safely absorbed all undefined property lookups.
+	pool := NewPool(reg, nil, &stubSink{})
+	vm := pool.GetVM(newStubVUContext(), nil, 1, 0, "TestProxySafeguard")
+	defer pool.PutVM(vm)
+
+	if vm == nil {
+		t.Fatal("VM pool initialization failed due to uncaught JS TypeError during cold-start evaluation")
+	}
+}

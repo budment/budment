@@ -75,33 +75,28 @@ http.post("https://api.example.com/orders").before({
 });
 ```
 
-### Dynamic Script Hooks & On-Demand URLs
+### Dynamic URLs & Scope Injection
 
-When payloads require cryptographic signatures or dynamic data logic, provide a callback receiving the `HttpRequest` instance.
-
-To ensure `budment plan` remains highly predictable and static, Budment does not allow mutating the URL topology (paths or query parameters) from inside the hook. Instead, declare parameters directly in the URL template. The request will dynamically evaluate the latest Virtual User scope on demand:
+Budment treats target URLs as reactive templates. To mutate paths or query parameters dynamically during execution, embed SDK variables directly into your URL string. The engine instantly evaluates the latest Virtual User scope on demand before dispatching the request.
 
 ```typescript
-import { http, set } from "@budment/sdk";
+import { http, set, get } from "@budment/sdk";
 
 export default [
+  // The URL topology is fully reactive to the Virtual User's state.
+  // You can template query params, specific segments, or the entire route.
   http
-    .get(
-      "https://api.example.com/users/{{userId}}/orders?page={{page}}&limit={{limit}}",
-    )
+    .get(`https://api.example.com${get("dynamic_route")}?limit=${get("limit")}`)
     .before((req) => {
-      // Before mutation: variables might be unresolved based on current scope
-      log(req.getTarget()); // e.g., https://api.example.com/users/{{userId}}/orders?page={{page}}&limit={{limit}}
+      // 1. Mutate the state variables inside the hook based on your custom logic
+      set("dynamic_route", "/users/usr_9999/orders");
+      set("limit", 50);
 
-      // Mutate the Virtual User scope
-      set("userId", "usr_9999");
+      // 2. getTarget() immediately reflects the fully assembled URL
+      console.log(req.getTarget()); // https://api.example.com/users/usr_9999/orders?limit=50
 
-      // After mutation: getTarget() instantly reflects the updated scope
-      log(req.getTarget()); // https://api.example.com/users/usr_9999/orders?page={{page}}&limit={{limit}}
-
-      // You can also append dynamic headers or body payloads
-      const nonce = Date.now().toString();
-      req.set(null, { headers: { "X-Request-Nonce": nonce } });
+      // 3. You can also inject dynamic cryptographic headers or payloads
+      req.set(null, { headers: { "X-Request-Nonce": Date.now().toString() } });
     }),
 ];
 ```
@@ -192,7 +187,7 @@ export interface HttpResponse {
     readonly error?: string; // Network timeout or socket error description
 
     // Extracts via GJSON, or parses full body if no selector is provided
-    json<T any>(selector?: string): T | undefined;
+    json<T = any>(selector?: string): T | undefined;
 }
 ```
 

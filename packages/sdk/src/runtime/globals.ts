@@ -38,7 +38,7 @@ export const dummyNode = { build: () => ({}) };
 export const dummyFn: any = () => dummyNode;
 
 /** Retrieves a value by key. */
-export const get: <T = any>(key: string) => T | undefined = _g.get || dummyFn;
+export const get: <T = any>(key: string) => any = _g.get || dummyFn;
 
 /** Stores a value by key. */
 export const set: (key: string, val: any) => void = _g.set || dummyFn;
