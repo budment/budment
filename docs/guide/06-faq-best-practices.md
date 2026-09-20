@@ -1,54 +1,62 @@
 ---
-title: FAQs, Anti-Patterns & Best Practices
-description: Understand the Budment philosophy, hardware realities of the JS VM pool, syntax safeguards.
+title: FAQs & Best Practices
+description: Core design philosophies, performance optimization, and compile-time safeguards in Budment.
 ---
 
-## 1. The "God Hook" Myth & Concurrency Optimization
+# FAQs & Best Practices
 
-**The Concern:** _If I put too much logic into JS hooks, won't it create a bottleneck, block the engine, and defeat the purpose of Go's high concurrency?_
+## 1. JS Hook Performance
 
-**The Reality:** Writing robust logic inside JS hooks is not a "dirty" anti-pattern—it is exactly how the engine is designed to be used safely and efficiently. Borrowing a VM from the pool is highly optimized for performance:
+Writing complex logic inside JS hooks is fully supported and optimized. Budment uses a bounded `sync.Pool` of JavaScript VMs (Goja) rather than allocating one VM per Virtual User. This minimizes Garbage Collection (GC) pressure and memory bloat, dedicating maximum CPU cycles to Go's concurrent network I/O.
 
-- **Hardware Reality Check:** Concurrency is not parallelism. Even if you spawn 10,000 Virtual Users (goroutines), a 4-core CPU can only physically execute 4 instructions simultaneously. The Go scheduler multiplexes the rest.
-- **Reducing Heap & GC Pressure:** JavaScript runtimes carry heavy internal states (Global objects, prototype chains). If Budment spawned 10,000 isolated JS VMs for 10,000 VUs, the Go Garbage Collector (GC) would drown trying to traverse a massive object graph, causing severe CPU spikes. By using a bounded `sync.Pool`, Budment keeps the memory footprint minimal, dedicating full CPU power to network I/O.
+## 2. DSL Structural Integrity
 
-## 2. Syntax Safeguards: You Can't "Break" the DSL
+The Budment DSL is a standard TypeScript array. You cannot physically write imperative statements (like variable assignments or `while` loops) directly inside the array without triggering IDE syntax errors. Logic must be wrapped in `script(() => { ... })`, which strictly isolates runtime execution from the static AST topology.
 
-**The Concern:** _What if a developer accidentally writes standard JavaScript logic (like `let a = 1`, `if/else`, or `while` loops) directly in the DSL instead of a hook?_
+## 3. Control Flow Analysis (`never` type)
 
-**The Reality:** The Budment DSL is syntactically protected by standard JavaScript/TypeScript grammar.
-
-Your scenario is an array of object instances `[ node1, node2, node3 ]` separated by commas. You physically cannot write imperative statements like variable assignments (`const x = 10`) or `while` loops directly inside an array declaration without triggering immediate IDE syntax errors.
-
-If you need to execute imperative logic, you are naturally forced to wrap it in a function signature: `script(() => { const x = 10; })`. This elegantly protects the execution graph from invalid runtime logic while keeping the topology easy to read.
-
-## 3. The Magic of the `never` Type
-
-Budment leverages advanced TypeScript definitions to provide real-time visual feedback on how the engine handles thread yielding via its Panic-Recovery protocol.
-
-Operational nodes that cause the JavaScript VM to immediately suspend and yield thread control back to Go—such as `sleep()`, `barrier()`, `abort()`, and `fail()`—are typed in the SDK to return `never`.
-
-**Dual Behavior (DSL vs. Hook):**
-
-- **In the DSL Array:** Because arrays are just lists of expressions, putting `sleep(1)` inside the DSL array works perfectly as a structural node. It will not gray out the next HTTP request in the list.
-- **Inside a JS Hook:** If you place a `sleep()` or `abort()` inside a JS hook, the TypeScript compiler's Control Flow Analysis takes over. Your IDE will automatically **gray out** any code written below it.
+Functions that suspend the JS VM and yield control back to Go (`abort`, `sleep`, `barrier`, `fail`) are strictly typed as `never`. When used inside a runtime hook, your IDE will automatically gray out any subsequent code, providing immediate visual confirmation of the engine's Panic-Recovery mechanism.
 
 ```typescript
-import { abort, get, script } from "budment/";
+import { abort, get, script } from "@budment/sdk";
 
 export default [
   script(() => {
-    const balance = get<number>("balance");
-    if (balance < 0) {
-      // Triggers a native Go panic ("BUDMENT_ABORT") to yield the VM instantly
+    if (get<number>("balance") < 0) {
       abort("Negative balance detected.");
-
-      // The IDE grays out this line automatically!
-      // It visually tells the developer: "The JS VM is yielded here. This will never run."
-      console.log("This is unreachable code.");
+      console.log("Unreachable code - IDE will gray this out.");
     }
   }),
 ];
 ```
 
-This acts as a brilliant built-in safety mechanism, providing developers with immediate visual confirmation that the engine will halt the script and release the VM back to the pool without executing further.
+## 4. Compile-Time Safeguards for AST Proxies
+
+In Phase plan, data providers like `get()` or `env()` return AST Proxy objects, not real values. To prevent silent evaluation bugs during load tests, Budment traps the ECMAScript `Symbol.toPrimitive` lifecycle.
+
+Applying arithmetic operators (`+`, `-`, `*`) or loose comparisons (`==`, `>`, `<`) to a Proxy outside a runtime hook triggers an immediate **Compile Error**.
+
+TypeScript
+
+```typescript
+// COMPILE ERROR: Proxy cannot evaluate arithmetic outside a hook.
+const nextPage = get('page') + 1;
+```
+
+**The Solution:** Use standard Template Literals for static AST string interpolation, and move logical operations into Runtime Hooks where `get()` returns actual data.
+
+TypeScript
+
+```typescript
+// VALID: String interpolation builds the static token before entering the pipeline
+const targetUrl = `https://api.example.com/users?page=${get("page")}`;
+export default [
+  http.get(targetUrl).before((req) => {
+    // VALID: Math and conditionals safely executed inside a hook
+    const page = get<number>("page");
+    if (page > 10) {
+      req.set({ next_page: page + 1 });
+    }
+  }),
+];
+```

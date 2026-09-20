@@ -5,18 +5,16 @@ description: Technical guide to memory scopes, data distribution, template inter
 
 # State Management, Test Data & Templates
 
-Budment provides an isolated memory model and a high-performance, template interpolation in Go. Variables can be interpolated directly into static requests or managed programmatically inside JavaScript hooks.
+Budment provides an isolated memory model and high-performance template interpolation in Go. Variables can be seamlessly embedded into static requests or managed programmatically inside JavaScript hooks.
 
-## 1. The Golden Rule
+## 1. The AST Compilation Principle
 
-Budment operates on a strictly decoupled Two-Phase Architecture (Static Planning vs. Native Runtime). If you only remember one rule when writing scenarios, it should be this:
+Budment operates on a decoupled **Two-Phase Architecture**. Understanding this is critical for writing robust scenarios:
 
-> **Outside `() => {}` is the Static DSL. Inside `() => {}` is the Runtime Hook.**
+- **Phase 1 (Static Planning):** Budment executes your global code (outside `() => {}` hooks) to compile a static **Abstract Syntax Tree (AST)**. Data providers like `get()` and `env()` act as **Proxies**. They do not return real data; they generate template tokens (e.g., `"{{user_id}}"`) to build the execution blueprint.
+- **Phase 2 (Runtime Execution):** The Go FSM executes the static AST concurrently across all Virtual Users (VUs). Any dynamic logic wrapped inside `() => {}` (Runtime Hooks) is dispatched to the JavaScript VM on demand. Inside hooks, `get()` and `env()` cross the bridge to return the actual, real-time memory state.
 
-To make the developer experience seamless, SDK data providers (`get`, `random`, `env`, `open`) are polymorphic. Their behavior changes entirely depending on where you call them:
-
-- **Outside JS Hooks (Phase 1 - Static DSL):** Used to define the structure of your test. SDK functions act as mocks, simply returning static template tokens (like `"{{@random:uuid}}"`) to build the execution graph.
-- **Inside JS Hooks (Phase 2 - Runtime):** Used for complex logic. When called inside a callback, they cross the Goja bridge and return the actual, real-time generated values. Any math, `if`/`else` conditions, or object destructuring must be placed here.
+Because of this design, the engine achieves massive throughput by reusing the same static blueprint (AST) for all workers, only dipping into the JavaScript VM when dynamic logic or state mutation is strictly necessary.
 
 ## 2. Memory Scopes
 
@@ -43,7 +41,7 @@ flowchart TB
 
 ## 3. Dataset Distribution
 
-To ensure virtual users consume unique credentials without collisions, use `distribute(key, items)` inside the `setup` phase.
+To ensure virtual users consume unique credentials use `distribute(key, items)` inside the `setup` phase.
 
 At the start of **every iteration**, the Go FSM automatically retrieves the next available item (round-robin) and securely injects it into the active Worker Scope using the provided key.
 
@@ -65,17 +63,12 @@ export const setup = [
 ];
 
 export default [
-  // Because the payload is a complex object, we MUST use a JS hook
-  // to destructure it at runtime.
-  http.post("https://api.example.com/login").before((req) => {
-    const identity = get<{ user: string; pass: string }>("active_identity");
-
-    if (identity) {
-      req.set({
-        username: identity.user,
-        password: identity.pass,
-      });
-    }
+  // resolves deep object properties
+  http.post("https://api.example.com/login").before({
+    body: {
+      username: `${get("active_identity").user}`,
+      password: `${get("active_identity").pass}`,
+    },
   }),
 ];
 ```
@@ -88,16 +81,17 @@ When you write standard JavaScript template literals outside of hooks, you don't
 
 This table illustrates how intuitive SDK calls compile into native tokens when used in static builders (Phase 1), which the Go FSM then resolves per-iteration during Phase 2:
 
-| SDK Call in Template Literal | Compiles To (Under-the-hood) | Native Go Runtime Action (Per Iteration)                                                         |
-| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| `${get('session_id')}`       | `{{session_id}}`             | Exact key lookup from **Worker Scope**. _(Does not support `.dot` paths for object properties)._ |
-| `${local.pop('tickets')}`    | `{{@pop:local:tickets}}`     | Pops the next value from a Local FIFO queue.                                                     |
-| `${env('PORT', '80')}`       | `{{@env:PORT:80}}`           | Reads system environment variable.                                                               |
-| `${random.uuid()}`           | `{{@random:uuid}}`           | Generates a standard RFC 4122 UUID v4 natively.                                                  |
-| `${random.string(16)}`       | `{{@random:string:16}}`      | Generates an alphanumeric string of length 16.                                                   |
-| `${random.integer(1, 100)}`  | `{{@random:int:1:100}}`      | Generates a uniformly distributed integer.                                                       |
-| `${random.pick(['A','B'])}`  | `{{@random:pick:A,B}}`       | Selects one option at random from the list.                                                      |
-| `${open('./data.json')}`     | `{{@open:./data.json:r}}`    | Streams file content from disk with in-memory caching.                                           |
+| SDK Call in Template Literal | Compiles To (Under-the-hood) | Native Go Runtime Action (Per Iteration)               |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------ |
+| `${get('session_id')}`       | `{{session_id}}`             | Exact key lookup from **Worker Scope**.                |
+| `${get('user').profile.id}`  | `{{user}{profile}{id}}`      | Deep property resolution.                              |
+| `${local.pop('tickets')}`    | `{{@pop:local:tickets}}`     | Pops the next value from a Local FIFO queue.           |
+| `${env('PORT', '80')}`       | `{{@env:PORT:80}}`           | Reads system environment variable.                     |
+| `${random.uuid()}`           | `{{@random:uuid}}`           | Generates a standard RFC 4122 UUID v4 natively.        |
+| `${random.string(16)}`       | `{{@random:string:16}}`      | Generates an alphanumeric string of length 16.         |
+| `${random.integer(1, 100)}`  | `{{@random:int:1:100}}`      | Generates a uniformly distributed integer.             |
+| `${random.pick(['A','B'])}`  | `{{@random:pick:A,B}}`       | Selects one option at random from the list.            |
+| `${open('./data.json')}`     | `{{@open:./data.json:r}}`    | Streams file content from disk with in-memory caching. |
 
 ### System Context Metadata
 
@@ -115,8 +109,7 @@ The engine automatically injects routing and context metadata into every active 
 import { http, random, get, env, info } from "@budment/sdk";
 
 export default [
-  // Outside a hook: The SDK returns tokens. The Go engine natively resolves this string
-  // at high speed for every iteration, without entering the JavaScript VM.
+  // Outside a hook: The SDK returns tokens and resolves this string without entering the VM.
   http
     .get(
       `http://api.example.com:${env("PORT")}/search?q=${random.string(8)}&iter=${info.iteration}`,
