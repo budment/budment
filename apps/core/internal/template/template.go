@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"math/rand/v2"
 	"os"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/budment/budment/internal/fastconv"
+	"github.com/dop251/goja"
 )
 
 type ScopeProvider interface {
@@ -41,47 +43,54 @@ func (e Expression) IsStatic() bool {
 }
 
 type fileEntry struct {
-	raw    []byte
-	text   string
-	base64 string
+	raw     []byte
+	b64     string
+	b64Once sync.Once
 }
 
 // Loaded only when the worker actively executes.
 var lazyFileCache sync.Map
 
-// GetFileBytes reads and caches raw bytes, supporting binary files (PDF, images, zip).
+// Helper function to load files with "Thundering Herd" protection (thousands of VUs requesting the file at the same millisecond)
+func loadFileEntry(path string) *fileEntry {
+	// 1. Fast-path cache lookup
+	if val, ok := lazyFileCache.Load(path); ok {
+		return val.(*fileEntry)
+	}
+
+	// 2. Read from disk if not cached
+	data, err := os.ReadFile(path)
+	if err != nil {
+		data = []byte{} // Prevent panic by returning empty slice if file does not exist
+	}
+
+	newEntry := &fileEntry{raw: data}
+
+	// 3. Prevent Race Conditions via LoadOrStore:
+	// If 100 VUs access the disk simultaneously, whichever succeeds first stores its entry; redundant copies are discarded.
+	actual, _ := lazyFileCache.LoadOrStore(path, newEntry)
+	return actual.(*fileEntry)
+}
+
+// Retrieves raw byte buffer (Used for open(path, 'b') in JS Hook) -> Avoids RAM overhead from Base64 generation
 func GetFileBytes(path string) []byte {
 	return bytes.Clone(loadFileEntry(path).raw)
 }
 
-func loadFileEntry(path string) fileEntry {
-	if val, ok := lazyFileCache.Load(path); ok {
-		return val.(fileEntry)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		empty := fileEntry{}
-		lazyFileCache.Store(path, empty)
-		return empty
-	}
-
-	entry := fileEntry{
-		raw:    data,
-		text:   fastconv.BytesToString(data),
-		base64: base64.StdEncoding.EncodeToString(data),
-	}
-	lazyFileCache.Store(path, entry)
-	return entry
-}
-
-// GetFileContent reads text files from the cache.
 func GetFileContent(path string) string {
-	return loadFileEntry(path).text
+	return fastconv.BytesToString(loadFileEntry(path).raw)
 }
 
 func GetFileBase64(path string) string {
-	return loadFileEntry(path).base64
+	entry := loadFileEntry(path)
+
+	// Ensures that even if 10,000 VUs call GetFileBase64 concurrently,
+	// the encoding algorithm runs exactly once and caches the result in memory.
+	entry.b64Once.Do(func() {
+		entry.b64 = base64.StdEncoding.EncodeToString(entry.raw)
+	})
+
+	return entry.b64
 }
 
 type ChunkKind uint8
@@ -106,6 +115,7 @@ type Chunk struct {
 	MaxParam int
 	Options  []string
 	IsBinary bool
+	Path     []string
 }
 
 type FastTemplate struct {
@@ -278,6 +288,15 @@ func parseASTChunk(varName, rawChunk string) Chunk {
 			return Chunk{Kind: ChunkStatic, Value: rawChunk}
 		}
 	}
+	parts := strings.Split(varName, "}{")
+	if len(parts) > 1 {
+		return Chunk{
+			Kind:  ChunkVar,
+			Value: parts[0],
+			Path:  parts[1:],
+			Raw:   rawChunk,
+		}
+	}
 
 	return Chunk{Kind: ChunkVar, Value: varName, Raw: rawChunk}
 }
@@ -321,13 +340,100 @@ func (ft *FastTemplate) Render(ctx ScopeProvider) string {
 			}
 
 		case ChunkVar:
-			if ctx != nil {
-				if val, exists := ctx.Resolve(c.Value); exists {
+			if ctx == nil {
+				sb.WriteString(c.Raw)
+				continue
+			}
+
+			// Get Root Object
+			val, exists := ctx.Resolve(c.Value)
+			if !exists {
+				sb.WriteString(c.Raw)
+				continue
+			}
+
+			// NO PATH case (e.g., {{user}})
+			if len(c.Path) == 0 {
+				switch v := val.(type) {
+				case *goja.Object:
+					jsonBytes, _ := json.Marshal(v.Export())
+					sb.Write(jsonBytes)
+				case map[string]any, []any:
+					jsonBytes, _ := json.Marshal(v)
+					sb.Write(jsonBytes)
+				default:
 					sb.WriteString(fastconv.String(val))
-					continue
+				}
+				continue
+			}
+
+			// WITH PATH case (e.g., {{user}{items}{0}{id}})
+			current := val
+			found := true
+
+			for i, p := range c.Path {
+				isLast := (i == len(c.Path)-1)
+
+				switch node := current.(type) {
+
+				// Branch A: JavaScript Object
+				case *goja.Object:
+					propVal := node.Get(p) // propVal returns a goja.Value
+					if propVal == nil || goja.IsUndefined(propVal) || goja.IsNull(propVal) {
+						found = false
+						break
+					}
+
+					if isLast {
+						current = propVal.Export()
+					} else {
+						// If intermediate node, attempt type assertion to *goja.Object to continue
+						if nextObj, ok := propVal.(*goja.Object); ok {
+							current = nextObj
+						} else {
+							// If JS array or primitive, Export() for handling in branches below
+							current = propVal.Export()
+						}
+					}
+
+				// Branch B: Pure Go Map
+				case map[string]any:
+					if next, ok := node[p]; ok {
+						current = next
+						continue
+					}
+					found = false
+
+				// Branch C: Pure Go Slice/Array (Fix array index traversal e.g., items.0.id)
+				case []any:
+					idx, err := strconv.Atoi(p)
+					if err == nil && idx >= 0 && idx < len(node) {
+						current = node[idx]
+						continue
+					}
+					found = false
+
+				default:
+					found = false
+				}
+
+				if !found {
+					break
 				}
 			}
-			sb.WriteString(c.Raw)
+
+			// Output final result
+			if found && current != nil {
+				switch v := current.(type) {
+				case map[string]any, []any:
+					jsonBytes, _ := json.Marshal(v)
+					sb.Write(jsonBytes)
+				default:
+					sb.WriteString(fastconv.String(current))
+				}
+			} else {
+				sb.WriteString(c.Raw)
+			}
 		}
 	}
 	return sb.String()
