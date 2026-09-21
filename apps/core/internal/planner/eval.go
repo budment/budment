@@ -307,6 +307,7 @@ func (e *Evaluator) injectMockDSL(vm *goja.Runtime) error {
 				strOpts = append(strOpts, fmt.Sprint(v))
 			}
 			return fmt.Sprintf("{{@random:pick:%s}}", strings.Join(strOpts, ","))
-		}})
+		},
+	})
 	return nil
 }
