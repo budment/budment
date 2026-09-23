@@ -20,16 +20,6 @@ Because of this design, the engine achieves massive throughput by reusing the sa
 
 To minimize lock contention and prevent race conditions, Budment uses a strictly isolated memory model. Each Virtual User (VU) maintains its own independent state.
 
-```mermaid
-flowchart LR
-    subgraph Engine ["Budment Engine"]
-        direction TB
-        VU1["Virtual User 1<br/>(Isolated Worker Scope)"]
-        VU2["Virtual User 2<br/>(Isolated Worker Scope)"]
-        VUN["Virtual User N<br/>(Isolated Worker Scope)"]
-    end
-```
-
 - **Isolation :** VUs cannot see or alter each other's state. The backpack is emptied at the start of every iteration.
 - **Operations:** Use set(key, value) to store data, and get(key) to retrieve it.
 - **API Primitives:** `get()` returns object references. Mutating an object inside a JS hook (e.g., `let obj = get('user'); obj.age = 20;`) will directly update the actual state in the worker's memory.

@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import { marked, type Tokens } from "marked";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import DocContent from "../../../components/DocContent";
@@ -12,7 +12,7 @@ import DocFooter from "@/components/DocFooter";
 import { DOCS_NAV } from "@/config/docs-nav";
 
 interface PageProps {
-  params: Promise<{ slug: string[] }>;
+  params: Promise<{ slug?: string[] }>;
 }
 
 /**
@@ -177,7 +177,7 @@ function highlightAST(raw: string): string {
     '<span class="text-fuchsia-400 font-bold">[MATCH]</span>',
   );
   text = text.replace(
-    /\[(LOOP|POLL)\]/g,
+    /\[(LOOP\vert{}POLL)\]/g,
     '<span class="text-purple-400 font-bold">[$1]</span>',
   );
   text = text.replace(
@@ -193,7 +193,7 @@ function highlightAST(raw: string): string {
     '<span class="text-slate-400 font-medium">$1</span><span class="text-amber-300 font-semibold">$2</span>',
   );
   text = text.replace(
-    /\[(BEFORE|AFTER)\]/gi,
+    /\[(BEFORE\vert{}AFTER)\]/gi,
     '<span class="text-fuchsia-400 font-semibold">[$1]</span>',
   );
   text = text.replace(/→\s*([a-zA-Z0-9_,\s]+)/g, (_, actions) => {
@@ -235,11 +235,25 @@ const LANG_THEMES: Record<string, { text: string; bar: string }> = {
   text: { text: "text-slate-400", bar: "bg-slate-500" },
 };
 
+const EXPAND_ICON_SVG = `<svg class="w-4 h-4 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>`;
+
 export default async function DocPage({ params }: PageProps) {
   const { slug } = await params;
+
+  if (!slug || slug.length === 0) {
+    redirect("/docs/getting-started/01-introduction");
+  }
+
   const targetFilePath = getFilePath(slug);
 
   if (!targetFilePath) {
+    const currentPrefix = `/docs/${slug.join("/")}`;
+    const matchedItem = DOCS_NAV.flatMap((s) => s.items).find((item) =>
+      item.href.startsWith(currentPrefix),
+    );
+    if (matchedItem) {
+      redirect(matchedItem.href);
+    }
     notFound();
   }
 
@@ -264,9 +278,7 @@ export default async function DocPage({ params }: PageProps) {
     const baseId = slugify(rawText);
     let finalId = baseId;
     const count = headingCounts.get(baseId) || 0;
-    if (count > 0) {
-      finalId = `${baseId}-${count}`;
-    }
+    if (count > 0) finalId = `${baseId}-${count}`;
     headingCounts.set(baseId, count + 1);
 
     if (depth === 2 || depth === 3) {
@@ -281,7 +293,18 @@ export default async function DocPage({ params }: PageProps) {
     const language = (lang || "text").toLowerCase();
 
     if (language === "mermaid") {
-      return `<div class="mermaid my-8 flex justify-center not-prose overflow-x-auto p-4 bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xs" translate="no">${text}</div>`;
+      const encodedCode = encodeURIComponent(text);
+      return `
+        <div class="mermaid-block group relative my-8 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden" translate="no" data-code="${encodedCode}">
+          <div class="mermaid-container relative p-6 flex justify-center items-center min-h-105 overflow-x-auto">
+            <div class="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
+              <span class="text-xs font-mono tracking-wide text-slate-400 dark:text-slate-500">
+                Rendering architecture diagram...
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     const theme = LANG_THEMES[language] || {
@@ -309,14 +332,15 @@ export default async function DocPage({ params }: PageProps) {
       );
     }
 
+    const lines = text.split("\n").length;
+    const isExpandable = lines > 15;
+
     return `
-      <div class="terminal-box my-6 rounded-lg border border-slate-800/80 bg-[#16181d] overflow-hidden text-left" translate="no">
+      <div class="terminal-box ${isExpandable ? "is-expandable relative" : ""} my-6 rounded-lg border border-slate-800/80 bg-[#16181d] overflow-hidden text-left" translate="no">
         <div class="flex items-center justify-between px-4 bg-[#1e222b] border-b border-slate-800">
           <div class="flex items-center">
             <div class="relative py-2 px-1">
-              <span class="font-mono text-xs font-semibold uppercase tracking-wider ${theme.text}">
-                ${language}
-              </span>
+              <span class="font-mono text-xs font-semibold uppercase tracking-wider ${theme.text}">${language}</span>
               <span class="absolute bottom-0 left-0 right-0 h-0.5 ${theme.bar}"></span>
             </div>
           </div>
@@ -327,7 +351,18 @@ export default async function DocPage({ params }: PageProps) {
             <span class="copy-text text-[13px] font-medium">Copy</span>
           </button>
         </div>
-        <pre class="p-4 overflow-x-auto text-[13.5px] font-mono leading-relaxed text-slate-200"><code class="language-${language}">${highlightedCode}</code></pre>
+        <pre class="p-4 overflow-x-auto text-[13.5px] font-mono leading-relaxed text-slate-200 ${isExpandable ? "max-h-80 overflow-y-hidden" : ""}"><code class="language-${language}">${highlightedCode}</code></pre>
+        ${
+          isExpandable
+            ? `
+          <div class="expand-fade absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-[#16181d] via-[#16181d]/85 to-transparent pointer-events-none transition-opacity duration-300 z-1"></div>
+          <button type="button" class="expand-toggle-btn absolute bottom-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#212631]/95 hover:bg-[#2c3342] text-slate-200 border border-slate-700/80 hover:border-slate-500 shadow-md hover:shadow-lg backdrop-blur-sm transition-all duration-200 cursor-pointer text-xs font-medium">
+            ${EXPAND_ICON_SVG}
+            <span class="btn-text">Expand</span>
+          </button>
+        `
+            : ""
+        }
       </div>
     `;
   };
