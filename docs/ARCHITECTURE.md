@@ -11,7 +11,10 @@ Budment is architected around a decoupled, compilation-based execution model. Te
 flowchart TB
     subgraph COMPILATION ["1. COMPILATION LAYER"]
         direction LR
-        TS["scenario.ts"] --> ES["esbuild"] --> BN["Bundle"] --> VM["Goja Planning VM"] --> IR["Protobuf Scenario IR"]
+        TS["scenario.ts"] --> ES["esbuild"]
+        ES --> BN["Bundle"]
+        BN --> VM["Goja Planning VM"]
+        VM --> IR["Protobuf Scenario IR"]
     end
 
     subgraph RUNTIME ["2. RUNTIME ENGINE (Go)"]
@@ -41,7 +44,7 @@ flowchart TB
         WORKERS -.-> |"On-demand hook execution"| POOL
     end
 
-    COMPILATION ==> |"Serialized State Graph"| DIR
+    COMPILATION ==> |"Serialized State Graph"| RUNTIME
 
     style COMPILATION fill:transparent,stroke:#64748b,stroke-width:1.5px,color:inherit
     style TS fill:transparent,stroke:#94a3b8,color:inherit
