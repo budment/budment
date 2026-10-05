@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@dotlottie/react-player": "^1.6.19",
+    "@lottiefiles/dotlottie-react": "^0.19.16",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "gray-matter": "^4.0.3",

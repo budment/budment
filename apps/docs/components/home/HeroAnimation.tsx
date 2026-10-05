@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-const DotLottiePlayer = dynamic(
-  () => import("@dotlottie/react-player").then((mod) => mod.DotLottiePlayer),
+const DotLottieReact = dynamic(
+  () => import("@lottiefiles/dotlottie-react").then((mod) => mod.DotLottieReact),
   { ssr: false },
 );
 
@@ -14,12 +14,14 @@ interface HeroAnimationProps {
 export default function HeroAnimation({ src }: HeroAnimationProps) {
   return (
     <div className="w-full flex items-center justify-center">
-      <DotLottiePlayer
-        src={src}
-        autoplay
-        loop
-        className="w-full max-w-95 sm:max-w-120 lg:max-w-140 h-auto drop-shadow-sm select-none pointer-events-none"
-      />
+      <div className="w-full max-w-105 sm:max-w-145 lg:max-w-180 aspect-square drop-shadow-sm select-none pointer-events-none">
+        <DotLottieReact
+          src={src}
+          autoplay
+          loop
+          className="w-full h-full"
+        />
+      </div>
     </div>
   );
 }
