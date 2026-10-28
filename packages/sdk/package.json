@@ -32,7 +32,7 @@
   "devDependencies": {
     "@budment/tsconfig": "workspace:*",
     "@types/node": "^26.6.5",
-    "ts-proto": "^2.15.3",
+    "ts-proto": "^2.18.3",
     "tsx": "^4.23.15",
     "typescript": "^5.8.0",
     "tsup": "^8.5.1"
