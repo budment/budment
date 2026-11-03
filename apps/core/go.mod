@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/dop251/goja v0.0.0-20260806115107-493f22071ef6
 	github.com/evanw/esbuild v0.28.2
-	github.com/goccy/go-json v0.11.2
+	github.com/goccy/go-json v0.12.0
 	github.com/spf13/cobra v1.10.2
 	github.com/tidwall/gjson v1.20.0
 	golang.org/x/term v0.47.0
