@@ -7,7 +7,7 @@ require (
 	github.com/evanw/esbuild v0.28.2
 	github.com/goccy/go-json v0.12.0
 	github.com/spf13/cobra v1.10.2
-	github.com/tidwall/gjson v1.20.0
+	github.com/tidwall/gjson v1.20.1
 	golang.org/x/term v0.47.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
