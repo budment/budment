@@ -127,21 +127,49 @@ export default function DocContent({ html }: { html: string }) {
       ".expand-toggle-btn",
     ) as HTMLButtonElement | null;
     if (expandBtn) {
-      const box = expandBtn.closest(".terminal-box");
-      const pre = box?.querySelector("pre");
-      const fade = box?.querySelector(".expand-fade");
-      if (!pre) return;
+      const box = expandBtn.closest(".terminal-box") as HTMLElement | null;
+      const pre = box?.querySelector("pre") as HTMLElement | null;
+      if (!box || !pre) return;
 
-      const isCollapsed = pre.classList.contains("max-h-[320px]");
-      if (isCollapsed) {
-        pre.classList.remove("max-h-[320px]");
-        fade?.classList.add("opacity-0");
+      const wrapper = pre.parentElement;
+      const targetEl =
+        wrapper && wrapper !== box && wrapper.scrollHeight > wrapper.clientHeight
+          ? wrapper
+          : pre;
+
+      const fade = box.querySelector(".expand-fade") as HTMLElement | null;
+      const isExpanded = box.getAttribute("data-expanded") === "true";
+
+      targetEl.style.transition = "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
+      targetEl.style.overflowY = "hidden";
+
+      if (!isExpanded) {
+        const initialHeight = `${targetEl.clientHeight || 320}px`;
+        if (!targetEl.dataset.collapsedHeight) {
+          targetEl.dataset.collapsedHeight = initialHeight;
+        }
+
+        targetEl.classList.remove("max-h-[320px]", "max-h-80");
+        targetEl.style.maxHeight = initialHeight;
+
+        void targetEl.offsetHeight;
+
+        targetEl.style.transition = "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
+        targetEl.style.overflowY = "hidden";
+        targetEl.style.maxHeight = `${targetEl.scrollHeight}px`;
+
+        box.setAttribute("data-expanded", "true");
+        fade?.classList.add("opacity-0", "pointer-events-none");
         expandBtn.innerHTML = `${COLLAPSE_ICON_SVG}<span class="btn-text">Collapse</span>`;
       } else {
-        pre.classList.add("max-h-[320px]");
-        fade?.classList.remove("opacity-0");
+        const collapsedHeight = targetEl.dataset.collapsedHeight || "320px";
+        targetEl.style.transition = "max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)";
+        targetEl.style.maxHeight = collapsedHeight;
+
+        box.removeAttribute("data-expanded");
+        fade?.classList.remove("opacity-0", "pointer-events-none");
         expandBtn.innerHTML = `${EXPAND_ICON_SVG}<span class="btn-text">Expand</span>`;
-        box?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        box.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
   };

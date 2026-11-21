@@ -106,3 +106,6 @@ kbd {
 .hljs-template-tag {
   color: #f472b6;
 }
+.terminal-box .expand-fade {
+  transition: opacity 0.25s ease;
+}
