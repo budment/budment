@@ -126,14 +126,14 @@ importers:
         specifier: ^8.5.1
         version: 8.5.1(typescript@5.4.5)
       turbo:
-        specifier: ^2.11.11
-        version: 2.11.11
+        specifier: ^2.11.13
+        version: 2.11.13
 
   apps/docs:
     dependencies:
       '@lottiefiles/dotlottie-react':
-        specifier: ^0.22.2
-        version: 0.22.2(react@19.3.1)
+        specifier: ^0.22.3
+        version: 0.22.3(react@19.3.1)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -147,11 +147,11 @@ importers:
         specifier: ^11.12.0
         version: 11.12.0
       lucide-react:
-        specifier: ^1.73.0
-        version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^1.77.0
+        version: 1.77.0(@types/react@19.3.0)(react@19.3.1)
       marked:
-        specifier: ^18.2.0
-        version: 18.2.0
+        specifier: ^18.2.1
+        version: 18.2.1
       mermaid:
         specifier: ^12.3.0
         version: 12.3.0
@@ -168,8 +168,8 @@ importers:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
       tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.7.0
+        specifier: ^3.7.1
+        version: 3.7.1
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -210,8 +210,8 @@ importers:
         specifier: ^26.6.6
         version: 26.6.6
       ts-proto:
-        specifier: ^2.21.1
-        version: 2.21.1
+        specifier: ^2.23.5
+        version: 2.23.5
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(supports-color@7.2.0)(tsx@4.23.15)(typescript@5.9.3)
@@ -963,8 +963,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lottiefiles/dotlottie-react@0.22.2':
-    resolution: {integrity: sha512-X91hm/hGigVt7PFRfcFYO5XeLqUAQSyhcAMfvpCBv7fNjUy8DCEENJdXglRsiUGGJezwqwaV2QoJxfDECoiiyw==}
+  '@lottiefiles/dotlottie-react@0.22.3':
+    resolution: {integrity: sha512-TBcQsb7FqprGEKsn8D1w+HGINz9t8LAz1wgcYVej4I964SbwzDPxnuCoGV/c8WIdIxn/XAmDRzSXQljSRpOtsA==}
     engines: {node: '>=18.17.0', npm: '>=9.5.0'}
     peerDependencies:
       react: ^17 || ^18 || ^19
@@ -1462,33 +1462,33 @@ packages:
   '@tailwindcss/postcss@4.3.5':
     resolution: {integrity: sha512-FAV37Tlx9wBiT/hkfgVD0Q6CWsP2oUX3lf28nrfjW8+ksILjnpuFulUqWDfNR4/ZiEHHDRBX8DUTzD1Rys687A==}
 
-  '@turbo/darwin-64@2.11.11':
-    resolution: {integrity: sha512-HMMeUIEAsmyIbSYn1ySvF/4gGMa0joiTMq4dQDuloIAnOpbtFT3JEiVsYnASdTWDXvplbRbZlqjU1EBeSR9G1A==}
+  '@turbo/darwin-64@2.11.13':
+    resolution: {integrity: sha512-5IT29i4j55E5O66+la7L8Y46ut7dFaNZqrgUIYYNtcpMt9Ql7aYnSQb/6tZ+prE2AfX1RBCAtRJE41txS2rG3w==}
     cpu: [x64]
     os: [darwin]
 
-  '@turbo/darwin-arm64@2.11.11':
-    resolution: {integrity: sha512-+8iySNgqYWY6PZYUQzYu6zn0C04z2OEq1vQ6oMGsJ9sxN6wOpg1gzi1AJ5VKDHviWvMUjhqng51hTEQZOuiqYQ==}
+  '@turbo/darwin-arm64@2.11.13':
+    resolution: {integrity: sha512-YFJPayVNlhSPRIZSeERiZYGKKqPs6N6qGhim8J3GtBdv5ZjUNF1ixfnAAyCVTqFEnMSkn1W7F0Y07kca8EjWsg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.11.11':
-    resolution: {integrity: sha512-uImTKFYCFKsoFxjaXeJXlMPv4uU3OIIDjyzoIwYVqOtu9LnCZ/5/fzu/WP6+G9YfwGAPRplTHkKFfcI5t97RGw==}
+  '@turbo/linux-64@2.11.13':
+    resolution: {integrity: sha512-R5RIQflV4ffBDNuUwjmtmzIr6Y2UeyeeHTtultYF7cnFn3tG1RZ4GRBlpjUhHB6JxuR7l1B450hlbzdtlD3ghg==}
     cpu: [x64]
     os: [android, linux]
 
-  '@turbo/linux-arm64@2.11.11':
-    resolution: {integrity: sha512-Y7xffSVfyyYRGzNy6PLdrFL4xXN6iTuR3W0SyJvH/yd3d4defA6dansZwJpPDVnIpD8a2Qn256DwY/Qin4Ip4g==}
+  '@turbo/linux-arm64@2.11.13':
+    resolution: {integrity: sha512-AwV8pVO/cH/lwx1B7SGfzUA/3e6vmPaygFp9NOSRESs6t3Wr63zrBuXlluDogAOIxIMlHDB2ZbBueDsBnQxh2Q==}
     cpu: [arm64]
     os: [android, linux]
 
-  '@turbo/windows-64@2.11.11':
-    resolution: {integrity: sha512-e2WqNtkPGo3QDwNNwwBo89Dx3PtSJ9Wp9QuRNzn80rrRnSHB+1mfBMZTpdHjA8/G/sG9rl76TdWdpgVsimjRdg==}
+  '@turbo/windows-64@2.11.13':
+    resolution: {integrity: sha512-PGXYTaFaN3FZloe4RffNGJmfB+TIWlqQgKK1PVyKwPN+PUzxGa+byxHBWFHredMaVbnUc6L/F6/QR4iHyM/wug==}
     cpu: [x64]
     os: [win32]
 
-  '@turbo/windows-arm64@2.11.11':
-    resolution: {integrity: sha512-LURivfmgv34Osm8NR1gZGx4vdlux9KAgRM+FoooXNG0838ff0+akWZ76iPSke0NS2rsf7Z4Gw+YSaygzNTZuRA==}
+  '@turbo/windows-arm64@2.11.13':
+    resolution: {integrity: sha512-YdRHWstBUHWt/eChOEM4f9LT0dPiWK5SNgtV77bLCr3JNke9M5E7metqelNYj+tXe36dH0BZrk2CMnFlWqHKng==}
     cpu: [arm64]
     os: [win32]
 
@@ -3040,8 +3040,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@1.73.0:
-    resolution: {integrity: sha512-fVOzGviL9mTfHenG1PbCfIceavyGlnpYNSYr+aGZHLRymAJ7DTP6KHuqt0uBkCKAoenr1UVkwSbDIYt2xIesEQ==}
+  lucide-react@1.77.0:
+    resolution: {integrity: sha512-VS6sOi8ZUH1qm6swBL/tpI4xAhB6pFTdHvw3pfCJD+DaTJwpyynVzfOS6mdyMZ+OCdY/GMSQbqinOMOPbNSrQA==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -3060,8 +3060,8 @@ packages:
     engines: {node: '>= 20'}
     hasBin: true
 
-  marked@18.2.0:
-    resolution: {integrity: sha512-KaeL+tAbtvI930q7HE2PN5lYXYdT8EiSmxHlN6F3rsfb57wd5mp5W5TLazpdj4inTQBJdgjYwbs40W/0VUGU+Q==}
+  marked@18.2.1:
+    resolution: {integrity: sha512-ii4bxCTCqqwpT86XZWgJNs+ZnAIZksmLGYMViWA7PDIXYIeNo1x6cDdX3JOip9NM/cI6p8z57FxliACboTruMA==}
     engines: {node: '>= 20'}
     hasBin: true
 
@@ -3538,8 +3538,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  tailwind-merge@3.7.0:
-    resolution: {integrity: sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==}
+  tailwind-merge@3.7.1:
+    resolution: {integrity: sha512-v7y4BV4FUlO8exj/4M5UXKeoowDiuugVUg3tkMNIyOUCOHy5xp8+5aWQeXCtZ2491sUV1YPsVeM9EveZ6/xuZQ==}
 
   tailwindcss@4.3.5:
     resolution: {integrity: sha512-FcQk9BuffmEHJP2G0XmB2SplU1aLTI7j07Kunk+U74Ny+XiWOtzXz9aujFZ/avntw1e2cOv/3PkgzflQ7gX2vQ==}
@@ -3587,14 +3587,14 @@ packages:
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
-  ts-poet@6.12.0:
-    resolution: {integrity: sha512-xo+iRNMWqyvXpFTaOAvLPA5QAWO6TZrSUs5s4Odaya3epqofBu/fMLHEWl8jPmjhA0s9sgj9sNvF1BmaQlmQkA==}
+  ts-poet@6.12.1:
+    resolution: {integrity: sha512-N/5xnO/ugx3C9Wfibfnkv48dyzn8iNce1kuhh8tpDG7bDfij4H7agPBKyxAKU6v4VfRvQZEulmSVinvGT2Qmwg==}
 
   ts-proto-descriptors@2.1.0:
     resolution: {integrity: sha512-S5EZYEQ6L9KLFfjSRpZWDIXDV/W7tAj8uW7pLsihIxyr62EAVSiKuVPwE8iWnr849Bqa53enex1jhDUcpgquzA==}
 
-  ts-proto@2.21.1:
-    resolution: {integrity: sha512-Km2x6+7pz0qtlDtGp5FOQvBJBMp7b95einkLB3lBK/RWPVE307bXaMr0k5B1mojtcFWjAdE42/vfRIV/xriZ8g==}
+  ts-proto@2.23.5:
+    resolution: {integrity: sha512-afJt8iAvcLsa2RkxvRpk6TTEuZVe808B/IlxoOrZ27Z0hcQ9BYrWuIe1wrygaRL3lAEaGMfMI5UcDdsQ8WdrSQ==}
     hasBin: true
 
   tsconfig-paths@3.15.0:
@@ -3627,8 +3627,8 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
-  turbo@2.11.11:
-    resolution: {integrity: sha512-AI4UJbUE/2cVZdoXJ4PODc8qvrjhQQX9Fa93eKGOI6Ims/w7+kUIb9T1jhlgSnZcf+gtUruci/ohSwqtNNC5Yw==}
+  turbo@2.11.13:
+    resolution: {integrity: sha512-2EZ8StW6tqaj71HGF60oUOmJrPQHidmZ5dcwv2VORofya9JthVrfZhxbzRMx/QxjPwYi754i2h5RFsZSDzpnaQ==}
     hasBin: true
 
   type-check@0.4.0:
@@ -4315,7 +4315,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lottiefiles/dotlottie-react@0.22.2(react@19.3.1)':
+  '@lottiefiles/dotlottie-react@0.22.3(react@19.3.1)':
     dependencies:
       '@lottiefiles/dotlottie-web': 0.83.2
       react: 19.3.1
@@ -4670,22 +4670,22 @@ snapshots:
       postcss: 8.5.28
       tailwindcss: 4.3.5
 
-  '@turbo/darwin-64@2.11.11':
+  '@turbo/darwin-64@2.11.13':
     optional: true
 
-  '@turbo/darwin-arm64@2.11.11':
+  '@turbo/darwin-arm64@2.11.13':
     optional: true
 
-  '@turbo/linux-64@2.11.11':
+  '@turbo/linux-64@2.11.13':
     optional: true
 
-  '@turbo/linux-arm64@2.11.11':
+  '@turbo/linux-arm64@2.11.13':
     optional: true
 
-  '@turbo/windows-64@2.11.11':
+  '@turbo/windows-64@2.11.13':
     optional: true
 
-  '@turbo/windows-arm64@2.11.11':
+  '@turbo/windows-arm64@2.11.13':
     optional: true
 
   '@tybys/wasm-util@0.10.4':
@@ -4822,7 +4822,7 @@ snapshots:
 
   '@types/marked@6.0.0':
     dependencies:
-      marked: 18.2.0
+      marked: 18.2.1
 
   '@types/node@26.6.6':
     dependencies:
@@ -6402,7 +6402,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@1.73.0(@types/react@19.3.0)(react@19.3.1):
+  lucide-react@1.77.0(@types/react@19.3.0)(react@19.3.1):
     dependencies:
       react: 19.3.1
     optionalDependencies:
@@ -6418,7 +6418,7 @@ snapshots:
 
   marked@16.4.2: {}
 
-  marked@18.2.0: {}
+  marked@18.2.1: {}
 
   math-intrinsics@1.1.0: {}
 
@@ -7002,7 +7002,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tailwind-merge@3.7.0: {}
+  tailwind-merge@3.7.1: {}
 
   tailwindcss@4.3.5: {}
 
@@ -7039,7 +7039,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-poet@6.12.0:
+  ts-poet@6.12.1:
     dependencies:
       dprint-node: 1.0.8
 
@@ -7047,11 +7047,11 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 2.17.0
 
-  ts-proto@2.21.1:
+  ts-proto@2.23.5:
     dependencies:
       '@bufbuild/protobuf': 2.17.0
       case-anything: 2.1.13
-      ts-poet: 6.12.0
+      ts-poet: 6.12.1
       ts-proto-descriptors: 2.1.0
 
   tsconfig-paths@3.15.0:
@@ -7123,14 +7123,14 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
-  turbo@2.11.11:
+  turbo@2.11.13:
     optionalDependencies:
-      '@turbo/darwin-64': 2.11.11
-      '@turbo/darwin-arm64': 2.11.11
-      '@turbo/linux-64': 2.11.11
-      '@turbo/linux-arm64': 2.11.11
-      '@turbo/windows-64': 2.11.11
-      '@turbo/windows-arm64': 2.11.11
+      '@turbo/darwin-64': 2.11.13
+      '@turbo/darwin-arm64': 2.11.13
+      '@turbo/linux-64': 2.11.13
+      '@turbo/linux-arm64': 2.11.13
+      '@turbo/windows-64': 2.11.13
+      '@turbo/windows-arm64': 2.11.13
 
   type-check@0.4.0:
     dependencies:
